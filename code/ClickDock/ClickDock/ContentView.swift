@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreData
 import AppKit
+import ImageIO
 import CryptoKit
 import Combine
 import Carbon.HIToolbox
@@ -824,7 +825,7 @@ struct ClipboardDetailInspector: View {
         Group {
             switch record.kind {
             case .image:
-                if let preview = record.previewImage {
+                if let preview = record.originalImage ?? record.previewImage {
                     VStack(alignment: .leading, spacing: 12) {
                         imagePreview(preview)
                     }
@@ -1514,10 +1515,10 @@ struct ClipboardHeroDetailPanel: View {
 
     private var previewPane: some View {
         Group {
-            if record.kind == .image, let imagePath = record.imagePath, let nsImage = NSImage(contentsOfFile: imagePath) {
+            if record.kind == .image, let nsImage = record.originalImage ?? record.previewImage {
                 Image(nsImage: nsImage)
                     .resizable()
-                    .scaledToFill()
+                    .scaledToFit()
             } else if record.kind == .link, let urlString = record.fullText ?? record.displayText {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -1720,8 +1721,8 @@ struct ClipboardPreviewCard: View {
                         .foregroundStyle(.secondary.opacity(0.8))
                 }
 
-                if record.kind == .image, let imagePath = record.imagePath, let nsImage = NSImage(contentsOfFile: imagePath) {
-                    Image(nsImage: nsImage)
+                if record.kind == .image, let preview = record.previewImage {
+                    Image(nsImage: preview)
                         .resizable()
                         .scaledToFill()
                         .frame(height: layout.cardImageHeight)
@@ -2543,6 +2544,15 @@ extension ClipboardRecord {
 
     var previewImage: NSImage? {
         guard kind == .image,
+              let previewPath = thumbnailPathValue ?? imagePath,
+              let image = NSImage(contentsOfFile: previewPath) else {
+            return nil
+        }
+        return image
+    }
+
+    var originalImage: NSImage? {
+        guard kind == .image,
               let imagePath,
               let image = NSImage(contentsOfFile: imagePath) else {
             return nil
@@ -2695,10 +2705,17 @@ extension NSImage {
     }
 }
 
-private func removeCachedAssets(for record: ClipboardRecord) {
-    guard let imagePath = record.imagePath, !imagePath.isEmpty else { return }
-    try? FileManager.default.removeItem(atPath: imagePath)
-}
+    private func removeCachedAssets(for record: ClipboardRecord) {
+        if let imagePath = record.imagePath, !imagePath.isEmpty {
+            try? FileManager.default.removeItem(atPath: imagePath)
+        }
+        if let assetPath = record.assetPathValue, !assetPath.isEmpty {
+            try? FileManager.default.removeItem(atPath: assetPath)
+        }
+        if let thumbnailPath = record.thumbnailPathValue, !thumbnailPath.isEmpty {
+            try? FileManager.default.removeItem(atPath: thumbnailPath)
+        }
+    }
 
 final class ClipboardMonitor: ObservableObject {
     private let context: NSManagedObjectContext
@@ -2754,7 +2771,11 @@ final class ClipboardMonitor: ObservableObject {
                 pasteboard.writeObjects([url as NSURL])
             }
         case .files:
-            if let text = record.fullText ?? record.displayText {
+            if let assetPath = record.assetPathValue,
+               let urls = Self.fileURLs(in: URL(fileURLWithPath: assetPath)),
+               !urls.isEmpty {
+                pasteboard.writeObjects(urls.map { $0 as NSURL })
+            } else if let text = record.fullText ?? record.displayText {
                 pasteboard.setString(text, forType: .string)
             }
         case .image:
@@ -2796,16 +2817,17 @@ final class ClipboardMonitor: ObservableObject {
             let fullText = fileURLs.map(\.path).joined(separator: "\n")
             let isSingleImageFile = fileURLs.count == 1 && Self.imageFileExtensions.contains(fileURLs[0].pathExtension.lowercased())
 
-            if isSingleImageFile, let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let pngData = image.pngData() {
-                let path = saveImageData(pngData)
+            if isSingleImageFile, let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let assets = saveImageAssets(from: image) {
                 return ClipboardSnapshot(
                     kind: .image,
                     displayText: "Image",
-                    fullText: path?.path,
-                    imagePath: path?.path,
+                    fullText: assets.original.path,
+                    imagePath: assets.original.path,
+                    assetPath: nil,
+                    thumbnailPath: assets.thumbnail.path,
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
-                    hash: Self.hash(kind: .image, data: pngData)
+                    hash: Self.hash(kind: .image, data: imageData)
                 )
             }
 
@@ -2814,22 +2836,25 @@ final class ClipboardMonitor: ObservableObject {
                 displayText: names.joined(separator: ", "),
                 fullText: fullText,
                 imagePath: nil,
+                assetPath: saveFileAssets(from: fileURLs)?.path,
+                thumbnailPath: nil,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .files, text: fullText)
             )
         }
 
-        if let image = NSImage(pasteboard: pasteboard), let data = image.pngData() {
-            let path = saveImageData(data)
+        if let image = NSImage(pasteboard: pasteboard), let assets = saveImageAssets(from: image) {
             return ClipboardSnapshot(
                 kind: .image,
                 displayText: "Image",
-                fullText: path?.path,
-                imagePath: path?.path,
+                fullText: assets.original.path,
+                imagePath: assets.original.path,
+                assetPath: nil,
+                thumbnailPath: assets.thumbnail.path,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
-                hash: Self.hash(kind: .image, data: data)
+                hash: Self.hash(kind: .image, data: assets.originalData)
             )
         }
 
@@ -2840,6 +2865,8 @@ final class ClipboardMonitor: ObservableObject {
                 displayText: urlText,
                 fullText: urlText,
                 imagePath: nil,
+                assetPath: nil,
+                thumbnailPath: nil,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .link, text: urlText)
@@ -2861,6 +2888,8 @@ final class ClipboardMonitor: ObservableObject {
                 displayText: previewText(from: trimmed),
                 fullText: trimmed,
                 imagePath: nil,
+                assetPath: nil,
+                thumbnailPath: nil,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: kind, text: trimmed)
@@ -2881,6 +2910,8 @@ final class ClipboardMonitor: ObservableObject {
             record.displayText = snapshot.displayText
             record.fullText = snapshot.fullText
             record.imagePath = snapshot.imagePath
+            record.setValue(snapshot.assetPath, forKey: "assetPath")
+            record.setValue(snapshot.thumbnailPath, forKey: "thumbnailPath")
             record.sourceAppName = snapshot.sourceAppName
             record.sourceBundleId = snapshot.sourceBundleId
             record.contentHash = snapshot.hash
@@ -2927,15 +2958,43 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
-    private func saveImageData(_ data: Data) -> URL? {
+    private func saveImageAssets(from image: NSImage) -> SavedImageAssets? {
         let folderURL = Self.assetFolderURL()
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            let fileURL = folderURL.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
-            try data.write(to: fileURL, options: .atomic)
-            return fileURL
+            guard let originalData = image.pngData() else { return nil }
+
+            let originalURL = folderURL.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
+            try originalData.write(to: originalURL, options: .atomic)
+
+            let thumbnailURL = folderURL.appendingPathComponent(UUID().uuidString).appendingPathExtension("thumb.png")
+            if let thumbnailData = Self.thumbnailData(from: originalData, maxPixelSize: 420) {
+                try thumbnailData.write(to: thumbnailURL, options: .atomic)
+            } else {
+                try originalData.write(to: thumbnailURL, options: .atomic)
+            }
+
+            return SavedImageAssets(original: originalURL, thumbnail: thumbnailURL, originalData: originalData)
         } catch {
             NSLog("Failed to save clipboard image: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private func saveFileAssets(from urls: [URL]) -> URL? {
+        let folderURL = Self.assetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+            for sourceURL in urls {
+                let destinationURL = folderURL.appendingPathComponent(sourceURL.lastPathComponent)
+                if FileManager.default.fileExists(atPath: destinationURL.path) {
+                    try FileManager.default.removeItem(at: destinationURL)
+                }
+                try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+            }
+            return folderURL
+        } catch {
+            NSLog("Failed to save clipboard files: \(error.localizedDescription)")
             return nil
         }
     }
@@ -2962,6 +3021,30 @@ final class ClipboardMonitor: ObservableObject {
 
     private static func hash(kind: ClipboardContentKind, text: String) -> String {
         hash(kind: kind, data: Data(text.utf8))
+    }
+
+    private static func thumbnailData(from imageData: Data, maxPixelSize: CGFloat) -> Data? {
+        guard let source = CGImageSourceCreateWithData(imageData as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceCreateThumbnailWithTransform: true
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    private static func fileURLs(in folderURL: URL) -> [URL]? {
+        let keys: [URLResourceKey] = [.isRegularFileKey]
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles]) else {
+            return nil
+        }
+        return contents.filter { url in
+            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
+        }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     private static func hash(kind: ClipboardContentKind, data: Data) -> String {
@@ -3119,9 +3202,29 @@ private struct ClipboardSnapshot {
     let displayText: String
     let fullText: String?
     let imagePath: String?
+    let assetPath: String?
+    let thumbnailPath: String?
     let sourceAppName: String?
     let sourceBundleId: String?
     let hash: String
+}
+
+private struct SavedImageAssets {
+    let original: URL
+    let thumbnail: URL
+    let originalData: Data
+}
+
+extension ClipboardRecord {
+    var thumbnailPathValue: String? {
+        get { value(forKey: "thumbnailPath") as? String }
+        set { setValue(newValue, forKey: "thumbnailPath") }
+    }
+
+    var assetPathValue: String? {
+        get { value(forKey: "assetPath") as? String }
+        set { setValue(newValue, forKey: "assetPath") }
+    }
 }
 
 extension ClipboardMonitor {
