@@ -837,36 +837,13 @@ struct ClipboardDetailInspector: View {
         Group {
             switch record.kind {
             case .image:
-                if let preview = record.detailImage(maxPixelSize: layout.heroImageHeight * 2) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        imagePreview(preview)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color.white.opacity(0.94),
-                                        Color(red: 0.89, green: 0.94, blue: 1.0).opacity(0.84)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .overlay(
-                                VStack(spacing: 10) {
-                                    Image(systemName: "photo")
-                                        .font(.system(size: 34, weight: .regular))
-                                        .foregroundStyle(.secondary.opacity(0.65))
-                                    Text(record.previewTitle)
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                            )
-                            .frame(height: 240)
-                    }
-                }
+                AsyncDetailImageView(
+                    imagePath: record.imagePath,
+                    placeholderTitle: record.previewTitle,
+                    maxPixelSize: layout.heroImageHeight * 2,
+                    cornerRadius: 18,
+                    fallbackHeight: 240
+                )
             case .link:
                 VStack(alignment: .leading, spacing: 14) {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -1541,10 +1518,14 @@ struct ClipboardHeroDetailPanel: View {
 
     private var previewPane: some View {
         Group {
-            if record.kind == .image, let nsImage = record.detailImage(maxPixelSize: layout.heroPreviewMinHeight * 2) {
-                Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFit()
+            if record.kind == .image {
+                AsyncDetailImageView(
+                    imagePath: record.imagePath,
+                    placeholderTitle: record.previewTitle,
+                    maxPixelSize: layout.heroPreviewMinHeight * 2,
+                    cornerRadius: layout.mediumCornerRadius,
+                    fallbackHeight: layout.heroPreviewMinHeight
+                )
             } else if record.kind == .link, let urlString = record.fullText ?? record.displayText {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -1637,6 +1618,88 @@ struct ClipboardHeroDetailPanel: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct AsyncDetailImageView: View {
+    let imagePath: String?
+    let placeholderTitle: String
+    let maxPixelSize: CGFloat
+    let cornerRadius: CGFloat
+    let height: CGFloat? = nil
+    let fallbackHeight: CGFloat
+
+    @State private var image: NSImage?
+    @State private var isLoading = false
+    @State private var requestToken = UUID()
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                placeholder
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height ?? fallbackHeight)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color.white.opacity(0.16))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+        )
+        .task(id: imagePath) {
+            image = nil
+
+            let token = UUID()
+            requestToken = token
+
+            guard let imagePath, !imagePath.isEmpty else {
+                return
+            }
+
+            isLoading = true
+            defer { isLoading = false }
+
+            let loadedImage = await Task.detached(priority: .userInitiated) {
+                autoreleasepool {
+                    ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize)
+                }
+            }.value
+
+            guard !Task.isCancelled else { return }
+            guard token == requestToken else { return }
+            image = loadedImage
+        }
+    }
+
+    private var placeholder: some View {
+        VStack(spacing: 10) {
+            Image(systemName: isLoading ? "hourglass" : "photo")
+                .font(.system(size: 34, weight: .regular))
+                .foregroundStyle(.secondary.opacity(0.65))
+
+            Text(placeholderTitle)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.94),
+                    Color(red: 0.89, green: 0.94, blue: 1.0).opacity(0.84)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 }
 
