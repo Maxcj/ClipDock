@@ -183,6 +183,7 @@ struct SimpleClipboardWorkspaceView: View {
     private let onOpenSettings: () -> Void
     @State private var sidebarWidth: CGFloat = 520
     @State private var isSearchFieldFocused: Bool = false
+    private static let fetchBatchSize = 40
 
     private var layout: SimpleClipboardLayout { SimpleClipboardLayout(containerSize: containerSize) }
 
@@ -202,16 +203,15 @@ struct SimpleClipboardWorkspaceView: View {
         self.onOpenSettings = onOpenSettings
 
         let predicate = ClipboardRecord.fetchPredicate(searchText: searchText.wrappedValue, filter: filter)
-        let sortDescriptors: [NSSortDescriptor] = [
+        let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+        request.sortDescriptors = [
             NSSortDescriptor(key: "isPinned", ascending: false),
             NSSortDescriptor(key: "createdAt", ascending: false)
         ]
+        request.predicate = predicate
+        request.fetchBatchSize = Self.fetchBatchSize
 
-        _records = FetchRequest(
-            sortDescriptors: sortDescriptors,
-            predicate: predicate,
-            animation: .default
-        )
+        _records = FetchRequest(fetchRequest: request, animation: .default)
     }
 
     var body: some View {
@@ -1617,18 +1617,13 @@ struct ClipboardHeroDetailPanel: View {
 struct ClipboardCodePane: View {
     let record: ClipboardRecord
 
-    private var contentLines: [String] {
-        let text = record.detailText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
-        return lines.isEmpty ? [text] : lines
-    }
-
     var body: some View {
         GeometryReader { proxy in
+            let lines = ClipboardCodeLineCache.shared.lines(for: record)
             ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .trailing, spacing: 6) {
-                        ForEach(Array(contentLines.enumerated()), id: \.offset) { index, _ in
+                        ForEach(Array(lines.enumerated()), id: \.offset) { index, _ in
                             Text("\(index + 1)")
                                 .font(.system(size: 12, design: .monospaced))
                                 .foregroundStyle(.secondary.opacity(0.7))
@@ -1637,7 +1632,7 @@ struct ClipboardCodePane: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        ForEach(Array(contentLines.enumerated()), id: \.offset) { _, line in
+                        ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                             Text(line)
                                 .font(.system(size: 13, design: .monospaced))
                                 .foregroundStyle(.primary)
@@ -2545,7 +2540,7 @@ extension ClipboardRecord {
     var previewImage: NSImage? {
         guard kind == .image,
               let previewPath = thumbnailPathValue ?? imagePath,
-              let image = NSImage(contentsOfFile: previewPath) else {
+              let image = ClipboardImageCache.shared.image(at: previewPath) else {
             return nil
         }
         return image
@@ -2554,7 +2549,7 @@ extension ClipboardRecord {
     var originalImage: NSImage? {
         guard kind == .image,
               let imagePath,
-              let image = NSImage(contentsOfFile: imagePath) else {
+              let image = ClipboardImageCache.shared.image(at: imagePath) else {
             return nil
         }
         return image
@@ -2582,16 +2577,7 @@ extension ClipboardRecord {
     }
 
     var sourceAppIcon: NSImage? {
-        if let bundleId = sourceBundleId,
-           let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
-            let icon = NSWorkspace.shared.icon(forFile: appURL.path)
-            icon.size = NSSize(width: 128, height: 128)
-            return icon
-        }
-
-        let genericAppIcon = NSWorkspace.shared.icon(for: UTType.application)
-        genericAppIcon.size = NSSize(width: 128, height: 128)
-        return genericAppIcon
+        ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
     }
 
     var detailText: String {
@@ -2708,23 +2694,110 @@ extension NSImage {
     private func removeCachedAssets(for record: ClipboardRecord) {
         if let imagePath = record.imagePath, !imagePath.isEmpty {
             try? FileManager.default.removeItem(atPath: imagePath)
+            ClipboardImageCache.shared.remove(path: imagePath)
         }
         if let assetPath = record.assetPathValue, !assetPath.isEmpty {
             try? FileManager.default.removeItem(atPath: assetPath)
         }
         if let thumbnailPath = record.thumbnailPathValue, !thumbnailPath.isEmpty {
             try? FileManager.default.removeItem(atPath: thumbnailPath)
+            ClipboardImageCache.shared.remove(path: thumbnailPath)
         }
     }
 
+private final class ClipboardImageCache {
+    static let shared = ClipboardImageCache()
+
+    private let cache = NSCache<NSString, NSImage>()
+
+    private init() {
+        cache.countLimit = 120
+    }
+
+    func image(at path: String, preferredSize: CGSize? = nil) -> NSImage? {
+        let key = path as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+
+        guard let image = NSImage(contentsOfFile: path) else {
+            return nil
+        }
+
+        if let preferredSize {
+            image.size = preferredSize
+        }
+
+        cache.setObject(image, forKey: key)
+        return image
+    }
+
+    func remove(path: String) {
+        cache.removeObject(forKey: path as NSString)
+    }
+}
+
+private final class ClipboardAppIconCache {
+    static let shared = ClipboardAppIconCache()
+
+    private let cache = NSCache<NSString, NSImage>()
+
+    private init() {
+        cache.countLimit = 64
+    }
+
+    func icon(bundleId: String?) -> NSImage? {
+        let key = bundleId ?? "__generic__"
+        if let cached = cache.object(forKey: key as NSString) {
+            return cached
+        }
+
+        let icon: NSImage
+        if let bundleId,
+           let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
+            icon = NSWorkspace.shared.icon(forFile: appURL.path)
+        } else {
+            icon = NSWorkspace.shared.icon(for: UTType.application)
+        }
+        icon.size = NSSize(width: 128, height: 128)
+        cache.setObject(icon, forKey: key as NSString)
+        return icon
+    }
+}
+
+private final class ClipboardCodeLineCache {
+    static let shared = ClipboardCodeLineCache()
+
+    private let cache = NSCache<NSString, NSArray>()
+
+    private init() {
+        cache.countLimit = 256
+    }
+
+    func lines(for record: ClipboardRecord) -> [String] {
+        let key = (record.contentHash ?? record.objectID.uriRepresentation().absoluteString) as NSString
+        if let cached = cache.object(forKey: key) as? [String] {
+            return cached
+        }
+
+        let text = record.detailText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
+        let result = lines.isEmpty ? [text] : lines
+        cache.setObject(result as NSArray, forKey: key)
+        return result
+    }
+}
+
 final class ClipboardMonitor: ObservableObject {
     private let context: NSManagedObjectContext
+    private let processingQueue = DispatchQueue(label: "cn.maxcj.ClickDock.clipboard.processing", qos: .userInitiated)
     private var timer: Timer?
     private var cleanupTimer: Timer?
     private var lastChangeCount: Int = -1
     private var lastRecordedHash: String?
     private var suppressionHash: String?
     private var suppressionExpiresAt: Date = .distantPast
+    private var isProcessingSnapshot = false
 
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -2779,7 +2852,7 @@ final class ClipboardMonitor: ObservableObject {
                 pasteboard.setString(text, forType: .string)
             }
         case .image:
-            if let imagePath = record.imagePath, let image = NSImage(contentsOfFile: imagePath) {
+            if let imagePath = record.imagePath, let image = ClipboardImageCache.shared.image(at: imagePath) {
                 pasteboard.writeObjects([image])
             }
         }
@@ -2788,24 +2861,38 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private func poll() {
+        guard !isProcessingSnapshot else { return }
         let pasteboard = NSPasteboard.general
         guard pasteboard.changeCount != lastChangeCount else { return }
         lastChangeCount = pasteboard.changeCount
+        isProcessingSnapshot = true
 
-        guard let snapshot = captureSnapshot(from: pasteboard) else { return }
+        processingQueue.async { [weak self] in
+            guard let self else { return }
+            autoreleasepool {
+                let snapshot = self.captureSnapshot(from: pasteboard)
 
-        if let suppressionHash,
-           suppressionHash == snapshot.hash,
-           Date() < suppressionExpiresAt {
-            return
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    defer { self.isProcessingSnapshot = false }
+
+                    guard let snapshot else { return }
+
+                    if let suppressionHash,
+                       suppressionHash == snapshot.hash,
+                       Date() < suppressionExpiresAt {
+                        return
+                    }
+
+                    if snapshot.hash == lastRecordedHash {
+                        return
+                    }
+
+                    self.insert(snapshot: snapshot)
+                    self.lastRecordedHash = snapshot.hash
+                }
+            }
         }
-
-        if snapshot.hash == lastRecordedHash {
-            return
-        }
-
-        insert(snapshot: snapshot)
-        lastRecordedHash = snapshot.hash
     }
 
     private func captureSnapshot(from pasteboard: NSPasteboard) -> ClipboardSnapshot? {
