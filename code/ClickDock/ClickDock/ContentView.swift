@@ -9,17 +9,20 @@ import SwiftUI
 import CoreData
 import AppKit
 import CryptoKit
+import Combine
+import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
+    @EnvironmentObject private var hotkeyManager: GlobalHotkeyManager
+    @Environment(\.openWindow) private var openWindow
 
     @State private var searchText = ""
     @State private var filter: ClipboardFilter = .all
     @State private var selectedRecordID: NSManagedObjectID?
     @State private var hasConfiguredWindow = false
-    @State private var isSettingsPresented = false
     @State private var windowRef: NSWindow?
 
     var body: some View {
@@ -34,13 +37,11 @@ struct ContentView: View {
                     selectedRecordID: $selectedRecordID,
                     containerSize: proxy.size,
                     onOpenSettings: {
-                        isSettingsPresented = true
+                        openWindow(id: "settings")
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                WindowChromeOverlay(window: windowRef, layout: layout, onOpenSettings: {
-                    isSettingsPresented = true
-                })
+                WindowChromeOverlay(window: windowRef, layout: layout)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
@@ -67,8 +68,8 @@ struct ContentView: View {
         .onDisappear {
             clipboardMonitor.stop()
         }
-        .sheet(isPresented: $isSettingsPresented) {
-            SettingsView()
+        .onReceive(NotificationCenter.default.publisher(for: .clickDockTogglePanelRequested)) { _ in
+            toggleMainWindowVisibility()
         }
     }
 
@@ -101,12 +102,23 @@ struct ContentView: View {
         window.standardWindowButton(.zoomButton)?.isHidden = true
     }
 
+    private func toggleMainWindowVisibility() {
+        guard let windowRef else { return }
+
+        if windowRef.isVisible {
+            windowRef.orderOut(nil)
+            return
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        windowRef.makeKeyAndOrderFront(nil)
+    }
+
 }
 
 struct WindowChromeOverlay: View {
     let window: NSWindow?
     let layout: SimpleClipboardLayout
-    let onOpenSettings: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: layout.chromeButtonSpacing) {
@@ -123,25 +135,6 @@ struct WindowChromeOverlay: View {
             }
 
             Spacer(minLength: 0)
-
-            Button(action: onOpenSettings) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: layout.chromeSettingsIconSize, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: layout.chromeSettingsButtonSize, height: layout.chromeSettingsButtonSize)
-                    .background(
-                        RoundedRectangle(cornerRadius: layout.chromeSettingsButtonCornerRadius, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .overlay(Color.white.opacity(0.14))
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: layout.chromeSettingsButtonCornerRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: layout.chromeSettingsButtonCornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                    )
-            }
-            .buttonStyle(.plain)
-            .help("Settings")
         }
         .padding(.leading, layout.chromeOverlayLeading)
         .padding(.top, layout.chromeOverlayTopPadding)
@@ -233,7 +226,10 @@ struct SimpleClipboardWorkspaceView: View {
                 layout: layout,
                 onCopy: copy(_:),
                 onTogglePin: togglePin(_:),
-                onOpenSettings: onOpenSettings
+                onOpenSettings: onOpenSettings,
+                onClearAll: {
+                    self.clearAll()
+                }
             )
             .frame(width: layout.clampedSidebarWidth(sidebarWidth))
 
@@ -316,7 +312,7 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     private var navigationFilters: [ClipboardFilter] {
-        [.all, .text, .links, .images, .files]
+        [.all, .text, .links, .images, .code, .files]
     }
 
     private func moveRecordSelection(by offset: Int) {
@@ -349,6 +345,7 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     private func delete(_ record: ClipboardRecord) {
+        removeCachedAssets(for: record)
         viewContext.delete(record)
         saveContext()
 
@@ -357,6 +354,15 @@ struct SimpleClipboardWorkspaceView: View {
         }
 
         syncSelection()
+    }
+
+    private func clearAll() {
+        for record in records {
+            removeCachedAssets(for: record)
+            viewContext.delete(record)
+        }
+        saveContext()
+        selectedRecordID = nil
     }
 
     private func markUsed(_ record: ClipboardRecord) {
@@ -386,30 +392,17 @@ struct ClipboardHistorySidebar: View {
     let onCopy: (ClipboardRecord) -> Void
     let onTogglePin: (ClipboardRecord) -> Void
     let onOpenSettings: () -> Void
+    let onClearAll: () -> Void
     @FocusState private var isSearchFieldFocused: Bool
 
-    private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .files]
+    private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files]
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.sidebarSpacing) {
             HStack(spacing: 10) {
                 searchField
-
-                Button {
-                    filterSelection = activeFilter == .all ? .files : .all
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.system(size: layout.searchIconSize, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: layout.searchHeight, height: layout.searchHeight)
-                        .background(Color.white.opacity(0.28))
-                        .clipShape(RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.plain)
+                clearHistoryButton
+                settingsButton
             }
 
             HStack(spacing: layout.chipSpacing) {
@@ -434,38 +427,26 @@ struct ClipboardHistorySidebar: View {
                 .foregroundStyle(.secondary.opacity(0.92))
                 .padding(.top, 2)
 
-            ScrollViewReader { proxy in
-                ScrollView(.vertical, showsIndicators: false) {
-                    LazyVStack(spacing: layout.rowSpacing) {
-                        ForEach(records, id: \.objectID) { record in
-                            ClipboardHistoryRow(
-                                record: record,
-                                isSelected: selectedRecordID == record.objectID,
-                                layout: layout,
-                                onSelect: {
-                                    selectedRecordID = record.objectID
-                                },
-                                onCopy: {
-                                    onCopy(record)
-                                },
-                                onTogglePin: {
-                                    onTogglePin(record)
-                                }
-                            )
-                            .id(record.objectID)
-                        }
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: layout.rowSpacing) {
+                    ForEach(records, id: \.objectID) { record in
+                        ClipboardHistoryRow(
+                            record: record,
+                            isSelected: selectedRecordID == record.objectID,
+                            layout: layout,
+                            onSelect: {
+                                selectedRecordID = record.objectID
+                            },
+                            onCopy: {
+                                onCopy(record)
+                            },
+                            onTogglePin: {
+                                onTogglePin(record)
+                            }
+                        )
                     }
-                    .padding(.trailing, 2)
                 }
-                .onAppear {
-                    scrollToSelectedRecord(using: proxy)
-                }
-                .onChange(of: selectedRecordID) { _ in
-                    scrollToSelectedRecord(using: proxy)
-                }
-                .onChange(of: records.count) { _ in
-                    scrollToSelectedRecord(using: proxy)
-                }
+                .padding(.trailing, 2)
             }
 
             HStack(spacing: 8) {
@@ -499,6 +480,8 @@ struct ClipboardHistorySidebar: View {
                     searchFieldFocused = newValue
                 }
 
+            Spacer(minLength: 0)
+
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -507,10 +490,6 @@ struct ClipboardHistorySidebar: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-            } else {
-                Text("⌘F")
-                    .font(.system(size: layout.searchHintSize, weight: .medium))
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, layout.searchPaddingX)
@@ -526,11 +505,46 @@ struct ClipboardHistorySidebar: View {
         )
     }
 
-    private func scrollToSelectedRecord(using proxy: ScrollViewProxy) {
-        guard let selectedRecordID else { return }
-        withAnimation(.easeInOut(duration: 0.28)) {
-            proxy.scrollTo(selectedRecordID, anchor: .center)
+    private var clearHistoryButton: some View {
+        Button {
+            onClearAll()
+        } label: {
+            Image(systemName: "trash")
+                .font(.system(size: layout.searchHintSize, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: layout.searchHeight, height: layout.searchHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
+                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                        )
+                )
         }
+        .buttonStyle(.plain)
+        .help("Clear clipboard history")
+    }
+
+    private var settingsButton: some View {
+        Button {
+            onOpenSettings()
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: layout.searchHintSize, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: layout.searchHeight, height: layout.searchHeight)
+                .background(
+                    RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
+                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .help("Settings")
     }
 }
 
@@ -545,53 +559,11 @@ struct ClipboardHistoryRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             Button(action: onSelect) {
-                HStack(alignment: .top, spacing: layout.rowContentGap) {
-                    kindBadge
-
-                    VStack(alignment: .leading, spacing: layout.rowTextSpacing) {
-                        HStack(alignment: .center, spacing: 8) {
-                            Circle()
-                                .fill(record.kind.accent)
-                                .frame(width: layout.rowStatusDotSize, height: layout.rowStatusDotSize)
-
-                            Text(record.timeLabelShort)
-                                .font(.system(size: layout.rowMetaSize))
-                                .foregroundStyle(.secondary)
-
-                            Spacer(minLength: 0)
-                        }
-
-                        Text(record.previewTitle)
-                            .font(.system(size: layout.rowTitleSize, weight: .medium))
-                            .foregroundStyle(.primary)
-                            .lineLimit(record.kind == .image ? 2 : 3)
-
-                        if record.kind == .link {
-                            Text(record.detailText)
-                                .font(.system(size: layout.rowSubtitleSize))
-                                .foregroundStyle(record.kind.accent)
-                                .lineLimit(1)
-                        } else {
-                            Text(record.previewSubtitle)
-                                .font(.system(size: layout.rowSubtitleSize))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        Text(record.kind.title)
-                            .font(.system(size: layout.rowTagSize, weight: .medium))
-                            .foregroundStyle(.secondary.opacity(0.82))
-                    }
-
-                    if record.kind == .image, let preview = record.previewImage {
-                        imageThumbnail(preview)
-                    } else if record.kind == .files {
-                        fileThumbnail
-                    }
-                }
+                rowContent
                 .padding(.horizontal, layout.rowPaddingX)
                 .padding(.vertical, layout.rowPaddingY)
-                .frame(maxWidth: .infinity, minHeight: layout.rowHeight, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: layout.rowHeight, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -616,6 +588,87 @@ struct ClipboardHistoryRow: View {
                 )
         )
         .shadow(color: isSelected ? Color.accentColor.opacity(0.06) : .clear, radius: 8, x: 0, y: 3)
+    }
+
+    @ViewBuilder
+    private var rowContent: some View {
+        ZStack(alignment: .topLeading) {
+            HStack(alignment: .top, spacing: layout.rowContentGap) {
+                kindBadge
+                rowTextColumn
+                rowPreview
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            footerRow
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .padding(.leading, layout.badgeSize + layout.rowContentGap)
+                .padding(.bottom, 0)
+            }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var rowTextColumn: some View {
+        VStack(alignment: .leading, spacing: layout.rowTextSpacing) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.previewTitle)
+                    .font(.system(size: layout.rowTitleSize, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                Text(record.detailText)
+                    .font(.system(size: layout.rowSubtitleSize))
+                    .foregroundStyle(record.kind == .link ? record.kind.accent : .secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var footerRow: some View {
+        HStack(alignment: .center, spacing: 8) {
+            HStack(spacing: 8) {
+                sourceAppIcon(size: layout.rowActionSize)
+
+                Text(record.previewSubtitle)
+                    .font(.system(size: layout.rowMetaSize + 1, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 10) {
+                Text(record.timeLabelShort)
+                    .font(.system(size: layout.rowMetaSize + 1))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(width: layout.rowTimeWidth, alignment: .trailing)
+
+                HStack(spacing: 4) {
+                    Image(systemName: record.kind.symbolName)
+                        .font(.system(size: layout.rowTagSize, weight: .semibold))
+                        .foregroundStyle(record.kind.accent)
+
+                    Text(record.kind.title)
+                        .font(.system(size: layout.rowTagSize, weight: .medium))
+                        .foregroundStyle(record.kind.accent)
+                        .lineLimit(1)
+                }
+                .frame(width: layout.rowKindWidth, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var rowPreview: some View {
+        if record.kind == .image, let preview = record.previewImage {
+            imageThumbnail(preview)
+        } else if record.kind == .files {
+            fileThumbnail
+        }
     }
 
     private func imageThumbnail(_ image: NSImage) -> some View {
@@ -657,6 +710,31 @@ struct ClipboardHistoryRow: View {
                 .foregroundStyle(record.kind.accent)
         }
         .frame(width: layout.badgeSize, height: layout.badgeSize)
+    }
+
+    @ViewBuilder
+    private func sourceAppIcon(size: CGFloat) -> some View {
+        if let icon = record.sourceAppIcon {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+                Image(systemName: "app.dashed")
+                    .font(.system(size: max(8, size * 0.48), weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(width: size, height: size)
+        }
     }
 }
 
@@ -702,20 +780,43 @@ struct ClipboardDetailInspector: View {
 
     private func header(for record: ClipboardRecord) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(record.kind.accent.opacity(0.12))
-                .overlay(
-                    Image(systemName: record.kind.symbolName)
-                        .font(.system(size: 22, weight: .regular))
-                        .foregroundStyle(record.kind.accent)
-                )
-                .frame(width: 42, height: 42)
+            sourceAppIcon(for: record, size: 42)
 
-            Text(record.kind.title)
-                .font(.system(size: layout.detailLabelSize, weight: .medium))
-                .foregroundStyle(record.kind.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(record.previewSubtitle)
+                    .font(.system(size: layout.detailLabelSize, weight: .medium))
+                    .foregroundStyle(.primary)
+                Text(record.kind.title)
+                    .font(.system(size: layout.footerFontSize))
+                    .foregroundStyle(record.kind.accent)
+            }
 
             Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private func sourceAppIcon(for record: ClipboardRecord, size: CGFloat) -> some View {
+        if let icon = record.sourceAppIcon {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+        } else {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(record.kind.accent.opacity(0.12))
+                .overlay(
+                    Image(systemName: "app.dashed")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(record.kind.accent)
+                )
+                .frame(width: size, height: size)
         }
     }
 
@@ -772,6 +873,7 @@ struct ClipboardDetailInspector: View {
                         )
                         .frame(height: 220)
                 }
+                .textSelection(.enabled)
             case .files:
                 HStack(spacing: 14) {
                     RoundedRectangle(cornerRadius: 20, style: .continuous)
@@ -794,14 +896,19 @@ struct ClipboardDetailInspector: View {
                     Spacer()
                 }
                 .frame(height: 240, alignment: .center)
+            case .code:
+                ClipboardCodePane(record: record)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             case .text, .unknown:
                 ScrollView(.vertical, showsIndicators: false) {
                     Text(record.detailText)
                         .font(.system(size: layout.previewTextSize, weight: .semibold))
+                        .monospaced()
                         .foregroundStyle(.primary)
                         .lineSpacing(8)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.vertical, 4)
+                        .textSelection(.enabled)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
@@ -827,8 +934,7 @@ struct ClipboardDetailInspector: View {
 
     private func metadata(for record: ClipboardRecord) -> some View {
         VStack(spacing: 14) {
-            ClipboardDetailMetaRow(title: "Source", value: record.previewSubtitle, layout: layout)
-            ClipboardDetailMetaRow(title: "Copied", value: record.timeLabel, layout: layout)
+            ClipboardDetailMetaRow(title: "Copied", value: record.timeLabelPrecise, layout: layout)
             ClipboardDetailMetaRow(title: "Characters", value: "\(record.characterCount)", layout: layout)
             ClipboardDetailMetaRow(title: "Type", value: record.kind.title, layout: layout)
         }
@@ -899,6 +1005,7 @@ struct SimpleFilterChip: View {
         .frame(height: layout.chipHeight)
         .background(isSelected ? AnyShapeStyle(accentColor.opacity(0.10)) : AnyShapeStyle(Color.clear))
         .clipShape(Capsule())
+        .contentShape(Capsule())
         .overlay(
             Capsule().stroke(isSelected ? accentColor.opacity(0.24) : Color.clear, lineWidth: 1)
         )
@@ -930,7 +1037,7 @@ struct SimpleClipboardLayout {
     var chromeSettingsButtonSize: CGFloat { s(32) }
     var chromeSettingsIconSize: CGFloat { s(14) }
     var chromeSettingsButtonCornerRadius: CGFloat { s(9) }
-    var chromeOverlayTopPadding: CGFloat { s(4) }
+    var chromeOverlayTopPadding: CGFloat { s(12) }
     var chromeOverlayLeading: CGFloat { s(18) }
     var chromeOverlaySpacing: CGFloat { s(6) }
     var workspacePadding: CGFloat { s(18) }
@@ -992,6 +1099,9 @@ struct SimpleClipboardLayout {
     var previewTextSize: CGFloat { s(42) }
     var detailButtonGap: CGFloat { s(12) }
     var heroImageHeight: CGFloat { s(320) }
+    var rowTimeWidth: CGFloat { s(48) }
+    var rowKindWidth: CGFloat { s(72) }
+    var rowFooterWidth: CGFloat { s(138) }
 
     var sidebarMinWidth: CGFloat { s(420) }
     var sidebarMaxWidth: CGFloat { min(s(640), containerSize.width * 0.48) }
@@ -1185,6 +1295,7 @@ struct ClipboardDashboardView: View {
     }
 
     private func delete(_ record: ClipboardRecord) {
+        removeCachedAssets(for: record)
         viewContext.delete(record)
         saveContext()
         if selectedRecordID == record.objectID {
@@ -1194,6 +1305,7 @@ struct ClipboardDashboardView: View {
 
     private func clearAll() {
         for record in records {
+            removeCachedAssets(for: record)
             viewContext.delete(record)
         }
         saveContext()
@@ -1507,39 +1619,43 @@ struct ClipboardCodePane: View {
     private var contentLines: [String] {
         let text = record.detailText.trimmingCharacters(in: .whitespacesAndNewlines)
         let lines = text.split(whereSeparator: \.isNewline).map(String.init)
-        if lines.isEmpty {
-            return [text]
-        }
-        return Array(lines.prefix(8))
+        return lines.isEmpty ? [text] : lines
     }
 
     var body: some View {
-        ScrollView {
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .trailing, spacing: 6) {
-                    ForEach(Array(contentLines.enumerated()), id: \.offset) { index, _ in
-                        Text("\(index + 1)")
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.secondary.opacity(0.7))
-                            .frame(height: 18)
+        GeometryReader { proxy in
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        ForEach(Array(contentLines.enumerated()), id: \.offset) { index, _ in
+                            Text("\(index + 1)")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.secondary.opacity(0.7))
+                                .frame(width: 28, height: 18, alignment: .topTrailing)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(contentLines.enumerated()), id: \.offset) { _, line in
+                            Text(line)
+                                .font(.system(size: 13, design: .monospaced))
+                                .foregroundStyle(.primary)
+                                .frame(height: 18, alignment: .topLeading)
+                                .lineLimit(1)
+                                .fixedSize(horizontal: true, vertical: false)
+                                .textSelection(.enabled)
+                        }
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(contentLines.enumerated()), id: \.offset) { _, line in
-                        Text(line)
-                            .font(.system(size: 13, design: .monospaced))
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: 18, alignment: .leading)
-                    }
-                }
-
-                Spacer(minLength: 0)
+                .padding(14)
+                .frame(
+                    minWidth: proxy.size.width,
+                    minHeight: proxy.size.height,
+                    alignment: .topLeading
+                )
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.white.opacity(0.92))
@@ -1905,37 +2021,56 @@ struct KeyCommandInterceptor: NSViewRepresentable {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var activeTab: SettingsTab = .general
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
     @AppStorage("clipboard.maxItems") private var maxItems = 200
+    @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = false
+    @AppStorage("clipboard.retentionValue") private var retentionValue = 7
+    @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
+    @AppStorage("clipboard.hotkeyEnabled") private var hotkeyEnabled = true
+    @AppStorage("clipboard.hotkeyKeyCode") private var hotkeyKeyCode = HotKeyConfiguration.defaultKeyCode
+    @AppStorage("clipboard.hotkeyModifiers") private var hotkeyModifiers = Int(HotKeyConfiguration.defaultModifiers)
+    @AppStorage("clipboard.hotkeyDisplay") private var hotkeyDisplay = HotKeyConfiguration.defaultDisplay
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Settings")
-                        .font(.title3.bold())
-                    Text("Keep the app light and local.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                settingsTabBar
 
-                Spacer()
+                tabContent
 
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .background(Color.white.opacity(0.70))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
+                Text("The app stores clipboard data locally and keeps working in the background.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
             }
+            .padding(24)
+        }
+        .frame(width: 560, height: 560)
+        .background(
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.96, green: 0.98, blue: 1.0),
+                        Color(red: 0.94, green: 0.95, blue: 0.99)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .opacity(0.72)
 
-            GroupBox {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(.ultraThinMaterial)
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch activeTab {
+        case .general:
+            SettingsTabCard {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle("Launch at login", isOn: $startAtLogin)
                     Toggle("Keep images in history", isOn: $keepImages)
@@ -1949,21 +2084,361 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .padding(.vertical, 2)
             }
+        case .quickOpen:
+            SettingsTabCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle("Enable global hotkey", isOn: $hotkeyEnabled)
 
-            Text("The first MVP stores clipboard data locally and listens in the background.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                    ShortcutRecorderField(
+                        keyCode: $hotkeyKeyCode,
+                        modifiers: $hotkeyModifiers,
+                        displayText: $hotkeyDisplay,
+                        defaultKeyCode: HotKeyConfiguration.defaultKeyCode,
+                        defaultModifiers: Int(HotKeyConfiguration.defaultModifiers),
+                        defaultDisplay: HotKeyConfiguration.defaultDisplay
+                    )
+                }
+            }
+        case .autoClean:
+            SettingsTabCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Toggle("Enable auto cleanup", isOn: $retentionEnabled)
+
+                    HStack(spacing: 10) {
+                        Text("Delete unpinned items older than")
+                            .font(.subheadline)
+
+                        TextField("", value: $retentionValue, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 76)
+                            .multilineTextAlignment(.trailing)
+
+                        Picker("", selection: $retentionUnit) {
+                            ForEach(RetentionUnit.allCases) { unit in
+                                Text(unit.title).tag(unit.rawValue)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+
+                        Spacer()
+                    }
+
+                    Text("Pinned items are never removed by auto cleanup.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var settingsTabBar: some View {
+        HStack(spacing: 10) {
+            ForEach(SettingsTab.allCases) { tab in
+                Button {
+                    activeTab = tab
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(tab.title)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundStyle(activeTab == tab ? Color.white : Color.primary)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(activeTab == tab ? tab.tint : Color.white.opacity(0.72))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(activeTab == tab ? tab.tint.opacity(0.35) : Color.black.opacity(0.08), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
 
             Spacer(minLength: 0)
         }
-        .padding(24)
-        .frame(width: 440, height: 300)
+    }
+
+}
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case quickOpen
+    case autoClean
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .quickOpen: return "Quick Open"
+        case .autoClean: return "Auto Clean"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .general: return "tray.full"
+        case .quickOpen: return "keyboard"
+        case .autoClean: return "clock.arrow.circlepath"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .general: return Color(red: 0.20, green: 0.49, blue: 0.98)
+        case .quickOpen: return Color(red: 0.16, green: 0.68, blue: 0.34)
+        case .autoClean: return Color(red: 0.99, green: 0.67, blue: 0.15)
+        }
+    }
+}
+
+struct SettingsTabCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color.white.opacity(0.80))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.36), lineWidth: 1)
+                )
         )
+        .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+    }
+}
+
+struct ShortcutRecorderField: View {
+    @Binding var keyCode: Int
+    @Binding var modifiers: Int
+    @Binding var displayText: String
+
+    let defaultKeyCode: Int
+    let defaultModifiers: Int
+    let defaultDisplay: String
+
+    @State private var isCapturing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Show or hide the main panel")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Click Change and press a key combo with at least one modifier.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(isCapturing ? "Recording..." : "Change") {
+                    isCapturing = true
+                }
+                .buttonStyle(SettingsSecondaryButtonStyle())
+
+                Button("Reset") {
+                    keyCode = defaultKeyCode
+                    modifiers = defaultModifiers
+                    displayText = defaultDisplay
+                }
+                .buttonStyle(SettingsSecondaryButtonStyle())
+            }
+
+            HStack(spacing: 8) {
+                Image(systemName: "command")
+                    .foregroundStyle(.secondary)
+                Text(displayText.isEmpty ? "No shortcut assigned" : displayText)
+                    .font(.system(.body, design: .monospaced))
+                    .monospacedDigit()
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 38)
+            .background(Color.white.opacity(0.18))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            )
+            .overlay(
+                Group {
+                    if isCapturing {
+                        ShortcutCaptureView(
+                            onCapture: { capturedKeyCode, capturedModifiers, capturedDisplay in
+                                keyCode = capturedKeyCode
+                                modifiers = capturedModifiers
+                                displayText = capturedDisplay
+                                isCapturing = false
+                            },
+                            onCancel: {
+                                isCapturing = false
+                            }
+                        )
+                        .allowsHitTesting(true)
+                    }
+                }
+            )
+        }
+    }
+}
+
+struct ShortcutCaptureView: NSViewRepresentable {
+    let onCapture: (Int, Int, String) -> Void
+    let onCancel: () -> Void
+
+    func makeNSView(context: Context) -> KeyCaptureNSView {
+        KeyCaptureNSView(onCapture: onCapture, onCancel: onCancel)
+    }
+
+    func updateNSView(_ nsView: KeyCaptureNSView, context: Context) {
+        nsView.onCapture = onCapture
+        nsView.onCancel = onCancel
+    }
+
+    final class KeyCaptureNSView: NSView {
+        var onCapture: (Int, Int, String) -> Void
+        var onCancel: () -> Void
+
+        init(onCapture: @escaping (Int, Int, String) -> Void, onCancel: @escaping () -> Void) {
+            self.onCapture = onCapture
+            self.onCancel = onCancel
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        override var acceptsFirstResponder: Bool { true }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            DispatchQueue.main.async { [weak self] in
+                self?.window?.makeFirstResponder(self)
+            }
+        }
+
+        override func keyDown(with event: NSEvent) {
+            let keyCode = Int(event.keyCode)
+            if keyCode == 53 {
+                onCancel()
+                return
+            }
+
+            let modifiers = HotKeyConfiguration.carbonModifiers(from: event.modifierFlags)
+            guard modifiers != 0 else { return }
+
+            onCapture(keyCode, modifiers, HotKeyConfiguration.displayString(for: event))
+        }
+    }
+}
+
+enum HotKeyConfiguration {
+    static let defaultKeyCode = 49
+    static let defaultModifiers = UInt32(cmdKey | shiftKey)
+    static let defaultDisplay = "⇧⌘Space"
+
+    static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> Int {
+        var carbonFlags: UInt32 = 0
+        let modifierFlags = flags.intersection([.command, .option, .control, .shift])
+
+        if modifierFlags.contains(.command) { carbonFlags |= UInt32(cmdKey) }
+        if modifierFlags.contains(.option) { carbonFlags |= UInt32(optionKey) }
+        if modifierFlags.contains(.control) { carbonFlags |= UInt32(controlKey) }
+        if modifierFlags.contains(.shift) { carbonFlags |= UInt32(shiftKey) }
+        return Int(carbonFlags)
+    }
+
+    static func displayString(for event: NSEvent) -> String {
+        let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        var pieces: [String] = []
+        if modifiers.contains(.control) { pieces.append("⌃") }
+        if modifiers.contains(.option) { pieces.append("⌥") }
+        if modifiers.contains(.shift) { pieces.append("⇧") }
+        if modifiers.contains(.command) { pieces.append("⌘") }
+
+        pieces.append(displayName(for: event))
+        return pieces.joined()
+    }
+
+    private static func displayName(for event: NSEvent) -> String {
+        switch Int(event.keyCode) {
+        case 49: return "Space"
+        case 36: return "Return"
+        case 53: return "Esc"
+        case 51: return "Delete"
+        case 123: return "Left"
+        case 124: return "Right"
+        case 125: return "Down"
+        case 126: return "Up"
+        default:
+            let chars = event.charactersIgnoringModifiers?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let chars, !chars.isEmpty {
+                return chars.uppercased()
+            }
+            return "Key \(event.keyCode)"
+        }
+    }
+}
+
+struct RetentionRule {
+    let isEnabled: Bool
+    let value: Int
+    let unit: RetentionUnit
+
+    var cutoffDate: Date? {
+        guard isEnabled, value > 0 else { return nil }
+        let interval = TimeInterval(value) * unit.secondsMultiplier
+        return Date().addingTimeInterval(-interval)
+    }
+
+    static func current() -> RetentionRule {
+        let defaults = UserDefaults.standard
+        let isEnabled = defaults.object(forKey: "clipboard.retentionEnabled") as? Bool ?? false
+        let value = defaults.object(forKey: "clipboard.retentionValue") as? Int ?? 7
+        let unit = RetentionUnit(rawValue: defaults.string(forKey: "clipboard.retentionUnit") ?? RetentionUnit.day.rawValue) ?? .day
+        return RetentionRule(isEnabled: isEnabled, value: value, unit: unit)
+    }
+}
+
+enum RetentionUnit: String, CaseIterable, Identifiable {
+    case minute
+    case hour
+    case day
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .minute: return "Minutes"
+        case .hour: return "Hours"
+        case .day: return "Days"
+        }
+    }
+
+    var secondsMultiplier: TimeInterval {
+        switch self {
+        case .minute: return 60
+        case .hour: return 60 * 60
+        case .day: return 60 * 60 * 24
+        }
     }
 }
 
@@ -2007,11 +2482,11 @@ enum ClipboardFilter: String, CaseIterable, Identifiable {
 
     var accentColor: Color {
         switch self {
-        case .all: return Color.secondary
-        case .text: return Color(red: 0.20, green: 0.49, blue: 0.98)
-        case .links: return Color(red: 0.16, green: 0.68, blue: 0.34)
-        case .images: return Color(red: 0.42, green: 0.29, blue: 0.94)
-        case .code: return Color(red: 0.20, green: 0.49, blue: 0.98)
+        case .all: return Color(red: 0.96, green: 0.20, blue: 0.28)
+        case .text: return Color(red: 0.96, green: 0.48, blue: 0.18)
+        case .links: return Color(red: 0.11, green: 0.66, blue: 0.53)
+        case .images: return Color(red: 0.16, green: 0.54, blue: 0.96)
+        case .code: return Color(red: 0.60, green: 0.35, blue: 0.95)
         case .files: return Color(red: 0.99, green: 0.67, blue: 0.15)
         case .colors: return Color.orange
         case .other: return Color.secondary
@@ -2023,6 +2498,7 @@ enum ClipboardContentKind: String {
     case text
     case link
     case image
+    case code
     case files
     case unknown
 
@@ -2031,6 +2507,7 @@ enum ClipboardContentKind: String {
         case .text: return "Text"
         case .link: return "Link"
         case .image: return "Image"
+        case .code: return "Code"
         case .files: return "Files"
         case .unknown: return "Other"
         }
@@ -2041,6 +2518,7 @@ enum ClipboardContentKind: String {
         case .text: return "text.quote"
         case .link: return "link"
         case .image: return "photo"
+        case .code: return "chevron.left.forwardslash.chevron.right"
         case .files: return "doc"
         case .unknown: return "questionmark.circle"
         }
@@ -2051,6 +2529,7 @@ enum ClipboardContentKind: String {
         case .text: return Color(red: 0.96, green: 0.48, blue: 0.18)
         case .link: return Color(red: 0.11, green: 0.66, blue: 0.53)
         case .image: return Color(red: 0.16, green: 0.54, blue: 0.96)
+        case .code: return Color(red: 0.60, green: 0.35, blue: 0.95)
         case .files: return Color(red: 0.99, green: 0.67, blue: 0.15)
         case .unknown: return Color.secondary
         }
@@ -2092,6 +2571,19 @@ extension ClipboardRecord {
         return appName
     }
 
+    var sourceAppIcon: NSImage? {
+        if let bundleId = sourceBundleId,
+           let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId) {
+            let icon = NSWorkspace.shared.icon(forFile: appURL.path)
+            icon.size = NSSize(width: 128, height: 128)
+            return icon
+        }
+
+        let genericAppIcon = NSWorkspace.shared.icon(for: UTType.application)
+        genericAppIcon.size = NSSize(width: 128, height: 128)
+        return genericAppIcon
+    }
+
     var detailText: String {
         if let fullText, !fullText.isEmpty {
             return fullText
@@ -2106,7 +2598,7 @@ extension ClipboardRecord {
 
     var rowSnippet: String {
         switch kind {
-        case .text, .unknown:
+        case .text, .code, .unknown:
             return detailText
         case .link:
             return fullText ?? previewTitle
@@ -2129,6 +2621,10 @@ extension ClipboardRecord {
         Self.shortFormatter.string(from: createdAt ?? Date())
     }
 
+    var timeLabelPrecise: String {
+        Self.preciseFormatter.string(from: createdAt ?? Date())
+    }
+
     static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -2140,6 +2636,13 @@ extension ClipboardRecord {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
         formatter.timeStyle = .short
+        return formatter
+    }()
+
+    static let preciseFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
         return formatter
     }()
 
@@ -2169,7 +2672,7 @@ extension ClipboardRecord {
         case .images:
             predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.image.rawValue))
         case .code:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@ OR contentTypeRaw == %@", ClipboardContentKind.text.rawValue, ClipboardContentKind.unknown.rawValue))
+            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.code.rawValue))
         case .files:
             predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.files.rawValue))
         case .colors:
@@ -2192,9 +2695,15 @@ extension NSImage {
     }
 }
 
+private func removeCachedAssets(for record: ClipboardRecord) {
+    guard let imagePath = record.imagePath, !imagePath.isEmpty else { return }
+    try? FileManager.default.removeItem(atPath: imagePath)
+}
+
 final class ClipboardMonitor: ObservableObject {
     private let context: NSManagedObjectContext
     private var timer: Timer?
+    private var cleanupTimer: Timer?
     private var lastChangeCount: Int = -1
     private var lastRecordedHash: String?
     private var suppressionHash: String?
@@ -2213,11 +2722,21 @@ final class ClipboardMonitor: ObservableObject {
             self?.poll()
         }
         RunLoop.main.add(timer!, forMode: .common)
+
+        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            self?.pruneExpiredRecords()
+        }
+        if let cleanupTimer {
+            RunLoop.main.add(cleanupTimer, forMode: .common)
+        }
+        pruneExpiredRecords()
     }
 
     func stop() {
         timer?.invalidate()
         timer = nil
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
     }
 
     func copy(_ record: ClipboardRecord) {
@@ -2226,7 +2745,7 @@ final class ClipboardMonitor: ObservableObject {
         pasteboard.clearContents()
 
         switch kind {
-        case .text, .unknown:
+        case .text, .code, .unknown:
             pasteboard.setString(record.fullText ?? record.displayText ?? "", forType: .string)
         case .link:
             let value = record.fullText ?? record.displayText ?? ""
@@ -2275,6 +2794,21 @@ final class ClipboardMonitor: ObservableObject {
         if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty {
             let names = fileURLs.map { $0.lastPathComponent }
             let fullText = fileURLs.map(\.path).joined(separator: "\n")
+            let isSingleImageFile = fileURLs.count == 1 && Self.imageFileExtensions.contains(fileURLs[0].pathExtension.lowercased())
+
+            if isSingleImageFile, let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let pngData = image.pngData() {
+                let path = saveImageData(pngData)
+                return ClipboardSnapshot(
+                    kind: .image,
+                    displayText: "Image",
+                    fullText: path?.path,
+                    imagePath: path?.path,
+                    sourceAppName: appName,
+                    sourceBundleId: bundleId,
+                    hash: Self.hash(kind: .image, data: pngData)
+                )
+            }
+
             return ClipboardSnapshot(
                 kind: .files,
                 displayText: names.joined(separator: ", "),
@@ -2314,7 +2848,14 @@ final class ClipboardMonitor: ObservableObject {
 
         if let text = pasteboard.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            let kind: ClipboardContentKind = isLikelyURL(trimmed) ? .link : .text
+            let kind: ClipboardContentKind
+            if isLikelyURL(trimmed) {
+                kind = .link
+            } else if isLikelyCode(trimmed) {
+                kind = .code
+            } else {
+                kind = .text
+            }
             return ClipboardSnapshot(
                 kind: kind,
                 displayText: previewText(from: trimmed),
@@ -2349,21 +2890,35 @@ final class ClipboardMonitor: ObservableObject {
 
             do {
                 try self.context.save()
-                self.pruneIfNeededLocked()
+                self.pruneExpiredRecordsLocked()
             } catch {
                 NSLog("Failed to save clipboard record: \(error.localizedDescription)")
             }
         }
     }
 
-    private func pruneIfNeededLocked() {
+    private func pruneExpiredRecords() {
+        context.perform { [weak self] in
+            self?.pruneExpiredRecordsLocked()
+        }
+    }
+
+    private func pruneExpiredRecordsLocked() {
+        let retention = RetentionRule.current()
+        guard retention.isEnabled, let cutoff = retention.cutoffDate else { return }
+
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
-        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-        request.fetchOffset = 200
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "isPinned == NO"),
+            NSPredicate(format: "createdAt < %@", cutoff as NSDate)
+        ])
 
         do {
-            let oldRecords = try self.context.fetch(request)
-            oldRecords.forEach { self.context.delete($0) }
+            let expiredRecords = try self.context.fetch(request)
+            expiredRecords.forEach { record in
+                removeCachedAssets(for: record)
+                self.context.delete(record)
+            }
             if self.context.hasChanges {
                 try self.context.save()
             }
@@ -2414,6 +2969,48 @@ final class ClipboardMonitor: ObservableObject {
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 
+    private func isLikelyCode(_ text: String) -> Bool {
+        let lines = text.split(whereSeparator: \.isNewline)
+        guard !lines.isEmpty else { return false }
+
+        let codeKeywords = [
+            "func ", "class ", "struct ", "enum ", "protocol ", "extension ",
+            "import ", "let ", "var ", "const ", "public ", "private ",
+            "if ", "for ", "while ", "switch ", "case ", "return ",
+            "def ", "from ", "export ", "interface ", "typealias "
+        ]
+        let codeSymbols = ["{", "}", ";", "=>", "->", "==", "!=", "&&", "||", "<-", ":</", "</", "</", "(", ")", "[", "]"]
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if lines.count >= 2 {
+            if lines.contains(where: { $0.hasPrefix("    ") || $0.hasPrefix("\t") }) {
+                return true
+            }
+
+            if lines.contains(where: { $0.contains("{") || $0.contains("}") || $0.contains(";") }) {
+                return true
+            }
+        }
+
+        let lowercased = trimmed.lowercased()
+        if codeKeywords.contains(where: { lowercased.contains($0) }) {
+            return true
+        }
+
+        let symbolHits = codeSymbols.reduce(0) { count, symbol in
+            count + (trimmed.contains(symbol) ? 1 : 0)
+        }
+        if symbolHits >= 2 {
+            return true
+        }
+
+        if trimmed.contains("```") || trimmed.contains("    ") {
+            return true
+        }
+
+        return false
+    }
+
     private func previewText(from text: String) -> String {
         let limit = 120
         guard text.count > limit else { return text }
@@ -2435,6 +3032,88 @@ final class ClipboardMonitor: ObservableObject {
     }
 }
 
+final class GlobalHotkeyManager: ObservableObject {
+    private var hotKeyRef: EventHotKeyRef?
+    private var eventHandler: EventHandlerRef?
+    private var defaultsObserver: NSObjectProtocol?
+    private let hotKeyID = EventHotKeyID(signature: OSType(0x434C444B), id: 1)
+
+    init() {
+        installEventHandler()
+        defaultsObserver = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshRegistration()
+        }
+        refreshRegistration()
+    }
+
+    deinit {
+        unregister()
+        if let defaultsObserver {
+            NotificationCenter.default.removeObserver(defaultsObserver)
+        }
+    }
+
+    private func refreshRegistration() {
+        unregister()
+
+        let defaults = UserDefaults.standard
+        let enabled = defaults.object(forKey: "clipboard.hotkeyEnabled") as? Bool ?? true
+        guard enabled else { return }
+
+        let keyCode = UInt32(defaults.object(forKey: "clipboard.hotkeyKeyCode") as? Int ?? HotKeyConfiguration.defaultKeyCode)
+        let modifiers = UInt32(defaults.object(forKey: "clipboard.hotkeyModifiers") as? Int ?? Int(HotKeyConfiguration.defaultModifiers))
+        guard keyCode != 0, modifiers != 0 else { return }
+
+        var hotKeyRef: EventHotKeyRef?
+        let status = RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        if status == noErr {
+            self.hotKeyRef = hotKeyRef
+        } else {
+            NSLog("Failed to register global hotkey: \(status)")
+        }
+    }
+
+    private func unregister() {
+        if let hotKeyRef {
+            UnregisterEventHotKey(hotKeyRef)
+            self.hotKeyRef = nil
+        }
+    }
+
+    private func installEventHandler() {
+        let eventType = EventTypeSpec(eventClass: UInt32(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        let userData = Unmanaged.passUnretained(self).toOpaque()
+
+        let status = InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, _, userData in
+                guard let userData else { return noErr }
+                _ = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .clickDockTogglePanelRequested, object: nil)
+                }
+                return noErr
+            },
+            1,
+            [eventType],
+            userData,
+            &eventHandler
+        )
+
+        if status != noErr {
+            NSLog("Failed to install hotkey event handler: \(status)")
+        }
+    }
+}
+
+extension Notification.Name {
+    static let clickDockTogglePanelRequested = Notification.Name("clickDockTogglePanelRequested")
+}
+
 private struct ClipboardSnapshot {
     let kind: ClipboardContentKind
     let displayText: String
@@ -2443,6 +3122,12 @@ private struct ClipboardSnapshot {
     let sourceAppName: String?
     let sourceBundleId: String?
     let hash: String
+}
+
+extension ClipboardMonitor {
+    fileprivate static let imageFileExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "gif", "heic", "heif", "tif", "tiff", "bmp", "webp", "avif", "icns"
+    ]
 }
 
 private struct PrimaryActionButtonStyle: ButtonStyle {
@@ -2456,6 +3141,21 @@ private struct PrimaryActionButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .background(Color.accentColor.opacity(configuration.isPressed ? 0.76 : 1.0))
             .clipShape(Capsule())
+    }
+}
+
+private struct SettingsSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(configuration.isPressed ? 0.56 : 0.80))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            )
     }
 }
 
