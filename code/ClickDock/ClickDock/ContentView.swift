@@ -124,7 +124,7 @@ struct WindowChromeOverlay: View {
     var body: some View {
         HStack(alignment: .center, spacing: layout.chromeButtonSpacing) {
             ChromeButton(color: Color(red: 1.0, green: 0.37, blue: 0.31), symbolName: "xmark", size: layout.chromeButtonSize) {
-                window?.performClose(nil)
+                window?.orderOut(nil)
             }
 
             ChromeButton(color: Color(red: 1.0, green: 0.80, blue: 0.20), symbolName: "minus", size: layout.chromeButtonSize) {
