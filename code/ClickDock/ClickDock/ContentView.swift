@@ -183,6 +183,7 @@ struct SimpleClipboardWorkspaceView: View {
     private let onOpenSettings: () -> Void
     @State private var sidebarWidth: CGFloat = 520
     @State private var isSearchFieldFocused: Bool = false
+    @State private var lastSelectedImageCachePaths: [String] = []
     private static let fetchBatchSize = 40
 
     private var layout: SimpleClipboardLayout { SimpleClipboardLayout(containerSize: containerSize) }
@@ -281,12 +282,16 @@ struct SimpleClipboardWorkspaceView: View {
         )
         .onAppear {
             syncSelection()
+            syncSelectedImageCachePaths()
         }
         .onChange(of: records.count) { _ in
             syncSelection()
         }
         .onChange(of: searchText) { _ in
             syncSelection()
+        }
+        .onChange(of: selectedRecordID) { _ in
+            syncSelectedImageCachePaths()
         }
     }
 
@@ -310,6 +315,13 @@ struct SimpleClipboardWorkspaceView: View {
         }
 
         selectedRecordID = records.first?.objectID
+    }
+
+    private func syncSelectedImageCachePaths() {
+        if !lastSelectedImageCachePaths.isEmpty {
+            ClipboardImageCache.shared.remove(paths: lastSelectedImageCachePaths)
+        }
+        lastSelectedImageCachePaths = currentSelectedRecord?.cachedImagePaths ?? []
     }
 
     private var navigationFilters: [ClipboardFilter] {
@@ -825,7 +837,7 @@ struct ClipboardDetailInspector: View {
         Group {
             switch record.kind {
             case .image:
-                if let preview = record.originalImage ?? record.previewImage {
+                if let preview = record.detailImage(maxPixelSize: layout.heroImageHeight * 2) {
                     VStack(alignment: .leading, spacing: 12) {
                         imagePreview(preview)
                     }
@@ -1162,6 +1174,7 @@ struct ClipboardDashboardView: View {
 
     @Binding private var filterSelection: ClipboardFilter
     @Binding private var selectedRecordID: NSManagedObjectID?
+    @State private var lastSelectedImageCachePaths: [String] = []
     let activeFilter: ClipboardFilter
     let containerSize: CGSize
     private var layout: DashboardLayout { DashboardLayout(containerSize: containerSize) }
@@ -1216,6 +1229,12 @@ struct ClipboardDashboardView: View {
                records.first(where: { $0.objectID == selectedRecordID }) == nil {
                 self.selectedRecordID = nil
             }
+        }
+        .onAppear {
+            syncSelectedImageCachePaths()
+        }
+        .onChange(of: selectedRecordID) { _ in
+            syncSelectedImageCachePaths()
         }
     }
 
@@ -1318,6 +1337,13 @@ struct ClipboardDashboardView: View {
         record.updatedAt = Date()
         record.usageCount += 1
         saveContext()
+    }
+
+    private func syncSelectedImageCachePaths() {
+        if !lastSelectedImageCachePaths.isEmpty {
+            ClipboardImageCache.shared.remove(paths: lastSelectedImageCachePaths)
+        }
+        lastSelectedImageCachePaths = selectedRecord?.cachedImagePaths ?? []
     }
 
     private func saveContext() {
@@ -1515,7 +1541,7 @@ struct ClipboardHeroDetailPanel: View {
 
     private var previewPane: some View {
         Group {
-            if record.kind == .image, let nsImage = record.originalImage ?? record.previewImage {
+            if record.kind == .image, let nsImage = record.detailImage(maxPixelSize: layout.heroPreviewMinHeight * 2) {
                 Image(nsImage: nsImage)
                     .resizable()
                     .scaledToFit()
@@ -2580,6 +2606,18 @@ extension ClipboardRecord {
         ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
     }
 
+    var cachedImagePaths: [String] {
+        [imagePath, thumbnailPathValue].compactMap { path in
+            guard let path, !path.isEmpty else { return nil }
+            return path
+        }
+    }
+
+    func detailImage(maxPixelSize: CGFloat) -> NSImage? {
+        guard kind == .image, let imagePath else { return nil }
+        return ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize) ?? previewImage
+    }
+
     var detailText: String {
         if let fullText, !fullText.isEmpty {
             return fullText
@@ -2732,8 +2770,33 @@ private final class ClipboardImageCache {
         return image
     }
 
+    func downsampledImage(at path: String, maxPixelSize: CGFloat) -> NSImage? {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let pixelSize = max(1, maxPixelSize * scale)
+        guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else {
+            return nil
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: pixelSize
+        ]
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+
+        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+    }
+
     func remove(path: String) {
         cache.removeObject(forKey: path as NSString)
+    }
+
+    func remove(paths: [String]) {
+        paths.forEach { cache.removeObject(forKey: $0 as NSString) }
     }
 }
 
