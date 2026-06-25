@@ -2618,9 +2618,9 @@ struct ShortcutCaptureView: NSViewRepresentable {
 }
 
 enum HotKeyConfiguration {
-    static let defaultKeyCode = 49
-    static let defaultModifiers = UInt32(cmdKey | shiftKey)
-    static let defaultDisplay = "⇧⌘Space"
+    static let defaultKeyCode = 12
+    static let defaultModifiers = UInt32(controlKey)
+    static let defaultDisplay = "⌃Q"
 
     static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> Int {
         var carbonFlags: UInt32 = 0
