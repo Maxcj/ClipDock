@@ -660,14 +660,18 @@ struct ClipboardHistoryRow: View {
                     .frame(width: layout.rowTimeWidth, alignment: .trailing)
 
                 HStack(spacing: 4) {
-                    Image(systemName: record.kind.symbolName)
-                        .font(.system(size: layout.rowTagSize, weight: .semibold))
-                        .foregroundStyle(record.kind.accent)
+                    if record.kind == .files {
+                        fileTypeBadgeIcon
+                    } else {
+                        Image(systemName: record.kind.symbolName)
+                            .font(.system(size: layout.rowTagSize, weight: .semibold))
+                            .foregroundStyle(record.kind.accent)
 
-                    Text(record.kind.title)
-                        .font(.system(size: layout.rowTagSize, weight: .medium))
-                        .foregroundStyle(record.kind.accent)
-                        .lineLimit(1)
+                        Text(record.kind.title)
+                            .font(.system(size: layout.rowTagSize, weight: .medium))
+                            .foregroundStyle(record.kind.accent)
+                            .lineLimit(1)
+                    }
                 }
                 .frame(width: layout.rowKindWidth, alignment: .leading)
             }
@@ -701,17 +705,42 @@ struct ClipboardHistoryRow: View {
         RoundedRectangle(cornerRadius: layout.rowFilePreviewCornerRadius, style: .continuous)
             .fill(Color.white.opacity(0.18))
             .overlay(
-                VStack(spacing: 8) {
-                    Image(systemName: "doc")
-                        .font(.system(size: layout.rowFileIconSize, weight: .regular))
-                        .foregroundStyle(.secondary.opacity(0.82))
+                Group {
+                    if let icon = record.fileIconImage {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .interpolation(.high)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: layout.rowImagePreviewWidth * 0.62, height: layout.rowImagePreviewHeight * 0.62)
+                    } else {
+                        VStack(spacing: 8) {
+                            Image(systemName: "doc")
+                                .font(.system(size: layout.rowFileIconSize, weight: .regular))
+                                .foregroundStyle(.secondary.opacity(0.82))
 
-                    Text(record.kind.title.uppercased())
-                        .font(.system(size: layout.rowTagSize, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                            Text(record.kind.title.uppercased())
+                                .font(.system(size: layout.rowTagSize, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             )
             .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
+    }
+
+    @ViewBuilder
+    private var fileTypeBadgeIcon: some View {
+        if let icon = record.fileIconImage {
+            Image(nsImage: icon)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: layout.rowTagSize + 4, height: layout.rowTagSize + 4)
+        } else {
+            Image(systemName: "doc")
+                .font(.system(size: layout.rowTagSize, weight: .semibold))
+                .foregroundStyle(record.kind.accent)
+        }
     }
 
     private var kindBadge: some View {
@@ -834,9 +863,9 @@ struct ClipboardDetailInspector: View {
     }
 
     private func preview(for record: ClipboardRecord) -> some View {
-        Group {
-            switch record.kind {
-            case .image:
+        switch record.kind {
+        case .image:
+            return AnyView(
                 AsyncDetailImageView(
                     imagePath: record.imagePath,
                     placeholderTitle: record.previewTitle,
@@ -844,7 +873,9 @@ struct ClipboardDetailInspector: View {
                     cornerRadius: 18,
                     fallbackHeight: 240
                 )
-            case .link:
+            )
+        case .link:
+            return AnyView(
                 VStack(alignment: .leading, spacing: 14) {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.white.opacity(0.18))
@@ -864,32 +895,24 @@ struct ClipboardDetailInspector: View {
                         .frame(height: 220)
                 }
                 .textSelection(.enabled)
-            case .files:
-                HStack(spacing: 14) {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(record.kind.accent.opacity(0.12))
-                        .overlay(
-                            Image(systemName: "doc")
-                                .font(.system(size: 38, weight: .regular))
-                                .foregroundStyle(record.kind.accent)
-                        )
-                        .frame(width: 120, height: 140)
-
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(record.previewTitle)
-                            .font(.system(size: 28, weight: .semibold))
-                        Text("File ready to copy or open from Finder.")
-                            .font(.system(size: layout.detailSubtitleSize))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-                }
-                .frame(height: 240, alignment: .center)
-            case .code:
+            )
+        case .files:
+            return AnyView(
+                FileDetailPreview(
+                    record: record,
+                    subtitleFontSize: layout.detailSubtitleSize,
+                    footerFontSize: layout.footerFontSize,
+                    iconSize: 112,
+                    height: 240
+                )
+            )
+        case .code:
+            return AnyView(
                 ClipboardCodePane(record: record)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            case .text, .unknown:
+            )
+        case .text, .unknown:
+            return AnyView(
                 ScrollView(.vertical, showsIndicators: false) {
                     Text(record.detailText)
                         .font(.system(size: layout.previewTextSize, weight: .semibold))
@@ -901,7 +924,7 @@ struct ClipboardDetailInspector: View {
                         .textSelection(.enabled)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            }
+            )
         }
     }
 
@@ -1577,6 +1600,14 @@ struct ClipboardHeroDetailPanel: View {
                         endPoint: .bottomTrailing
                     )
                 )
+            } else if record.kind == .files {
+                FileDetailPreview(
+                    record: record,
+                    subtitleFontSize: layout.bodySize,
+                    footerFontSize: layout.footerFontSize,
+                    iconSize: 144,
+                    height: layout.heroPreviewMinHeight
+                )
             } else {
                 ClipboardCodePane(record: record)
             }
@@ -1722,6 +1753,79 @@ private struct AsyncDetailImageView: View {
                 endPoint: .bottomTrailing
             )
         )
+    }
+}
+
+private struct FileDetailPreview: View {
+    let record: ClipboardRecord
+    let subtitleFontSize: CGFloat
+    let footerFontSize: CGFloat
+    let iconSize: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        HStack(spacing: 18) {
+            fileIcon
+                .frame(width: max(120, iconSize + 24), height: height)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: record.kind.symbolName)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(record.kind.accent)
+                    Text(record.kind.title)
+                        .font(.system(size: footerFontSize, weight: .semibold))
+                        .foregroundStyle(record.kind.accent)
+                }
+
+                Text(record.previewTitle)
+                    .font(.system(size: 28, weight: .semibold))
+                    .lineLimit(3)
+
+                Text("File ready to copy or open from Finder.")
+                    .font(.system(size: subtitleFontSize))
+                    .foregroundStyle(.secondary)
+
+                if record.kind == .files {
+                    Text(record.fileSizeLabel)
+                        .font(.system(size: footerFontSize, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: height, alignment: .center)
+    }
+
+    @ViewBuilder
+    private var fileIcon: some View {
+        if let icon = record.fileIconImage {
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.white.opacity(0.22))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: iconSize, height: iconSize)
+            }
+        } else {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(record.kind.accent.opacity(0.12))
+                .overlay(
+                    Image(systemName: "doc")
+                        .font(.system(size: iconSize * 0.38, weight: .regular))
+                        .foregroundStyle(record.kind.accent)
+                )
+        }
     }
 }
 
@@ -2691,6 +2795,11 @@ extension ClipboardRecord {
         ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
     }
 
+    var fileIconImage: NSImage? {
+        guard kind == .files else { return nil }
+        return ClipboardFileIconCache.shared.icon(for: fileRepresentativeURL)
+    }
+
     var imageFormatLabel: String {
         guard kind == .image else { return "-" }
         let path = imagePath ?? thumbnailPathValue
@@ -2722,6 +2831,30 @@ extension ClipboardRecord {
     func detailImage(maxPixelSize: CGFloat) -> NSImage? {
         guard kind == .image, let imagePath else { return nil }
         return ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize) ?? previewImage
+    }
+
+    var fileRepresentativeURL: URL? {
+        guard kind == .files,
+              let assetPath = assetPathValue,
+              !assetPath.isEmpty else {
+            return nil
+        }
+
+        let folderURL = URL(fileURLWithPath: assetPath)
+        let keys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey]
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: folderURL,
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+
+        let files = contents.filter { url in
+            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
+        }.sorted { $0.lastPathComponent < $1.lastPathComponent }
+
+        return files.first
     }
 
     var detailText: String {
@@ -3004,6 +3137,196 @@ private final class ClipboardAppIconCache {
         icon.size = NSSize(width: 128, height: 128)
         cache.setObject(icon, forKey: key as NSString)
         return icon
+    }
+}
+
+private final class ClipboardFileIconCache {
+    static let shared = ClipboardFileIconCache()
+
+    private let cache = NSCache<NSString, NSImage>()
+
+    private init() {
+        cache.countLimit = 96
+    }
+
+    func icon(for url: URL?) -> NSImage? {
+        let contentType = Self.contentType(for: url)
+        let cacheKey = contentType?.identifier ?? "__generic_file__"
+
+        if let cached = cache.object(forKey: cacheKey as NSString) {
+            return cached
+        }
+
+        let icon = NSWorkspace.shared.icon(for: contentType ?? .data)
+        icon.size = NSSize(width: 256, height: 256)
+        cache.setObject(icon, forKey: cacheKey as NSString)
+        return icon
+    }
+
+    private static func contentType(for url: URL?) -> UTType? {
+        guard let url else { return nil }
+
+        if let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .contentTypeKey]),
+           let contentType = values.contentType {
+            return contentType
+        }
+
+        if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            return .folder
+        }
+
+        let ext = url.pathExtension.lowercased()
+        if let mappedExtension = mappedPreferredExtension(forExtension: ext),
+           let type = UTType(filenameExtension: mappedExtension) {
+            return type
+        }
+
+        if !ext.isEmpty, let type = UTType(filenameExtension: ext) {
+            return type
+        }
+
+        return nil
+    }
+
+    private static func mappedPreferredExtension(forExtension ext: String) -> String? {
+        switch ext {
+        case "pdf":
+            return "pdf"
+        case "rtf":
+            return "rtf"
+        case "txt", "text", "log", "md", "markdown", "rst", "ini", "conf", "cfg":
+            return "txt"
+        case "csv", "tsv":
+            return "csv"
+        case "json":
+            return "json"
+        case "xml", "plist":
+            return "xml"
+        case "html", "htm":
+            return "html"
+        case "yaml", "yml":
+            return "yaml"
+        case "swift":
+            return "swift"
+        case "c":
+            return "c"
+        case "h", "hh", "hpp":
+            return "h"
+        case "m":
+            return "m"
+        case "mm":
+            return "mm"
+        case "js", "mjs", "cjs":
+            return "js"
+        case "ts", "mts", "cts":
+            return "ts"
+        case "jsx":
+            return "jsx"
+        case "tsx":
+            return "tsx"
+        case "py":
+            return "py"
+        case "sh", "bash", "zsh", "fish":
+            return "sh"
+        case "sql":
+            return "sql"
+        case "zip":
+            return "zip"
+        case "gz", "tgz":
+            return "gz"
+        case "tar":
+            return "tar"
+        case "7z":
+            return "7z"
+        case "rar":
+            return "rar"
+        case "dmg":
+            return "dmg"
+        case "pkg":
+            return "pkg"
+        case "iso":
+            return "iso"
+        case "pages":
+            return "pages"
+        case "numbers":
+            return "numbers"
+        case "key":
+            return "key"
+        case "doc":
+            return "doc"
+        case "docx":
+            return "docx"
+        case "dotx":
+            return "dotx"
+        case "xls":
+            return "xls"
+        case "xlsx":
+            return "xlsx"
+        case "xlsm":
+            return "xlsm"
+        case "xltx":
+            return "xltx"
+        case "ppt":
+            return "ppt"
+        case "pptx":
+            return "pptx"
+        case "odp":
+            return "odp"
+        case "odt":
+            return "odt"
+        case "ods":
+            return "ods"
+        case "png":
+            return "png"
+        case "jpg", "jpeg", "jpe":
+            return "jpg"
+        case "gif":
+            return "gif"
+        case "webp":
+            return "webp"
+        case "heic":
+            return "heic"
+        case "heif":
+            return "heif"
+        case "tif", "tiff":
+            return "tiff"
+        case "bmp":
+            return "bmp"
+        case "svg":
+            return "svg"
+        case "psd":
+            return "psd"
+        case "mp3":
+            return "mp3"
+        case "aac":
+            return "aac"
+        case "m4a":
+            return "m4a"
+        case "wav":
+            return "wav"
+        case "aiff", "aif":
+            return "aiff"
+        case "flac":
+            return "flac"
+        case "mp4":
+            return "mp4"
+        case "m4v":
+            return "m4v"
+        case "mov":
+            return "mov"
+        case "avi":
+            return "avi"
+        case "mkv":
+            return "mkv"
+        case "webm":
+            return "webm"
+        case "srt":
+            return "srt"
+        case "vtt":
+            return "vtt"
+        default:
+            return nil
+        }
     }
 }
 
