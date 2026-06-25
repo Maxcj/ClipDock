@@ -245,10 +245,7 @@ struct SimpleClipboardWorkspaceView: View {
                 onCopy: copy(_:),
                 onDelete: delete(_:),
                 onTogglePin: togglePin(_:),
-                onOpenSettings: onOpenSettings,
-                onClearAll: {
-                    self.clearAll()
-                }
+                onOpenSettings: onOpenSettings
             )
             .frame(width: layout.clampedSidebarWidth(sidebarWidth))
 
@@ -463,7 +460,6 @@ struct ClipboardHistorySidebar: View {
     let onDelete: (ClipboardRecord) -> Void
     let onTogglePin: (ClipboardRecord) -> Void
     let onOpenSettings: () -> Void
-    let onClearAll: () -> Void
     @FocusState private var isSearchFieldFocused: Bool
 
     private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files]
@@ -474,7 +470,6 @@ struct ClipboardHistorySidebar: View {
         VStack(alignment: .leading, spacing: layout.sidebarSpacing) {
             HStack(spacing: 10) {
                 searchField
-                clearHistoryButton
                 settingsButton
             }
 
@@ -645,27 +640,6 @@ struct ClipboardHistorySidebar: View {
                         .stroke(Color.black.opacity(0.07), lineWidth: 1)
                 )
         )
-    }
-
-    private var clearHistoryButton: some View {
-        Button {
-            onClearAll()
-        } label: {
-            Image(systemName: "trash")
-                .font(.system(size: layout.searchHintSize, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: layout.searchHeight, height: layout.searchHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.18))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
-                        )
-                )
-        }
-        .buttonStyle(.plain)
-        .help("Clear clipboard history")
     }
 
     private var settingsButton: some View {
