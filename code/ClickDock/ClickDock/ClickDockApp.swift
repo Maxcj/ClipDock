@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 enum WindowLayout {
     static let defaultSize = CGSize(width: 1008, height: 717)
@@ -43,5 +44,32 @@ struct ClickDockApp: App {
             SettingsView()
         }
         .defaultSize(width: 560, height: 560)
+
+        MenuBarExtra {
+            StatusBarMenuView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+        } label: {
+            Image(systemName: "tray.full")
+        }
+    }
+}
+
+private struct StatusBarMenuView: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("显示/隐藏主窗口") {
+            NotificationCenter.default.post(name: .clickDockTogglePanelRequested, object: nil)
+        }
+
+        Button("设置") {
+            openWindow(id: "settings")
+        }
+
+        Divider()
+
+        Button("退出") {
+            NSApplication.shared.terminate(nil)
+        }
     }
 }
