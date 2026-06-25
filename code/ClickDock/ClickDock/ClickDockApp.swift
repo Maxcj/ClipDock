@@ -47,15 +47,17 @@ struct ClipDockApp: App {
 
         Window("Settings", id: "settings") {
             SettingsView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(loginItemManager)
         }
-        .defaultSize(width: 560, height: 560)
+        .defaultSize(width: 720, height: 500)
 
         MenuBarExtra {
             StatusBarMenuView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         } label: {
-            Image(systemName: "tray.full")
+            Image("StatusBarIcon")
+                .renderingMode(.original)
         }
     }
 }
