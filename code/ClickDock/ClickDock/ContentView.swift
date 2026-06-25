@@ -2481,6 +2481,24 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        case .about:
+            SettingsTabCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(appName)
+                            .font(.headline)
+                        Text("A lightweight clipboard manager for fast copy and paste workflows.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Divider()
+
+                    LabeledContent("Author:", value: appAuthor)
+                    LabeledContent("Version:", value: appVersion)
+                }
+            }
         case .quickOpen:
             SettingsTabCard {
                 VStack(alignment: .leading, spacing: 14) {
@@ -2566,6 +2584,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case quickOpen
     case autoClean
+    case about
 
     var id: String { rawValue }
 
@@ -2574,6 +2593,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "General"
         case .quickOpen: return "Quick Open"
         case .autoClean: return "Auto Clean"
+        case .about: return "About"
         }
     }
 
@@ -2582,6 +2602,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "tray.full"
         case .quickOpen: return "keyboard"
         case .autoClean: return "clock.arrow.circlepath"
+        case .about: return "info.circle"
         }
     }
 
@@ -2590,6 +2611,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return Color(red: 0.20, green: 0.49, blue: 0.98)
         case .quickOpen: return Color(red: 0.16, green: 0.68, blue: 0.34)
         case .autoClean: return Color(red: 0.99, green: 0.67, blue: 0.15)
+        case .about: return Color(red: 0.61, green: 0.39, blue: 0.95)
         }
     }
 }
@@ -2616,6 +2638,21 @@ struct SettingsTabCard<Content: View>: View {
                 )
         )
         .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+    }
+}
+
+private extension SettingsView {
+    var appName: String {
+        "ClipDock"
+    }
+
+    var appAuthor: String {
+        "Maxcj"
+    }
+
+    var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        ?? "Unknown"
     }
 }
 
