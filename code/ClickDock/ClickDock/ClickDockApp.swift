@@ -26,11 +26,15 @@ struct ClipDockApp: App {
         let context = PersistenceController.shared.container.viewContext
         _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: context))
         UserDefaults.standard.register(defaults: [
-            "clipboard.hotkeyEnabled": true,
+            "clipboard.hotkeyEnabled": false,
             "clipboard.hotkeyKeyCode": 49,
             "clipboard.hotkeyModifiers": Int(HotKeyConfiguration.defaultModifiers),
             "clipboard.hotkeyDisplay": HotKeyConfiguration.defaultDisplay,
-            "clipboard.autoHideAfterCopy": false
+            "clipboard.autoHideAfterCopy": false,
+            "clipboard.keepImages": false,
+            "clipboard.retentionEnabled": true,
+            "clipboard.retentionValue": 7,
+            "clipboard.retentionUnit": RetentionUnit.day.rawValue
         ])
         _hotkeyManager = StateObject(wrappedValue: GlobalHotkeyManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())

@@ -13,6 +13,19 @@
 		C1E5F5F12FE950D000571FED /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5F02FE950D000571FED /* Persistence.swift */; };
 		C1E5F5F42FE950D000571FED /* ClickDock.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */; };
 		C1E80E002FED78BC00C7373C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E92FE950CD00571FED /* ContentView.swift */; };
+		D93A11012FF2000100A1B2C3 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11002FF2000100A1B2C3 /* AppLocalization.swift */; };
+		D93A11032FF2000100A1B2C3 /* WindowSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11022FF2000100A1B2C3 /* WindowSupport.swift */; };
+		D93A11052FF2000100A1B2C3 /* ClipboardSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */; };
+		D93A11072FF2000100A1B2C3 /* ClipboardServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11062FF2000100A1B2C3 /* ClipboardServices.swift */; };
+		D93A11092FF2000100A1B2C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11082FF2000100A1B2C3 /* SettingsView.swift */; };
+		D93A110B2FF2000100A1B2C3 /* MainWindowSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A110A2FF2000100A1B2C3 /* MainWindowSupport.swift */; };
+		D93A110D2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */; };
+		D93A110F2FF2000100A1B2C3 /* ClipboardHistoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */; };
+		D93A11112FF2000100A1B2C3 /* ClipboardDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */; };
+		D93A11132FF2000100A1B2C3 /* LegacyDashboardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */; };
+		D93A11152FF2000100A1B2C3 /* LegacyDashboardComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */; };
+		D93A11172FF2000100A1B2C3 /* SettingsSupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */; };
+		D93A11192FF2000100A1B2C3 /* ClipboardPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */; };
 		D91B6F722FF0000100A1B2C3 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D91B6F742FF0000100A1B2C3 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
@@ -25,6 +38,19 @@
 		C1E5F5F02FE950D000571FED /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClickDock.xcdatamodel; sourceTree = "<group>"; };
 		C1E5F5F52FE950D000571FED /* ClickDock.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClickDock.entitlements; sourceTree = "<group>"; };
+		D93A11002FF2000100A1B2C3 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
+		D93A11022FF2000100A1B2C3 /* WindowSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSupport.swift; sourceTree = "<group>"; };
+		D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSupport.swift; sourceTree = "<group>"; };
+		D93A11062FF2000100A1B2C3 /* ClipboardServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardServices.swift; sourceTree = "<group>"; };
+		D93A11082FF2000100A1B2C3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		D93A110A2FF2000100A1B2C3 /* MainWindowSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowSupport.swift; sourceTree = "<group>"; };
+		D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWorkspaceView.swift; sourceTree = "<group>"; };
+		D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryViews.swift; sourceTree = "<group>"; };
+		D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardDetailViews.swift; sourceTree = "<group>"; };
+		D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDashboardViews.swift; sourceTree = "<group>"; };
+		D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDashboardComponents.swift; sourceTree = "<group>"; };
+		D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupportViews.swift; sourceTree = "<group>"; };
+		D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewSupport.swift; sourceTree = "<group>"; };
 		D91B6F752FF0000100A1B2C3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		D91B6F762FF0000100A1B2C3 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -61,6 +87,19 @@
 			children = (
 				C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */,
 				C1E5F5E92FE950CD00571FED /* ContentView.swift */,
+				D93A11002FF2000100A1B2C3 /* AppLocalization.swift */,
+				D93A11022FF2000100A1B2C3 /* WindowSupport.swift */,
+				D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */,
+				D93A11062FF2000100A1B2C3 /* ClipboardServices.swift */,
+				D93A110A2FF2000100A1B2C3 /* MainWindowSupport.swift */,
+				D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */,
+				D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */,
+				D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */,
+				D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */,
+				D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */,
+				D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */,
+				D93A11082FF2000100A1B2C3 /* SettingsView.swift */,
+				D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */,
 				C1E5F5EB2FE950D000571FED /* Assets.xcassets */,
 				D91B6F742FF0000100A1B2C3 /* Localizable.strings */,
 				C1E5F5F02FE950D000571FED /* Persistence.swift */,
@@ -151,6 +190,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D93A11192FF2000100A1B2C3 /* ClipboardPreviewSupport.swift in Sources */,
+				D93A11172FF2000100A1B2C3 /* SettingsSupportViews.swift in Sources */,
+				D93A11152FF2000100A1B2C3 /* LegacyDashboardComponents.swift in Sources */,
+				D93A11132FF2000100A1B2C3 /* LegacyDashboardViews.swift in Sources */,
+				D93A11112FF2000100A1B2C3 /* ClipboardDetailViews.swift in Sources */,
+				D93A110F2FF2000100A1B2C3 /* ClipboardHistoryViews.swift in Sources */,
+				D93A110D2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift in Sources */,
+				D93A110B2FF2000100A1B2C3 /* MainWindowSupport.swift in Sources */,
+				D93A11092FF2000100A1B2C3 /* SettingsView.swift in Sources */,
+				D93A11072FF2000100A1B2C3 /* ClipboardServices.swift in Sources */,
+				D93A11052FF2000100A1B2C3 /* ClipboardSupport.swift in Sources */,
+				D93A11032FF2000100A1B2C3 /* WindowSupport.swift in Sources */,
+				D93A11012FF2000100A1B2C3 /* AppLocalization.swift in Sources */,
 				C1E5F5F12FE950D000571FED /* Persistence.swift in Sources */,
 				C1E5F5F42FE950D000571FED /* ClickDock.xcdatamodeld in Sources */,
 				C1E80E002FED78BC00C7373C /* ContentView.swift in Sources */,
@@ -309,7 +361,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -340,7 +392,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
