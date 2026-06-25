@@ -413,6 +413,8 @@ struct ClipboardHistorySidebar: View {
     private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files]
 
     var body: some View {
+        let sections = groupedSections
+
         VStack(alignment: .leading, spacing: layout.sidebarSpacing) {
             HStack(spacing: 10) {
                 searchField
@@ -437,33 +439,47 @@ struct ClipboardHistorySidebar: View {
                 }
             }
 
-            Text("Today")
-                .font(.system(size: layout.sectionLabelSize, weight: .medium))
-                .foregroundStyle(.secondary.opacity(0.92))
-                .padding(.top, 2)
-
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(spacing: layout.rowSpacing) {
-                    ForEach(records, id: \.objectID) { record in
-                        ClipboardHistoryRow(
-                            record: record,
-                            isSelected: selectedRecordID == record.objectID,
-                            layout: layout,
-                            onSelect: {
-                                selectedRecordID = record.objectID
-                            },
-                            onCopy: {
-                                onCopy(record)
-                            },
-                            onDelete: {
-                                onDelete(record)
-                            },
-                            onTogglePin: {
-                                onTogglePin(record)
+                VStack(alignment: .leading, spacing: layout.rowSpacing) {
+                    ForEach(sections) { section in
+                        VStack(alignment: .leading, spacing: layout.rowSpacing) {
+                            HStack(spacing: 0) {
+                                Text(verbatim: section.title)
+                                    .font(.system(size: layout.sectionLabelSize, weight: .medium))
+                                    .foregroundColor(Color.black.opacity(0.54))
+
+                                Spacer(minLength: 0)
                             }
-                        )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 2)
+                                .padding(.top, section.topPadding)
+                            .zIndex(1)
+
+                            VStack(spacing: layout.rowSpacing) {
+                                ForEach(section.records, id: \.objectID) { record in
+                                    ClipboardHistoryRow(
+                                        record: record,
+                                        isSelected: selectedRecordID == record.objectID,
+                                        layout: layout,
+                                        onSelect: {
+                                            selectedRecordID = record.objectID
+                                        },
+                                        onCopy: {
+                                            onCopy(record)
+                                        },
+                                        onDelete: {
+                                            onDelete(record)
+                                        },
+                                        onTogglePin: {
+                                            onTogglePin(record)
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
+                .padding(.top, 2)
                 .padding(.trailing, 2)
             }
 
@@ -479,6 +495,49 @@ struct ClipboardHistorySidebar: View {
             .padding(.top, 2)
         }
         .padding(layout.sidebarPadding)
+    }
+
+    private var groupedSections: [ClipboardHistorySection] {
+        let calendar = Calendar.current
+        let dayKeys = Dictionary(grouping: records, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
+        let sortedDays = dayKeys.keys.sorted(by: >)
+        return sortedDays.map { day in
+            let sectionRecords = (dayKeys[day] ?? []).sorted { lhs, rhs in
+                let lhsDate = lhs.createdAt ?? .distantPast
+                let rhsDate = rhs.createdAt ?? .distantPast
+
+                if lhsDate != rhsDate {
+                    return lhsDate > rhsDate
+                }
+
+                if lhs.isPinned != rhs.isPinned {
+                    return lhs.isPinned && !rhs.isPinned
+                }
+
+                return lhs.objectID.uriRepresentation().absoluteString < rhs.objectID.uriRepresentation().absoluteString
+            }
+
+            return ClipboardHistorySection(
+                id: day,
+                title: historySectionTitle(for: day),
+                records: sectionRecords,
+                topPadding: calendar.isDate(day, equalTo: sortedDays.first ?? day, toGranularity: .day) ? 0 : layout.rowSpacing
+            )
+        }
+    }
+
+    private func historySectionTitle(for day: Date) -> String {
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(day) {
+            return "Today"
+        }
+
+        if calendar.isDateInYesterday(day) {
+            return "Yesterday"
+        }
+
+        return Self.sectionDateFormatter.string(from: day)
     }
 
     private var searchField: some View {
@@ -564,6 +623,21 @@ struct ClipboardHistorySidebar: View {
         .buttonStyle(.plain)
         .help("Settings")
     }
+
+    private struct ClipboardHistorySection: Identifiable {
+        let id: Date
+        let title: String
+        let records: [ClipboardRecord]
+        let topPadding: CGFloat
+    }
+
+    private static let sectionDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 struct ClipboardHistoryRow: View {
@@ -1801,15 +1875,6 @@ private struct FileDetailPreview: View {
                 .frame(width: max(120, iconSize + 24), height: height)
 
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 10) {
-                    Image(systemName: record.kind.symbolName)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(record.kind.accent)
-                    Text(record.kind.title)
-                        .font(.system(size: footerFontSize, weight: .semibold))
-                        .foregroundStyle(record.kind.accent)
-                }
-
                 Text(record.previewTitle)
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(3)

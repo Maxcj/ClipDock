@@ -38,6 +38,20 @@ struct PersistenceController {
             sourceAppName: "Finder",
             kind: .files,
             isPinned: false
+        ),
+        (
+            displayText: "ClipDock docs",
+            fullText: "https://github.com/Maxcj/ClickDcok",
+            sourceAppName: "Safari",
+            kind: .link,
+            isPinned: false
+        ),
+        (
+            displayText: "API response snippet",
+            fullText: "{ \"status\": \"ok\", \"count\": 18 }",
+            sourceAppName: "Terminal",
+            kind: .code,
+            isPinned: false
         )
     ]
 
@@ -75,7 +89,7 @@ struct PersistenceController {
                  * The device is out of space.
                  * The store could not be migrated to the current model version.
                  Check the error message to determine what the actual problem was.
-                 */
+                */
                 fatalError("Unresolved error \(error), \(error.userInfo)")
             }
         })
@@ -89,37 +103,71 @@ struct PersistenceController {
     private func seedSampleRecordsIfNeeded(in context: NSManagedObjectContext) {
         do {
             let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
-            request.fetchLimit = 1
+            request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
             let existing = try context.fetch(request)
-            guard existing.isEmpty else { return }
-            Self.seedSamples(into: context)
+
+            if existing.isEmpty {
+                Self.seedSamples(into: context)
+            } else {
+                Self.refreshSampleCoverage(into: context, existingRecords: existing)
+            }
             try context.save()
         } catch {
             NSLog("Failed to seed sample clipboard records: \(error.localizedDescription)")
         }
     }
 
-    private static func seedSamples(into context: NSManagedObjectContext) {
-        let timestamps = sampleRows.enumerated().map { index, _ in
-            Calendar.current.date(byAdding: .minute, value: -(index * 8), to: Date()) ?? Date()
+    private static func refreshSampleCoverage(into context: NSManagedObjectContext, existingRecords: [ClipboardRecord]) {
+        let calendar = Calendar.current
+        let now = Date()
+        let timestamps: [Date] = [
+            now,
+            calendar.date(byAdding: .minute, value: -14, to: now) ?? now,
+            calendar.date(byAdding: .day, value: -1, to: now) ?? now,
+            calendar.date(byAdding: .day, value: -1, to: now)?.addingTimeInterval(-1_800) ?? now,
+            calendar.date(byAdding: .day, value: -2, to: now) ?? now,
+            calendar.date(byAdding: .day, value: -4, to: now) ?? now
+        ]
+
+        var recordsByDisplayText: [String: ClipboardRecord] = [:]
+        for record in existingRecords where record.isIgnored == false {
+            if let displayText = record.displayText, !displayText.isEmpty {
+                recordsByDisplayText[displayText] = record
+            }
         }
 
         for (index, sample) in sampleRows.enumerated() {
-            let record = ClipboardRecord(context: context)
-            record.id = UUID()
-            record.createdAt = timestamps[index]
-            record.updatedAt = timestamps[index]
-            record.lastUsedAt = nil
-            record.contentTypeRaw = sample.kind.rawValue
-            record.displayText = sample.displayText
-            record.fullText = sample.fullText
-            record.imagePath = nil
-            record.sourceAppName = sample.sourceAppName
-            record.sourceBundleId = nil
-            record.contentHash = UUID().uuidString
-            record.isPinned = sample.isPinned
-            record.isIgnored = false
-            record.usageCount = Int16(index)
+            let timestamp = timestamps[min(index, timestamps.count - 1)]
+
+            if let record = recordsByDisplayText[sample.displayText] {
+                record.createdAt = timestamp
+                record.updatedAt = timestamp
+                record.contentTypeRaw = sample.kind.rawValue
+                record.displayText = sample.displayText
+                record.fullText = sample.fullText
+                record.sourceAppName = sample.sourceAppName
+                record.isPinned = sample.isPinned
+            } else {
+                let record = ClipboardRecord(context: context)
+                record.id = UUID()
+                record.createdAt = timestamp
+                record.updatedAt = timestamp
+                record.lastUsedAt = nil
+                record.contentTypeRaw = sample.kind.rawValue
+                record.displayText = sample.displayText
+                record.fullText = sample.fullText
+                record.imagePath = nil
+                record.sourceAppName = sample.sourceAppName
+                record.sourceBundleId = nil
+                record.contentHash = UUID().uuidString
+                record.isPinned = sample.isPinned
+                record.isIgnored = false
+                record.usageCount = Int16(index)
+            }
         }
+    }
+
+    private static func seedSamples(into context: NSManagedObjectContext) {
+        refreshSampleCoverage(into: context, existingRecords: [])
     }
 }
