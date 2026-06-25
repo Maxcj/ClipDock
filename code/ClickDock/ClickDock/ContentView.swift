@@ -730,11 +730,14 @@ struct ClipboardHistoryRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .continuous)
+            RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .circular)
                 .fill(isSelected ? Color(red: 0.91, green: 0.95, blue: 1.0).opacity(0.64) : Color.white.opacity(0.12))
                 .overlay(
-                    RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .continuous)
-                        .stroke(isSelected ? Color(red: 0.24, green: 0.54, blue: 0.99).opacity(0.88) : Color.black.opacity(0.05), lineWidth: isSelected ? 1.4 : 1)
+                    RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .circular)
+                        .strokeBorder(
+                            isSelected ? Color(red: 0.24, green: 0.54, blue: 0.99).opacity(0.88) : Color.black.opacity(0.05),
+                            lineWidth: 1
+                        )
                 )
         )
         .shadow(color: isSelected ? Color.accentColor.opacity(0.06) : .clear, radius: 8, x: 0, y: 3)
@@ -766,7 +769,7 @@ struct ClipboardHistoryRow: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
 
-                Text(record.detailText)
+                Text(record.rowSubtitle)
                     .font(.system(size: layout.rowSubtitleSize))
                     .foregroundStyle(record.kind == .link ? record.kind.accent : .secondary)
                     .lineLimit(1)
@@ -908,7 +911,7 @@ struct ClipboardHistoryRow: View {
             ZStack {
                 RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous)
                     .fill(Color.secondary.opacity(0.12))
-                Image(systemName: "app.dashed")
+                Image(systemName: record.kind == .link ? "globe" : "app.dashed")
                     .font(.system(size: max(8, size * 0.48), weight: .semibold))
                     .foregroundStyle(.secondary)
             }
@@ -991,7 +994,7 @@ struct ClipboardDetailInspector: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(record.kind.accent.opacity(0.12))
                 .overlay(
-                    Image(systemName: "app.dashed")
+                    Image(systemName: record.kind == .link ? "globe" : "app.dashed")
                         .font(.system(size: 18, weight: .regular))
                         .foregroundStyle(record.kind.accent)
                 )
@@ -1017,12 +1020,42 @@ struct ClipboardDetailInspector: View {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.white.opacity(0.18))
                         .overlay(
-                            VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack(alignment: .center, spacing: 10) {
+                                    if let icon = record.sourceAppIcon {
+                                        Image(nsImage: icon)
+                                            .resizable()
+                                            .interpolation(.high)
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 22, height: 22)
+                                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                    } else {
+                                        Image(systemName: "globe")
+                                            .font(.system(size: 19, weight: .semibold))
+                                            .foregroundStyle(record.kind.accent)
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(record.previewSubtitle)
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .lineLimit(1)
+                                        if let host = record.linkHostLabel {
+                                            Text(host)
+                                                .font(.system(size: 13))
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+
+                                    Spacer()
+                                }
+
                                 Text(record.previewTitle)
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .lineLimit(3)
+                                    .font(.system(size: 26, weight: .semibold))
+                                    .lineLimit(4)
+
                                 Text(record.detailText)
-                                    .font(.system(size: 15))
+                                    .font(.system(size: 14))
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
                             }
@@ -1626,9 +1659,17 @@ struct ClipboardDetailPanel: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: layout.smallCornerRadius, style: .continuous)
                         .fill(record.kind.accent.opacity(0.14))
-                    Image(systemName: record.kind.symbolName)
-                        .font(.system(size: layout.iconSizeLarge, weight: .semibold))
-                        .foregroundStyle(record.kind.accent)
+                    if let icon = record.sourceAppIcon, record.kind == .link {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .interpolation(.high)
+                            .aspectRatio(contentMode: .fit)
+                            .padding(4)
+                    } else {
+                        Image(systemName: record.kind.symbolName)
+                            .font(.system(size: layout.iconSizeLarge, weight: .semibold))
+                            .foregroundStyle(record.kind.accent)
+                    }
                 }
                 .frame(width: layout.detailBadgeSize, height: layout.detailBadgeSize)
 
@@ -1721,18 +1762,34 @@ struct ClipboardHeroDetailPanel: View {
             } else if record.kind == .link, let urlString = record.fullText ?? record.displayText {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Image(systemName: record.kind.symbolName)
-                            .font(.system(size: 26, weight: .semibold))
-                            .foregroundStyle(record.kind.accent)
+                        if let icon = record.sourceAppIcon {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .interpolation(.high)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 26, height: 26)
+                                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        } else {
+                            Image(systemName: "globe")
+                                .font(.system(size: 26, weight: .semibold))
+                                .foregroundStyle(record.kind.accent)
+                        }
                         Spacer()
                         Text(record.timeLabelShort)
                             .font(.system(size: layout.footerFontSize))
                             .foregroundStyle(.secondary)
                     }
 
-                    Text(record.previewTitle)
+                    Text(record.previewSubtitle)
                         .font(.system(size: layout.detailBodyTitleSize + 6, weight: .semibold))
                         .lineLimit(3)
+
+                    if let host = record.linkHostLabel {
+                        Text(host)
+                            .font(.system(size: layout.footerFontSize))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
 
                     Text(urlString)
                         .font(.system(size: layout.footerFontSize))
@@ -1766,10 +1823,19 @@ struct ClipboardHeroDetailPanel: View {
     private var metadata: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 10) {
-                Image(systemName: record.kind.symbolName)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(record.kind.accent)
-                Text(record.kind.title)
+                if let icon = record.sourceAppIcon, record.kind == .link {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .interpolation(.high)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 18, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                } else {
+                    Image(systemName: record.kind.symbolName)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(record.kind.accent)
+                }
+                Text(record.kind == .link ? (record.previewSubtitle) : record.kind.title)
                     .font(.system(size: layout.footerFontSize, weight: .semibold))
                     .foregroundStyle(record.kind.accent)
                 Text(record.timeLabelShort)
@@ -2052,8 +2118,17 @@ struct ClipboardPreviewCard: View {
             VStack(alignment: .leading, spacing: layout.cardSpacingInner) {
                 HStack(spacing: 8) {
                     HStack(spacing: 6) {
-                        Image(systemName: record.kind.symbolName)
-                            .font(.system(size: layout.iconSizeSmall, weight: .semibold))
+                        if let icon = record.sourceAppIcon, record.kind == .link {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .interpolation(.high)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: layout.iconSizeSmall, height: layout.iconSizeSmall)
+                                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                        } else {
+                            Image(systemName: record.kind.symbolName)
+                                .font(.system(size: layout.iconSizeSmall, weight: .semibold))
+                        }
                         Text(record.kind.title)
                     }
                     .font(.system(size: layout.footerFontSize - 1, weight: .semibold))
@@ -3009,12 +3084,63 @@ extension ClipboardRecord {
     }
 
     var previewSubtitle: String {
+        if kind == .link {
+            return linkTitleLabel ?? linkHostLabel ?? "Link"
+        }
+
         let appName = sourceAppName?.isEmpty == false ? sourceAppName! : "Unknown source"
         return appName
     }
 
     var sourceAppIcon: NSImage? {
-        ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
+        if kind == .link {
+            return linkIconImage
+        }
+
+        return ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
+    }
+
+    var linkURL: URL? {
+        Self.webURL(from: fullText ?? displayText)
+    }
+
+    var linkHostLabel: String? {
+        guard kind == .link else { return nil }
+        if let host = linkHostValue?.trimmingCharacters(in: .whitespacesAndNewlines), !host.isEmpty {
+            return host
+        }
+
+        if let host = linkURL?.host?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !host.isEmpty {
+            return host
+        }
+        return nil
+    }
+
+    var linkTitleLabel: String? {
+        guard kind == .link else { return nil }
+        if let title = linkTitleValue?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+            return title
+        }
+        return linkHostLabel
+    }
+
+    var linkIconImage: NSImage? {
+        guard kind == .link,
+              let data = linkIconDataValue,
+              !data.isEmpty,
+              let image = NSImage(data: data) else {
+            return nil
+        }
+        return image
+    }
+
+    var rowSubtitle: String {
+        if kind == .link {
+            return linkHostLabel ?? linkTitleLabel ?? previewTitle
+        }
+
+        return detailText
     }
 
     var fileIconImage: NSImage? {
@@ -3080,6 +3206,10 @@ extension ClipboardRecord {
     }
 
     var detailText: String {
+        if kind == .link {
+            return fullText ?? displayText ?? "-"
+        }
+
         if let fullText, !fullText.isEmpty {
             return fullText
         }
@@ -3163,6 +3293,16 @@ extension ClipboardRecord {
         formatter.dateFormat = "yyyy-MM-dd  HH:mm"
         return formatter
     }()
+
+    static func webURL(from string: String?) -> URL? {
+        guard let string = string?.trimmingCharacters(in: .whitespacesAndNewlines), !string.isEmpty,
+              let url = URL(string: string),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+        return url
+    }
 
     private static func fileExtensionLabel(for path: String?) -> String? {
         guard let path, !path.isEmpty else { return nil }
@@ -3600,6 +3740,7 @@ private final class ClipboardCodeLineCache {
 
 final class ClipboardMonitor: ObservableObject {
     private let context: NSManagedObjectContext
+    private let linkMetadataManager: LinkMetadataManager
     private let processingQueue = DispatchQueue(label: "cn.maxcj.ClipDock.clipboard.processing", qos: .userInitiated)
     private var timer: Timer?
     private var cleanupTimer: Timer?
@@ -3610,6 +3751,7 @@ final class ClipboardMonitor: ObservableObject {
 
     init(context: NSManagedObjectContext) {
         self.context = context
+        self.linkMetadataManager = LinkMetadataManager(context: context)
     }
 
     func start() {
@@ -3629,6 +3771,7 @@ final class ClipboardMonitor: ObservableObject {
             RunLoop.main.add(cleanupTimer, forMode: .common)
         }
         pruneExpiredRecords()
+        linkMetadataManager.refreshMissingMetadata()
     }
 
     func stop() {
@@ -3755,7 +3898,8 @@ final class ClipboardMonitor: ObservableObject {
         }
 
         let urlType = NSPasteboard.PasteboardType(UTType.url.identifier)
-        if let urlText = pasteboard.string(forType: urlType), !urlText.isEmpty {
+        if let urlText = pasteboard.string(forType: urlType),
+           ClipboardRecord.webURL(from: urlText) != nil {
             return ClipboardSnapshot(
                 kind: .link,
                 displayText: urlText,
@@ -3772,7 +3916,7 @@ final class ClipboardMonitor: ObservableObject {
         if let text = pasteboard.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             let kind: ClipboardContentKind
-            if isLikelyURL(trimmed) {
+            if ClipboardRecord.webURL(from: trimmed) != nil {
                 kind = .link
             } else if isLikelyCode(trimmed) {
                 kind = .code
@@ -3815,9 +3959,21 @@ final class ClipboardMonitor: ObservableObject {
             record.isIgnored = false
             record.usageCount = 0
 
+            if snapshot.kind == .link,
+               let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
+                record.linkHostValue = url.host?.trimmingCharacters(in: .whitespacesAndNewlines)
+                record.linkTitleValue = nil
+                record.linkIconDataValue = nil
+                record.linkMetadataCheckedAtValue = nil
+            }
+
             do {
                 try self.context.save()
                 self.pruneExpiredRecordsLocked()
+                if snapshot.kind == .link,
+                   let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
+                    self.linkMetadataManager.scheduleMetadataFetch(for: record.objectID, url: url)
+                }
             } catch {
                 NSLog("Failed to save clipboard record: \(error.localizedDescription)")
             }
@@ -3996,17 +4152,252 @@ final class ClipboardMonitor: ObservableObject {
         return String(text[..<index]) + "…"
     }
 
-    private func isLikelyURL(_ text: String) -> Bool {
-        guard let url = URL(string: text) else { return false }
-        return url.scheme != nil
-    }
-
     private static func assetFolderURL() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let bundleName = Bundle.main.bundleIdentifier ?? "ClipDock"
         return base.appendingPathComponent(bundleName, isDirectory: true)
             .appendingPathComponent("ClipboardImages", isDirectory: true)
+    }
+}
+
+final class LinkMetadataManager {
+    private let context: NSManagedObjectContext
+    private var inFlightRecordIDs: Set<String> = []
+
+    init(context: NSManagedObjectContext) {
+        self.context = context
+    }
+
+    func refreshMissingMetadata() {
+        context.performAndWait {
+            let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+            request.predicate = NSPredicate(
+                format: "contentTypeRaw == %@ AND (linkTitle == nil OR linkIconData == nil OR linkMetadataCheckedAt == nil)",
+                ClipboardContentKind.link.rawValue
+            )
+            request.fetchBatchSize = 25
+
+            guard let records = try? self.context.fetch(request) else { return }
+            for record in records {
+                guard let url = record.linkURL else { continue }
+                self.scheduleMetadataFetch(for: record.objectID, url: url)
+            }
+        }
+    }
+
+    func scheduleMetadataFetch(for recordID: NSManagedObjectID, url: URL) {
+        let key = recordID.uriRepresentation().absoluteString
+        guard inFlightRecordIDs.insert(key).inserted else { return }
+
+        Task.detached(priority: .utility) { [weak self] in
+            let metadata = await LinkMetadataFetcher.fetch(from: url)
+            guard let self else { return }
+            self.apply(metadata: metadata, for: recordID, url: url)
+            self.inFlightRecordIDs.remove(key)
+        }
+    }
+
+    private func apply(metadata: LinkMetadata?, for recordID: NSManagedObjectID, url: URL) {
+        context.perform {
+            guard let record = try? self.context.existingObject(with: recordID) as? ClipboardRecord,
+                  record.kind == .link else {
+                return
+            }
+
+            if let normalizedHost = url.host?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !normalizedHost.isEmpty {
+                record.linkHostValue = normalizedHost
+            }
+
+            if let metadata {
+                if let title = metadata.title, !title.isEmpty {
+                    record.linkTitleValue = title
+                }
+
+                if let host = metadata.host, !host.isEmpty {
+                    record.linkHostValue = host
+                }
+
+                if let iconData = metadata.iconData, !iconData.isEmpty {
+                    record.linkIconDataValue = iconData
+                }
+            }
+
+            record.linkMetadataCheckedAtValue = Date()
+
+            do {
+                try self.context.save()
+            } catch {
+                NSLog("Failed to save link metadata: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+private struct LinkMetadata {
+    let title: String?
+    let host: String?
+    let iconData: Data?
+}
+
+private enum LinkMetadataFetcher {
+    static func fetch(from url: URL) async -> LinkMetadata? {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return nil
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...399).contains(httpResponse.statusCode) else {
+                return LinkMetadata(title: nil, host: response.url?.host, iconData: nil)
+            }
+
+            let resolvedURL = response.url ?? url
+            let html = string(from: data)
+            let title = extractTitle(from: html)
+            let iconURL = extractIconURL(from: html, baseURL: resolvedURL)
+
+            var iconData: Data?
+            if let iconURL {
+                iconData = try? await fetchIconData(from: iconURL)
+            }
+
+            if iconData == nil {
+                iconData = try? await fetchIconData(from: rootFaviconURL(for: resolvedURL))
+            }
+
+            return LinkMetadata(
+                title: title,
+                host: resolvedURL.host?.trimmingCharacters(in: .whitespacesAndNewlines),
+                iconData: iconData
+            )
+        } catch {
+            return LinkMetadata(title: nil, host: url.host?.trimmingCharacters(in: .whitespacesAndNewlines), iconData: nil)
+        }
+    }
+
+    private static func fetchIconData(from url: URL) async throws -> Data {
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...399).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return data
+    }
+
+    private static func string(from data: Data) -> String {
+        if let string = String(data: data, encoding: .utf8) {
+            return string
+        }
+        if let string = String(data: data, encoding: .isoLatin1) {
+            return string
+        }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    private static func extractTitle(from html: String) -> String? {
+        let patterns = [
+            #"(?is)<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["'][^>]*>"#,
+            #"(?is)<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["'][^>]*>"#,
+            #"(?is)<title[^>]*>(.*?)</title>"#
+        ]
+
+        for pattern in patterns {
+            if let match = firstMatch(pattern: pattern, in: html) {
+                let normalized = normalizeTitle(match)
+                if !normalized.isEmpty {
+                    return normalized
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private static func extractIconURL(from html: String, baseURL: URL) -> URL? {
+        let linkPattern = #"(?is)<link\b[^>]*>"#
+        guard let tags = regexMatches(pattern: linkPattern, in: html), !tags.isEmpty else {
+            return rootFaviconURL(for: baseURL)
+        }
+
+        let priorityTokens = ["apple-touch-icon", "shortcut icon", "icon"]
+        for token in priorityTokens {
+            for tag in tags {
+                guard let rel = attribute(named: "rel", in: tag)?.lowercased(),
+                      rel.contains(token),
+                      let href = attribute(named: "href", in: tag),
+                      !href.isEmpty,
+                      let url = URL(string: href, relativeTo: baseURL)?.absoluteURL else {
+                    continue
+                }
+                return url
+            }
+        }
+
+        return rootFaviconURL(for: baseURL)
+    }
+
+    private static func attribute(named name: String, in tag: String) -> String? {
+        let pattern = #"(?is)\#(name)\s*=\s*["']([^"']+)["']"#
+        return firstMatch(pattern: pattern, in: tag)
+    }
+
+    private static func firstMatch(pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges >= 2,
+              let captureRange = Range(match.range(at: 1), in: text) else {
+            return nil
+        }
+        return String(text[captureRange])
+    }
+
+    private static func regexMatches(pattern: String, in text: String) -> [String]? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex.matches(in: text, range: range)
+        guard !matches.isEmpty else { return nil }
+        return matches.compactMap { match in
+            guard let captureRange = Range(match.range, in: text) else { return nil }
+            return String(text[captureRange])
+        }
+    }
+
+    private static func normalizeTitle(_ raw: String) -> String {
+        let stripped = raw
+            .replacingOccurrences(of: "\n", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !stripped.isEmpty else { return "" }
+
+        if let data = stripped.data(using: .utf8),
+           let attributed = try? NSAttributedString(
+            data: data,
+            options: [
+                .documentType: NSAttributedString.DocumentType.html,
+                .characterEncoding: String.Encoding.utf8.rawValue
+            ],
+            documentAttributes: nil
+           ) {
+            return attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return stripped
+    }
+
+    private static func rootFaviconURL(for url: URL) -> URL {
+        if var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            components.path = "/favicon.ico"
+            components.query = nil
+            components.fragment = nil
+            return components.url ?? url
+        }
+
+        return url.deletingLastPathComponent().appendingPathComponent("favicon.ico")
     }
 }
 
@@ -4134,6 +4525,26 @@ extension ClipboardRecord {
     var assetPathValue: String? {
         get { value(forKey: "assetPath") as? String }
         set { setValue(newValue, forKey: "assetPath") }
+    }
+
+    var linkHostValue: String? {
+        get { value(forKey: "linkHost") as? String }
+        set { setValue(newValue, forKey: "linkHost") }
+    }
+
+    var linkTitleValue: String? {
+        get { value(forKey: "linkTitle") as? String }
+        set { setValue(newValue, forKey: "linkTitle") }
+    }
+
+    var linkIconDataValue: Data? {
+        get { value(forKey: "linkIconData") as? Data }
+        set { setValue(newValue, forKey: "linkIconData") }
+    }
+
+    var linkMetadataCheckedAtValue: Date? {
+        get { value(forKey: "linkMetadataCheckedAt") as? Date }
+        set { setValue(newValue, forKey: "linkMetadataCheckedAt") }
     }
 }
 
