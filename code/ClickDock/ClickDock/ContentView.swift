@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  ClickDock
+//  ClipDock
 //
 //  Created by Maxcj on 2026/6/22.
 //
@@ -69,7 +69,7 @@ struct ContentView: View {
         .onDisappear {
             clipboardMonitor.stop()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .clickDockTogglePanelRequested)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .clipDockTogglePanelRequested)) { _ in
             toggleMainWindowVisibility()
         }
     }
@@ -3411,7 +3411,7 @@ private final class ClipboardCodeLineCache {
 
 final class ClipboardMonitor: ObservableObject {
     private let context: NSManagedObjectContext
-    private let processingQueue = DispatchQueue(label: "cn.maxcj.ClickDock.clipboard.processing", qos: .userInitiated)
+    private let processingQueue = DispatchQueue(label: "cn.maxcj.ClipDock.clipboard.processing", qos: .userInitiated)
     private var timer: Timer?
     private var cleanupTimer: Timer?
     private var lastChangeCount: Int = -1
@@ -3883,7 +3883,7 @@ final class GlobalHotkeyManager: ObservableObject {
                 guard let userData else { return noErr }
                 _ = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
                 DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .clickDockTogglePanelRequested, object: nil)
+                    NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
                 }
                 return noErr
             },
@@ -3900,7 +3900,7 @@ final class GlobalHotkeyManager: ObservableObject {
 }
 
 extension Notification.Name {
-    static let clickDockTogglePanelRequested = Notification.Name("clickDockTogglePanelRequested")
+    static let clipDockTogglePanelRequested = Notification.Name("clipDockTogglePanelRequested")
 }
 
 private struct ClipboardSnapshot {

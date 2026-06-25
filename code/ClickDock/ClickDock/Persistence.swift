@@ -1,6 +1,6 @@
 //
 //  Persistence.swift
-//  ClickDock
+//  ClipDock
 //
 //  Created by Maxcj on 2026/6/22.
 //
@@ -59,7 +59,7 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "ClickDock")
+        container = NSPersistentContainer(name: "ClipDock")
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }

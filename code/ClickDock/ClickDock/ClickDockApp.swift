@@ -1,6 +1,6 @@
 //
-//  ClickDockApp.swift
-//  ClickDock
+//  ClipDockApp.swift
+//  ClipDock
 //
 //  Created by Maxcj on 2026/6/22.
 //
@@ -14,7 +14,7 @@ enum WindowLayout {
 }
 
 @main
-struct ClickDockApp: App {
+struct ClipDockApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var clipboardMonitor: ClipboardMonitor
     @StateObject private var hotkeyManager: GlobalHotkeyManager
@@ -59,7 +59,7 @@ private struct StatusBarMenuView: View {
 
     var body: some View {
         Button("显示/隐藏主窗口") {
-            NotificationCenter.default.post(name: .clickDockTogglePanelRequested, object: nil)
+            NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
         }
 
         Button("设置") {

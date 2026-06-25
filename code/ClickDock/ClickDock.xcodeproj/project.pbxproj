@@ -16,7 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		C1E5F5E42FE950CD00571FED /* ClickDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClickDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1E5F5E42FE950CD00571FED /* ClipDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClipDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickDockApp.swift; sourceTree = "<group>"; };
 		C1E5F5E92FE950CD00571FED /* ContentView.swift */ = {isa = PBXFileReference; indentWidth = 5; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; tabWidth = 5; };
 		C1E5F5EB2FE950D000571FED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -48,7 +48,7 @@
 		C1E5F5E52FE950CD00571FED /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C1E5F5E42FE950CD00571FED /* ClickDock.app */,
+				C1E5F5E42FE950CD00571FED /* ClipDock.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -291,7 +291,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -320,7 +320,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};

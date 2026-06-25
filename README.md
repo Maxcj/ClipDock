@@ -1,1 +1,1 @@
-# ClickDcok
+# ClipDock
