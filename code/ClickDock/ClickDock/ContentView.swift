@@ -3416,8 +3416,7 @@ final class ClipboardMonitor: ObservableObject {
     private var cleanupTimer: Timer?
     private var lastChangeCount: Int = -1
     private var lastRecordedHash: String?
-    private var suppressionHash: String?
-    private var suppressionExpiresAt: Date = .distantPast
+    private var suppressionChangeCount: Int?
     private var isProcessingSnapshot = false
 
     init(context: NSManagedObjectContext) {
@@ -3478,7 +3477,7 @@ final class ClipboardMonitor: ObservableObject {
             }
         }
 
-        markSuppression(hash: record.contentHash)
+        markSuppression(changeCount: pasteboard.changeCount)
     }
 
     private func poll() {
@@ -3499,9 +3498,9 @@ final class ClipboardMonitor: ObservableObject {
 
                     guard let snapshot else { return }
 
-                    if let suppressionHash,
-                       suppressionHash == snapshot.hash,
-                       Date() < suppressionExpiresAt {
+                    if let suppressionChangeCount,
+                       pasteboard.changeCount == suppressionChangeCount {
+                        self.suppressionChangeCount = nil
                         return
                     }
 
@@ -3722,9 +3721,8 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
-    private func markSuppression(hash: String?) {
-        suppressionHash = hash
-        suppressionExpiresAt = Date().addingTimeInterval(1.5)
+    private func markSuppression(changeCount: Int) {
+        suppressionChangeCount = changeCount
     }
 
     private static func hash(kind: ClipboardContentKind, text: String) -> String {
