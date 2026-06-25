@@ -227,6 +227,7 @@ struct SimpleClipboardWorkspaceView: View {
                 searchFieldFocused: $isSearchFieldFocused,
                 layout: layout,
                 onCopy: copy(_:),
+                onDelete: delete(_:),
                 onTogglePin: togglePin(_:),
                 onOpenSettings: onOpenSettings,
                 onClearAll: {
@@ -403,6 +404,7 @@ struct ClipboardHistorySidebar: View {
     @Binding var searchFieldFocused: Bool
     let layout: SimpleClipboardLayout
     let onCopy: (ClipboardRecord) -> Void
+    let onDelete: (ClipboardRecord) -> Void
     let onTogglePin: (ClipboardRecord) -> Void
     let onOpenSettings: () -> Void
     let onClearAll: () -> Void
@@ -452,6 +454,9 @@ struct ClipboardHistorySidebar: View {
                             },
                             onCopy: {
                                 onCopy(record)
+                            },
+                            onDelete: {
+                                onDelete(record)
                             },
                             onTogglePin: {
                                 onTogglePin(record)
@@ -567,6 +572,7 @@ struct ClipboardHistoryRow: View {
     let layout: SimpleClipboardLayout
     let onSelect: () -> Void
     let onCopy: () -> Void
+    let onDelete: () -> Void
     let onTogglePin: () -> Void
 
     var body: some View {
@@ -580,6 +586,29 @@ struct ClipboardHistoryRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture(count: 2).onEnded {
+                onSelect()
+                onCopy()
+            })
+            .contextMenu {
+                Button {
+                    onCopy()
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+
+                Button {
+                    onTogglePin()
+                } label: {
+                    Label(record.isPinned ? "Unpin" : "Pin", systemImage: record.isPinned ? "pin.slash" : "pin")
+                }
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
 
             Button(action: onTogglePin) {
                 Image(systemName: record.isPinned ? "pin.fill" : "pin")
@@ -1296,6 +1325,9 @@ struct ClipboardDashboardView: View {
                             onCopy: {
                                 copy(record)
                             },
+                            onDelete: {
+                                delete(record)
+                            },
                             onTogglePin: {
                                 togglePin(record)
                             }
@@ -1906,6 +1938,7 @@ struct ClipboardPreviewCard: View {
     let layout: DashboardLayout
     let onTap: () -> Void
     let onCopy: () -> Void
+    let onDelete: () -> Void
     let onTogglePin: () -> Void
 
     var body: some View {
@@ -1986,6 +2019,29 @@ struct ClipboardPreviewCard: View {
             )
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded {
+            onTap()
+            onCopy()
+        })
+        .contextMenu {
+            Button {
+                onCopy()
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                onTogglePin()
+            } label: {
+                Label(record.isPinned ? "Unpin" : "Pin", systemImage: record.isPinned ? "pin.slash" : "pin")
+            }
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     private var cardBackground: some ShapeStyle {
