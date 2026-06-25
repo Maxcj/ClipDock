@@ -14,6 +14,185 @@ import Combine
 import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
+enum AppLanguagePreference: String, CaseIterable, Identifiable {
+    case system
+    case simplifiedChinese = "zh-Hans"
+    case english = "en"
+
+    var id: String { rawValue }
+}
+
+enum AppDisplayLanguage {
+    case simplifiedChinese
+    case english
+
+    static func resolve(from preferenceRawValue: String) -> AppDisplayLanguage {
+        let preference = AppLanguagePreference(rawValue: preferenceRawValue) ?? .system
+        switch preference {
+        case .system:
+            let identifier = Locale.preferredLanguages.first ?? Locale.current.identifier
+            if identifier.hasPrefix("zh-Hans") || identifier.hasPrefix("zh") {
+                return .simplifiedChinese
+            }
+            return .english
+        case .simplifiedChinese:
+            return .simplifiedChinese
+        case .english:
+            return .english
+        }
+    }
+
+    var localeIdentifier: String {
+        switch self {
+        case .simplifiedChinese:
+            return "zh-Hans"
+        case .english:
+            return "en"
+        }
+    }
+}
+
+enum AppTextKey: String {
+    case close
+    case minimize
+    case zoom
+    case settings
+    case showHideMainWindow
+    case quit
+    case loginApprovalRequired
+    case loginItemNotFound
+    case loginStatusUnknown
+    case clipsCount
+    case pinned
+    case today
+    case yesterday
+    case searchClipboard
+    case copy
+    case delete
+    case pin
+    case unpin
+    case noSelection
+    case chooseClipboardItem
+    case copied
+    case sourceApp
+    case imageFormat
+    case resolution
+    case imageSize
+    case fileSize
+    case characters
+    case type
+    case excludeApp
+    case fileReady
+    case versionLabel
+    case general
+    case privacy
+    case quickOpen
+    case autoClean
+    case about
+    case launchAndBehavior
+    case launchAndBehaviorSubtitle
+    case launchAtLogin
+    case launchAtLoginSubtitle
+    case autoHideAfterCopy
+    case autoHideAfterCopySubtitle
+    case interfaceSection
+    case interfaceSectionSubtitle
+    case language
+    case languageSubtitle
+    case followSystem
+    case simplifiedChinese
+    case english
+    case clipboardSection
+    case clipboardSectionSubtitle
+    case keepImages
+    case keepImagesSubtitle
+    case dataManagement
+    case dataManagementSubtitle
+    case clearAllHistory
+    case clearAllHistorySubtitle
+    case clear
+    case noExcludedApps
+    case noExcludedAppsSubtitle
+    case remove
+    case shortcutSection
+    case shortcutSectionSubtitle
+    case shortcutChangeSubtitle
+    case appTagline
+    case appInfo
+    case author
+    case privacySection
+    case privacySectionSubtitle
+    case autoCleanSection
+    case autoCleanSectionSubtitle
+    case enableAutoCleanup
+    case enableAutoCleanupSubtitle
+    case retentionDuration
+    case retentionDurationSubtitle
+    case shortcutRecordTitle
+    case shortcutRecordHint
+    case recording
+    case change
+    case reset
+    case noShortcutSet
+    case text
+    case link
+    case image
+    case code
+    case files
+    case other
+    case all
+    case links
+    case images
+    case minute
+    case hour
+    case day
+    case unknownSource
+    case fileList
+    case empty
+}
+
+struct AppLocalizer {
+    let language: AppDisplayLanguage
+
+    static var current: AppLocalizer {
+        AppLocalizer(language: AppDisplayLanguage.resolve(from: UserDefaults.standard.string(forKey: "app.languagePreference") ?? AppLanguagePreference.system.rawValue))
+    }
+
+    func text(_ key: AppTextKey, _ arguments: CVarArg...) -> String {
+        let format = localizedFormat(for: key)
+        guard !arguments.isEmpty else { return format }
+        return String(format: format, locale: Locale(identifier: language.localeIdentifier), arguments: arguments)
+    }
+
+    private func localizedFormat(for key: AppTextKey) -> String {
+        let locale = Locale(identifier: language.localeIdentifier)
+        if #available(macOS 13.0, *) {
+            return String(localized: String.LocalizationValue(key.rawValue), bundle: localizedBundle, locale: locale)
+        }
+
+        return NSLocalizedString(key.rawValue, tableName: "Localizable", bundle: localizedBundle, value: key.rawValue, comment: "")
+    }
+
+    private var localizedBundle: Bundle {
+        guard let path = Bundle.main.path(forResource: language.localeIdentifier, ofType: "lproj"),
+              let bundle = Bundle(path: path) else {
+            return .main
+        }
+        return bundle
+    }
+}
+
+private struct AppLocalizerEnvironmentKey: EnvironmentKey {
+    static let defaultValue = AppLocalizer.current
+}
+
+extension EnvironmentValues {
+    var appLocalizer: AppLocalizer {
+        get { self[AppLocalizerEnvironmentKey.self] }
+        set { self[AppLocalizerEnvironmentKey.self] = newValue }
+    }
+}
+
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
@@ -158,6 +337,7 @@ struct WindowChromeOverlay: View {
 }
 
 struct ChromeButton: View {
+    @Environment(\.appLocalizer) private var localizer
     let color: Color
     let symbolName: String
     let size: CGFloat
@@ -180,7 +360,7 @@ struct ChromeButton: View {
         .onHover { hovering in
             isHovered = hovering
         }
-        .help(symbolName == "xmark" ? "Close" : symbolName == "minus" ? "Minimize" : "Zoom")
+        .help(symbolName == "xmark" ? localizer.text(.close) : symbolName == "minus" ? localizer.text(.minimize) : localizer.text(.zoom))
     }
 }
 
@@ -449,6 +629,7 @@ struct SimpleClipboardWorkspaceView: View {
 }
 
 struct ClipboardHistorySidebar: View {
+    @Environment(\.appLocalizer) private var localizer
     @Binding var searchText: String
     @Binding var filterSelection: ClipboardFilter
     let activeFilter: ClipboardFilter
@@ -538,7 +719,7 @@ struct ClipboardHistorySidebar: View {
                 Circle()
                     .fill(Color.green.opacity(0.78))
                     .frame(width: 8, height: 8)
-                Text("\(records.count) clips")
+                Text(localizer.text(.clipsCount, records.count))
                     .font(.system(size: layout.footerSize))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -563,7 +744,7 @@ struct ClipboardHistorySidebar: View {
             sections.append(
                 ClipboardHistorySection(
                     id: .distantFuture,
-                    title: "Pinned",
+                    title: localizer.text(.pinned),
                     records: pinnedRecords,
                     topPadding: 0
                 )
@@ -590,11 +771,11 @@ struct ClipboardHistorySidebar: View {
         let calendar = Calendar.current
 
         if calendar.isDateInToday(day) {
-            return "Today"
+            return localizer.text(.today)
         }
 
         if calendar.isDateInYesterday(day) {
-            return "Yesterday"
+            return localizer.text(.yesterday)
         }
 
         return Self.sectionDateFormatter.string(from: day)
@@ -606,7 +787,7 @@ struct ClipboardHistorySidebar: View {
                 .font(.system(size: layout.searchIconSize, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            TextField("Search clipboard", text: $searchText)
+            TextField(localizer.text(.searchClipboard), text: $searchText)
                 .textFieldStyle(.plain)
                 .font(.system(size: layout.searchTextSize))
                 .focused($isSearchFieldFocused)
@@ -660,7 +841,7 @@ struct ClipboardHistorySidebar: View {
                 )
         }
         .buttonStyle(.plain)
-        .help("Settings")
+        .help(localizer.text(.settings))
     }
 
     private struct ClipboardHistorySection: Identifiable {
@@ -681,6 +862,7 @@ struct ClipboardHistorySidebar: View {
 }
 
 struct ClipboardHistoryRow: View {
+    @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
     let isSelected: Bool
     let layout: SimpleClipboardLayout
@@ -708,19 +890,19 @@ struct ClipboardHistoryRow: View {
                 Button {
                     onCopy()
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label(localizer.text(.copy), systemImage: "doc.on.doc")
                 }
 
                 Button {
                     onTogglePin()
                 } label: {
-                    Label(record.isPinned ? "Unpin" : "Pin", systemImage: record.isPinned ? "pin.slash" : "pin")
+                    Label(record.isPinned ? localizer.text(.unpin) : localizer.text(.pin), systemImage: record.isPinned ? "pin.slash" : "pin")
                 }
 
                 Button(role: .destructive) {
                     onDelete()
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(localizer.text(.delete), systemImage: "trash")
                 }
             }
 
@@ -927,6 +1109,7 @@ struct ClipboardHistoryRow: View {
 }
 
 struct ClipboardDetailInspector: View {
+    @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord?
     let layout: SimpleClipboardLayout
     let onCopy: () -> Void
@@ -947,19 +1130,19 @@ struct ClipboardDetailInspector: View {
                 metadata(for: record)
 
                 HStack(spacing: layout.detailButtonGap) {
-                    detailButton(title: "Copy", icon: "doc.on.doc", action: onCopy)
-                    detailButton(title: "Pin", icon: record.isPinned ? "pin.fill" : "pin", action: onTogglePin)
+                    detailButton(title: localizer.text(.copy), icon: "doc.on.doc", action: onCopy)
+                    detailButton(title: localizer.text(.pin), icon: record.isPinned ? "pin.fill" : "pin", action: onTogglePin)
                     if record.sourceBundleId?.isEmpty == false {
-                        detailButton(title: "Exclude App", icon: "hand.raised", action: onExcludeSourceApp)
+                        detailButton(title: localizer.text(.excludeApp), icon: "hand.raised", action: onExcludeSourceApp)
                     }
-                    detailButton(title: "Delete", icon: "trash", action: onDelete, isDestructive: true)
+                    detailButton(title: localizer.text(.delete), icon: "trash", action: onDelete, isDestructive: true)
                 }
                 .padding(.top, 8)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("No selection")
+                    Text(localizer.text(.noSelection))
                         .font(.system(size: layout.detailTitleSize, weight: .semibold))
-                    Text("Choose a clipboard item from the left to inspect it here.")
+                    Text(localizer.text(.chooseClipboardItem))
                         .font(.system(size: layout.detailSubtitleSize))
                         .foregroundStyle(.secondary)
                 }
@@ -1138,26 +1321,26 @@ struct ClipboardDetailInspector: View {
 
     private func metadataRows(for record: ClipboardRecord) -> [(title: String, value: String)] {
         var rows: [(title: String, value: String)] = [
-            ("Copied", record.timeLabelPrecise)
+            (localizer.text(.copied), record.timeLabelPrecise)
         ]
 
         if let sourceAppName = record.sourceAppName?.trimmingCharacters(in: .whitespacesAndNewlines),
            !sourceAppName.isEmpty {
-            rows.append(("Source App", sourceAppName))
+            rows.append((localizer.text(.sourceApp), sourceAppName))
         }
 
         switch record.kind {
         case .image:
-            rows.append(("Image Format", record.imageFormatLabel))
-            rows.append(("Resolution", record.imageResolutionLabel))
-            rows.append(("Image Size", record.imageFileSizeLabel))
+            rows.append((localizer.text(.imageFormat), record.imageFormatLabel))
+            rows.append((localizer.text(.resolution), record.imageResolutionLabel))
+            rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
         case .files:
-            rows.append(("File Size", record.fileSizeLabel))
+            rows.append((localizer.text(.fileSize), record.fileSizeLabel))
         default:
-            rows.append(("Characters", "\(record.characterCount)"))
+            rows.append((localizer.text(.characters), "\(record.characterCount)"))
         }
 
-        rows.append(("Type", record.kind.title))
+        rows.append((localizer.text(.type), record.kind.title))
         return rows
     }
 
@@ -2024,6 +2207,7 @@ private struct AsyncDetailImageView: View {
 }
 
 private struct FileDetailPreview: View {
+    @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
     let subtitleFontSize: CGFloat
     let footerFontSize: CGFloat
@@ -2040,7 +2224,7 @@ private struct FileDetailPreview: View {
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(3)
 
-                Text("File ready to copy or open from Finder.")
+                Text(localizer.text(.fileReady))
                     .font(.system(size: subtitleFontSize))
                     .foregroundStyle(.secondary)
 
@@ -2522,6 +2706,7 @@ struct KeyCommandInterceptor: NSViewRepresentable {
 }
 
 struct SettingsView: View {
+    @Environment(\.appLocalizer) private var localizer
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var loginItemManager: LoginItemManager
@@ -2539,6 +2724,7 @@ struct SettingsView: View {
     @AppStorage("clipboard.hotkeyDisplay") private var hotkeyDisplay = HotKeyConfiguration.defaultDisplay
     @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
     @AppStorage(ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey) private var excludedBundleIdentifiersStorage = ""
+    @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
     var body: some View {
         GeometryReader { proxy in
@@ -2660,9 +2846,9 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(appName)
-                        .font(.system(size: 22, weight: .semibold))
-                    Text("版本 \(appVersion)")
-                        .font(.system(size: 13))
+                        .font(.system(size: 20, weight: .semibold))
+                    Text(localizer.text(.versionLabel, appVersion))
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
 
@@ -2699,11 +2885,11 @@ struct SettingsView: View {
         switch activeTab {
         case .general:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
-                settingsSection(title: "启动与行为", subtitle: "应用启动和窗口行为") {
+                settingsSection(title: localizer.text(.launchAndBehavior), subtitle: localizer.text(.launchAndBehaviorSubtitle)) {
                     settingsToggleRow(
                         iconName: "power",
-                        title: "开机时自动启动",
-                        subtitle: "登录系统后自动运行 ClipDock",
+                        title: localizer.text(.launchAtLogin),
+                        subtitle: localizer.text(.launchAtLoginSubtitle),
                         isOn: $startAtLogin
                     )
 
@@ -2711,8 +2897,8 @@ struct SettingsView: View {
 
                     settingsToggleRow(
                         iconName: "rectangle.on.rectangle",
-                        title: "复制后自动隐藏窗口",
-                        subtitle: "从历史项复制后自动收起主窗口，方便直接粘贴",
+                        title: localizer.text(.autoHideAfterCopy),
+                        subtitle: localizer.text(.autoHideAfterCopySubtitle),
                         isOn: $autoHideAfterCopy
                     )
 
@@ -2722,21 +2908,38 @@ struct SettingsView: View {
                     }
                 }
 
-                settingsSection(title: "剪贴板", subtitle: "记录和保留策略") {
+                settingsSection(title: localizer.text(.interfaceSection), subtitle: localizer.text(.interfaceSectionSubtitle)) {
+                    settingsValueRow(
+                        iconName: "globe",
+                        title: localizer.text(.language),
+                        subtitle: localizer.text(.languageSubtitle)
+                    ) {
+                        Picker("", selection: $languagePreference) {
+                            ForEach(AppLanguagePreference.allCases) { option in
+                                Text(localizedTitle(for: option)).tag(option.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 132)
+                    }
+                }
+
+                settingsSection(title: localizer.text(.clipboardSection), subtitle: localizer.text(.clipboardSectionSubtitle)) {
                     settingsToggleRow(
                         iconName: "photo.on.rectangle",
-                        title: "保留图片历史",
-                        subtitle: "将图片内容保留在历史记录中",
+                        title: localizer.text(.keepImages),
+                        subtitle: localizer.text(.keepImagesSubtitle),
                         isOn: $keepImages
                     )
                 }
 
-                settingsSection(title: "数据管理", subtitle: "危险操作请谨慎使用") {
+                settingsSection(title: localizer.text(.dataManagement), subtitle: localizer.text(.dataManagementSubtitle)) {
                     settingsDestructiveRow(
                         iconName: "trash",
-                        title: "清除所有历史记录",
-                        subtitle: "永久删除当前设备上的所有剪贴板历史",
-                        buttonTitle: "清除",
+                        title: localizer.text(.clearAllHistory),
+                        subtitle: localizer.text(.clearAllHistorySubtitle),
+                        buttonTitle: localizer.text(.clear),
                         action: {
                             clearAllHistory()
                         }
@@ -2745,18 +2948,18 @@ struct SettingsView: View {
             }
         case .quickOpen:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
-                settingsSection(title: "快捷键", subtitle: "设置唤出主窗口的组合键") {
+                settingsSection(title: localizer.text(.shortcutSection), subtitle: localizer.text(.shortcutSectionSubtitle)) {
                     settingsShortcutRow()
                 }
             }
         case .privacy:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
-                settingsSection(title: "安全与隐私", subtitle: "管理不会被记录的应用") {
+                settingsSection(title: localizer.text(.privacySection), subtitle: localizer.text(.privacySectionSubtitle)) {
                     if excludedBundleIdentifiers.isEmpty {
                         settingsPlaceholderRow(
                             iconName: "hand.raised",
-                            title: "暂无排除应用",
-                            subtitle: "你可以在历史项详情里把当前来源应用加入排除列表。"
+                            title: localizer.text(.noExcludedApps),
+                            subtitle: localizer.text(.noExcludedAppsSubtitle)
                         )
                     } else {
                         VStack(spacing: 0) {
@@ -2773,11 +2976,11 @@ struct SettingsView: View {
             }
         case .autoClean:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
-                settingsSection(title: "自动清理", subtitle: "调整历史记录保留规则") {
+                settingsSection(title: localizer.text(.autoCleanSection), subtitle: localizer.text(.autoCleanSectionSubtitle)) {
                     settingsToggleRow(
                         iconName: "clock.arrow.circlepath",
-                        title: "启用自动清理",
-                        subtitle: "自动删除超过设定时间的历史记录",
+                        title: localizer.text(.enableAutoCleanup),
+                        subtitle: localizer.text(.enableAutoCleanupSubtitle),
                         isOn: $retentionEnabled
                     )
 
@@ -2785,8 +2988,8 @@ struct SettingsView: View {
 
                     settingsValueRow(
                         iconName: "calendar.badge.clock",
-                        title: "历史记录保留时长",
-                        subtitle: "仅删除非置顶条目",
+                        title: localizer.text(.retentionDuration),
+                        subtitle: localizer.text(.retentionDurationSubtitle),
                         accessory: {
                             HStack(spacing: 8) {
                                 TextField("", value: $retentionValue, format: .number)
@@ -2808,7 +3011,7 @@ struct SettingsView: View {
             }
         case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
-                settingsSection(title: "关于", subtitle: "应用信息") {
+                settingsSection(title: localizer.text(.about), subtitle: localizer.text(.appInfo)) {
                     settingsAboutRow()
                 }
             }
@@ -2822,13 +3025,13 @@ struct SettingsView: View {
                     .fill(isSelected ? tab.tint.opacity(0.16) : Color.white.opacity(0.0))
 
                 Image(systemName: tab.iconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.62))
             }
             .frame(width: 36, height: 36)
 
-            Text(tab.title)
-                .font(.system(size: 16, weight: .regular))
+            Text(localizer.text(tab.titleKey))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.80))
 
             Spacer(minLength: 0)
@@ -2855,11 +3058,11 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -2920,7 +3123,7 @@ struct SettingsView: View {
             SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
                 HStack(spacing: 10) {
                     Text(trailingText)
-                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
@@ -2928,7 +3131,7 @@ struct SettingsView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -2954,7 +3157,7 @@ struct SettingsView: View {
     private func settingsPlaceholderRow(iconName: String, title: String, subtitle: String) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
             Text("...")
-                .font(.caption)
+                .font(.system(size: 11))
                 .foregroundStyle(.clear)
         }
     }
@@ -2967,17 +3170,17 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(ClipboardPrivacyRules.displayName(for: bundleIdentifier))
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.primary)
                 Text(bundleIdentifier)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
 
             Spacer(minLength: 0)
 
-            Button("移除") {
+            Button(localizer.text(.remove)) {
                 removeExcludedBundleIdentifier(bundleIdentifier)
             }
             .buttonStyle(SettingsSecondaryButtonStyle())
@@ -2991,8 +3194,8 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 12) {
             SettingsPreferenceRow(
                 iconName: "command",
-                title: "显示或隐藏主窗口",
-                subtitle: "点击“更改”后按下新的组合键"
+                title: localizer.text(.shortcutRecordTitle),
+                subtitle: localizer.text(.shortcutChangeSubtitle)
             ) {
                 ShortcutRecorderField(
                     keyCode: $hotkeyKeyCode,
@@ -3024,14 +3227,14 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(appName)
-                    .font(.system(size: 22, weight: .regular))
-                Text("轻量级 macOS 剪贴板管理工具。")
-                    .font(.system(size: 13))
+                    .font(.system(size: 20, weight: .regular))
+                Text(localizer.text(.appTagline))
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
 
                 Divider().padding(.vertical, 4)
 
-                SettingsInlineKeyValueRow(title: "作者", value: appAuthor)
+                SettingsInlineKeyValueRow(title: localizer.text(.author), value: appAuthor)
             }
 
             Spacer(minLength: 0)
@@ -3054,15 +3257,26 @@ struct SettingsView: View {
         }
     }
 
+    private func localizedTitle(for preference: AppLanguagePreference) -> String {
+        switch preference {
+        case .system:
+            return localizer.text(.followSystem)
+        case .simplifiedChinese:
+            return localizer.text(.simplifiedChinese)
+        case .english:
+            return localizer.text(.english)
+        }
+    }
+
     @ViewBuilder
     private func settingsInlineMessage(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "info.circle")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .padding(.top, 1)
             Text(text)
-                .font(.system(size: 12))
+                .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -3293,14 +3507,18 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var titleKey: AppTextKey {
         switch self {
-        case .general: return "通用"
-        case .privacy: return "安全与隐私"
-        case .quickOpen: return "快捷键"
-        case .autoClean: return "自动清理"
-        case .about: return "关于"
+        case .general: return .general
+        case .privacy: return .privacy
+        case .quickOpen: return .quickOpen
+        case .autoClean: return .autoClean
+        case .about: return .about
         }
+    }
+
+    var title: String {
+        AppLocalizer.current.text(titleKey)
     }
 
     var iconName: String {
@@ -3391,17 +3609,17 @@ private struct SettingsPreferenceRow<Accessory: View>: View {
                     .fill(Color.black.opacity(0.04))
 
                 Image(systemName: iconName)
-                    .font(.system(size: 16, weight: .regular))
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(.secondary)
             }
             .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 14, weight: .regular))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.primary)
                 Text(subtitle)
-                    .font(.system(size: 12))
+                    .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -3422,11 +3640,11 @@ private struct SettingsInlineKeyValueRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text("\(title):")
-                .font(.system(size: 13))
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
             Text(value)
-                .font(.system(size: 13, weight: .regular))
+                .font(.system(size: 12, weight: .regular))
                 .foregroundStyle(.primary)
 
             Spacer(minLength: 0)
@@ -3437,7 +3655,7 @@ private struct SettingsInlineKeyValueRow: View {
 private struct DestructivePillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13, weight: .semibold))
+            .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .foregroundStyle(.white)
@@ -3492,6 +3710,7 @@ private extension SettingsView {
 }
 
 struct ShortcutRecorderField: View {
+    @Environment(\.appLocalizer) private var localizer
     @Binding var keyCode: Int
     @Binding var modifiers: Int
     @Binding var displayText: String
@@ -3506,21 +3725,21 @@ struct ShortcutRecorderField: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("显示或隐藏主窗口")
-                        .font(.subheadline.weight(.semibold))
-                    Text("点击“更改”后按下新的组合键，至少包含一个修饰键。")
-                        .font(.caption)
+                    Text(localizer.text(.shortcutRecordTitle))
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(localizer.text(.shortcutRecordHint))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer(minLength: 0)
 
-                Button(isCapturing ? "录制中..." : "更改") {
+                Button(isCapturing ? localizer.text(.recording) : localizer.text(.change)) {
                     isCapturing = true
                 }
                 .buttonStyle(SettingsSecondaryButtonStyle())
 
-                Button("重置") {
+                Button(localizer.text(.reset)) {
                     keyCode = defaultKeyCode
                     modifiers = defaultModifiers
                     displayText = defaultDisplay
@@ -3531,8 +3750,8 @@ struct ShortcutRecorderField: View {
             HStack(spacing: 8) {
                 Image(systemName: "command")
                     .foregroundStyle(.secondary)
-                Text(displayText.isEmpty ? "未设置快捷键" : displayText)
-                    .font(.system(.body, design: .monospaced))
+                Text(displayText.isEmpty ? localizer.text(.noShortcutSet) : displayText)
+                    .font(.system(size: 12, design: .monospaced))
                     .monospacedDigit()
                 Spacer()
             }
@@ -3695,9 +3914,9 @@ enum RetentionUnit: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .minute: return "分钟"
-        case .hour: return "小时"
-        case .day: return "天"
+        case .minute: return AppLocalizer.current.text(.minute)
+        case .hour: return AppLocalizer.current.text(.hour)
+        case .day: return AppLocalizer.current.text(.day)
         }
     }
 
@@ -3724,14 +3943,14 @@ enum ClipboardFilter: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .all: return "All"
-        case .text: return "Text"
-        case .links: return "Links"
-        case .images: return "Images"
-        case .code: return "Code"
-        case .files: return "Files"
+        case .all: return AppLocalizer.current.text(.all)
+        case .text: return AppLocalizer.current.text(.text)
+        case .links: return AppLocalizer.current.text(.links)
+        case .images: return AppLocalizer.current.text(.images)
+        case .code: return AppLocalizer.current.text(.code)
+        case .files: return AppLocalizer.current.text(.files)
         case .colors: return "Colors"
-        case .other: return "Other"
+        case .other: return AppLocalizer.current.text(.other)
         }
     }
 
@@ -3772,12 +3991,12 @@ enum ClipboardContentKind: String {
 
     var title: String {
         switch self {
-        case .text: return "Text"
-        case .link: return "Link"
-        case .image: return "Image"
-        case .code: return "Code"
-        case .files: return "Files"
-        case .unknown: return "Other"
+        case .text: return AppLocalizer.current.text(.text)
+        case .link: return AppLocalizer.current.text(.link)
+        case .image: return AppLocalizer.current.text(.image)
+        case .code: return AppLocalizer.current.text(.code)
+        case .files: return AppLocalizer.current.text(.files)
+        case .unknown: return AppLocalizer.current.text(.other)
         }
     }
 
@@ -3833,22 +4052,22 @@ extension ClipboardRecord {
         }
 
         if kind == .image {
-            return "Image"
+            return AppLocalizer.current.text(.image)
         }
 
         if kind == .files {
-            return "File list"
+            return AppLocalizer.current.text(.fileList)
         }
 
-        return "Empty"
+        return AppLocalizer.current.text(.empty)
     }
 
     var previewSubtitle: String {
         if kind == .link {
-            return linkTitleLabel ?? linkHostLabel ?? "Link"
+            return linkTitleLabel ?? linkHostLabel ?? AppLocalizer.current.text(.link)
         }
 
-        let appName = sourceAppName?.isEmpty == false ? sourceAppName! : "Unknown source"
+        let appName = sourceAppName?.isEmpty == false ? sourceAppName! : AppLocalizer.current.text(.unknownSource)
         return appName
     }
 
@@ -4016,11 +4235,11 @@ extension ClipboardRecord {
         let calendar = Calendar.current
 
         if calendar.isDateInToday(date) {
-            return "Today  \(timeText)"
+            return "\(AppLocalizer.current.text(.today))  \(timeText)"
         }
 
         if calendar.isDateInYesterday(date) {
-            return "Yesterday  \(timeText)"
+            return "\(AppLocalizer.current.text(.yesterday))  \(timeText)"
         }
 
         return Self.historyRowFormatter.string(from: date)
