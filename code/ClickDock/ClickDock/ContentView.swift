@@ -38,6 +38,7 @@ struct ContentView: View {
                     selectedRecordID: $selectedRecordID,
                     containerSize: proxy.size,
                     onOpenSettings: {
+                        NSApp.activate(ignoringOtherApps: true)
                         openWindow(id: "settings")
                     }
                 )
@@ -71,6 +72,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .clipDockTogglePanelRequested)) { _ in
             toggleMainWindowVisibility()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .clipDockHidePanelRequested)) { _ in
+            hideMainWindow()
         }
     }
 
@@ -111,8 +115,19 @@ struct ContentView: View {
             return
         }
 
+        showMainWindow()
+    }
+
+    private func hideMainWindow() {
+        windowRef?.orderOut(nil)
+    }
+
+    private func showMainWindow() {
+        guard let windowRef else { return }
+
         NSApp.activate(ignoringOtherApps: true)
         windowRef.makeKeyAndOrderFront(nil)
+        windowRef.orderFrontRegardless()
     }
 
 }
@@ -172,6 +187,7 @@ struct ChromeButton: View {
 struct SimpleClipboardWorkspaceView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
+    @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
 
     @FetchRequest private var records: FetchedResults<ClipboardRecord>
 
@@ -298,10 +314,14 @@ struct SimpleClipboardWorkspaceView: View {
 
     private var currentSelectedRecord: ClipboardRecord? {
         if let selectedRecordID,
-           let record = records.first(where: { $0.objectID == selectedRecordID }) {
+           let record = displayOrderedRecords.first(where: { $0.objectID == selectedRecordID }) {
             return record
         }
-        return records.first
+        return displayOrderedRecords.first
+    }
+
+    private var displayOrderedRecords: [ClipboardRecord] {
+        records.sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func syncSelection() {
@@ -350,6 +370,10 @@ struct SimpleClipboardWorkspaceView: View {
     private func copy(_ record: ClipboardRecord) {
         clipboardMonitor.copy(record)
         markUsed(record)
+
+        if autoHideAfterCopy {
+            NotificationCenter.default.post(name: .clipDockHidePanelRequested, object: nil)
+        }
     }
 
     private func togglePin(_ record: ClipboardRecord) {
@@ -499,31 +523,40 @@ struct ClipboardHistorySidebar: View {
 
     private var groupedSections: [ClipboardHistorySection] {
         let calendar = Calendar.current
-        let dayKeys = Dictionary(grouping: records, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
+        let pinnedRecords = records
+            .filter(\.isPinned)
+            .sorted(by: clipboardRecordDisplaysBefore)
+        let unpinnedRecords = records.filter { !$0.isPinned }
+        let dayKeys = Dictionary(grouping: unpinnedRecords, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
         let sortedDays = dayKeys.keys.sorted(by: >)
-        return sortedDays.map { day in
+
+        var sections: [ClipboardHistorySection] = []
+
+        if !pinnedRecords.isEmpty {
+            sections.append(
+                ClipboardHistorySection(
+                    id: .distantFuture,
+                    title: "Pinned",
+                    records: pinnedRecords,
+                    topPadding: 0
+                )
+            )
+        }
+
+        sections.append(contentsOf: sortedDays.map { day in
             let sectionRecords = (dayKeys[day] ?? []).sorted { lhs, rhs in
-                let lhsDate = lhs.createdAt ?? .distantPast
-                let rhsDate = rhs.createdAt ?? .distantPast
-
-                if lhsDate != rhsDate {
-                    return lhsDate > rhsDate
-                }
-
-                if lhs.isPinned != rhs.isPinned {
-                    return lhs.isPinned && !rhs.isPinned
-                }
-
-                return lhs.objectID.uriRepresentation().absoluteString < rhs.objectID.uriRepresentation().absoluteString
+                clipboardRecordDisplaysBefore(lhs, rhs)
             }
 
             return ClipboardHistorySection(
                 id: day,
                 title: historySectionTitle(for: day),
                 records: sectionRecords,
-                topPadding: calendar.isDate(day, equalTo: sortedDays.first ?? day, toGranularity: .day) ? 0 : layout.rowSpacing
+                topPadding: sections.isEmpty && calendar.isDate(day, equalTo: sortedDays.first ?? day, toGranularity: .day) ? 0 : layout.rowSpacing
             )
-        }
+        })
+
+        return sections
     }
 
     private func historySectionTitle(for day: Date) -> String {
@@ -638,6 +671,7 @@ struct ClipboardHistorySidebar: View {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+
 }
 
 struct ClipboardHistoryRow: View {
@@ -756,7 +790,7 @@ struct ClipboardHistoryRow: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                Text(record.timeLabelShort)
+                Text(record.historyRowTimeLabel)
                     .font(.system(size: layout.rowMetaSize + 1))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -1240,7 +1274,7 @@ struct SimpleClipboardLayout {
     var previewTextSize: CGFloat { s(42) }
     var detailButtonGap: CGFloat { s(12) }
     var heroImageHeight: CGFloat { s(320) }
-    var rowTimeWidth: CGFloat { s(48) }
+    var rowTimeWidth: CGFloat { s(112) }
     var rowKindWidth: CGFloat { s(72) }
     var rowFooterWidth: CGFloat { s(138) }
 
@@ -1391,7 +1425,7 @@ struct ClipboardDashboardView: View {
         VStack(alignment: .leading, spacing: layout.cardPanelSpacing) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: layout.cardSpacing) {
-                    ForEach(records, id: \.objectID) { record in
+                    ForEach(displayOrderedRecords, id: \.objectID) { record in
                         ClipboardPreviewCard(
                             record: record,
                             isSelected: selectedRecordID == record.objectID,
@@ -1428,10 +1462,14 @@ struct ClipboardDashboardView: View {
 
     private var selectedRecord: ClipboardRecord? {
         if let selectedRecordID,
-           let record = records.first(where: { $0.objectID == selectedRecordID }) {
+           let record = displayOrderedRecords.first(where: { $0.objectID == selectedRecordID }) {
             return record
         }
         return nil
+    }
+
+    private var displayOrderedRecords: [ClipboardRecord] {
+        records.sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func copy(_ record: ClipboardRecord) {
@@ -2356,10 +2394,11 @@ struct KeyCommandInterceptor: NSViewRepresentable {
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var loginItemManager: LoginItemManager
     @State private var activeTab: SettingsTab = .general
+    @State private var windowRef: NSWindow?
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
-    @AppStorage("clipboard.maxItems") private var maxItems = 200
     @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = false
     @AppStorage("clipboard.retentionValue") private var retentionValue = 7
     @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
@@ -2367,6 +2406,7 @@ struct SettingsView: View {
     @AppStorage("clipboard.hotkeyKeyCode") private var hotkeyKeyCode = HotKeyConfiguration.defaultKeyCode
     @AppStorage("clipboard.hotkeyModifiers") private var hotkeyModifiers = Int(HotKeyConfiguration.defaultModifiers)
     @AppStorage("clipboard.hotkeyDisplay") private var hotkeyDisplay = HotKeyConfiguration.defaultDisplay
+    @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -2399,6 +2439,25 @@ struct SettingsView: View {
                     .fill(.ultraThinMaterial)
             }
         )
+        .background(
+            WindowAccessor { window in
+                if windowRef !== window {
+                    windowRef = window
+                }
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                window.orderFrontRegardless()
+            }
+        )
+        .onAppear {
+            loginItemManager.refreshStatus()
+            startAtLogin = loginItemManager.isEnabled
+        }
+        .onChange(of: startAtLogin) { newValue in
+            guard newValue != loginItemManager.isEnabled else { return }
+            loginItemManager.setEnabled(newValue)
+            startAtLogin = loginItemManager.isEnabled
+        }
     }
 
     @ViewBuilder
@@ -2408,16 +2467,18 @@ struct SettingsView: View {
             SettingsTabCard {
                 VStack(alignment: .leading, spacing: 14) {
                     Toggle("Launch at login", isOn: $startAtLogin)
-                    Toggle("Keep images in history", isOn: $keepImages)
-                    HStack {
-                        Text("Max items")
-                        Spacer()
-                        Stepper(value: $maxItems, in: 50...1000, step: 25) {
-                            Text("\(maxItems)")
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
+                    if let statusMessage = loginItemManager.statusMessage {
+                        Text(statusMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    Toggle("Keep images in history", isOn: $keepImages)
+                    Toggle("Auto-hide after copying from history", isOn: $autoHideAfterCopy)
+                    Text("Hide the main window after copying a clipboard item so you can paste immediately.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         case .quickOpen:
@@ -3022,6 +3083,22 @@ extension ClipboardRecord {
         Self.preciseFormatter.string(from: createdAt ?? Date())
     }
 
+    var historyRowTimeLabel: String {
+        let date = createdAt ?? Date()
+        let timeText = Self.shortFormatter.string(from: date)
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(date) {
+            return "Today  \(timeText)"
+        }
+
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday  \(timeText)"
+        }
+
+        return Self.historyRowFormatter.string(from: date)
+    }
+
     static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -3040,6 +3117,13 @@ extension ClipboardRecord {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    static let historyRowFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd  HH:mm"
         return formatter
     }()
 
@@ -3969,6 +4053,7 @@ final class GlobalHotkeyManager: ObservableObject {
 
 extension Notification.Name {
     static let clipDockTogglePanelRequested = Notification.Name("clipDockTogglePanelRequested")
+    static let clipDockHidePanelRequested = Notification.Name("clipDockHidePanelRequested")
 }
 
 private struct ClipboardSnapshot {
@@ -3987,6 +4072,20 @@ private struct SavedImageAssets {
     let original: URL
     let thumbnail: URL
     let originalData: Data
+}
+
+private func clipboardRecordDisplaysBefore(_ lhs: ClipboardRecord, _ rhs: ClipboardRecord) -> Bool {
+    if lhs.isPinned != rhs.isPinned {
+        return lhs.isPinned && !rhs.isPinned
+    }
+
+    let lhsAnchor = lhs.isPinned ? (lhs.updatedAt ?? lhs.createdAt ?? .distantPast) : (lhs.createdAt ?? .distantPast)
+    let rhsAnchor = rhs.isPinned ? (rhs.updatedAt ?? rhs.createdAt ?? .distantPast) : (rhs.createdAt ?? .distantPast)
+    if lhsAnchor != rhsAnchor {
+        return lhsAnchor > rhsAnchor
+    }
+
+    return lhs.objectID.uriRepresentation().absoluteString < rhs.objectID.uriRepresentation().absoluteString
 }
 
 extension ClipboardRecord {

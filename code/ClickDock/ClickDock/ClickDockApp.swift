@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 enum WindowLayout {
     static let defaultSize = CGSize(width: 1008, height: 717)
@@ -18,6 +19,7 @@ struct ClipDockApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var clipboardMonitor: ClipboardMonitor
     @StateObject private var hotkeyManager: GlobalHotkeyManager
+    @StateObject private var loginItemManager: LoginItemManager
 
     init() {
         let context = PersistenceController.shared.container.viewContext
@@ -26,9 +28,11 @@ struct ClipDockApp: App {
             "clipboard.hotkeyEnabled": true,
             "clipboard.hotkeyKeyCode": 49,
             "clipboard.hotkeyModifiers": Int(HotKeyConfiguration.defaultModifiers),
-            "clipboard.hotkeyDisplay": HotKeyConfiguration.defaultDisplay
+            "clipboard.hotkeyDisplay": HotKeyConfiguration.defaultDisplay,
+            "clipboard.autoHideAfterCopy": false
         ])
         _hotkeyManager = StateObject(wrappedValue: GlobalHotkeyManager())
+        _loginItemManager = StateObject(wrappedValue: LoginItemManager())
     }
 
     var body: some Scene {
@@ -37,11 +41,13 @@ struct ClipDockApp: App {
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(clipboardMonitor)
                 .environmentObject(hotkeyManager)
+                .environmentObject(loginItemManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
 
         Window("Settings", id: "settings") {
             SettingsView()
+                .environmentObject(loginItemManager)
         }
         .defaultSize(width: 560, height: 560)
 
@@ -54,6 +60,50 @@ struct ClipDockApp: App {
     }
 }
 
+@MainActor
+final class LoginItemManager: ObservableObject {
+    @Published private(set) var isEnabled: Bool = false
+    @Published private(set) var statusMessage: String?
+
+    init() {
+        refreshStatus()
+    }
+
+    func refreshStatus() {
+        switch SMAppService.mainApp.status {
+        case .enabled:
+            isEnabled = true
+            statusMessage = nil
+        case .requiresApproval:
+            isEnabled = false
+            statusMessage = "Login item registration needs approval in System Settings."
+        case .notFound:
+            isEnabled = false
+            statusMessage = "The app could not register itself as a login item."
+        case .notRegistered:
+            isEnabled = false
+            statusMessage = nil
+        @unknown default:
+            isEnabled = false
+            statusMessage = "Unable to determine launch-at-login status."
+        }
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+
+        refreshStatus()
+    }
+}
+
 private struct StatusBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
 
@@ -63,6 +113,7 @@ private struct StatusBarMenuView: View {
         }
 
         Button("设置") {
+            NSApp.activate(ignoringOtherApps: true)
             openWindow(id: "settings")
         }
 
