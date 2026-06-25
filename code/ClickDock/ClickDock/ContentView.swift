@@ -923,12 +923,34 @@ struct ClipboardDetailInspector: View {
     }
 
     private func metadata(for record: ClipboardRecord) -> some View {
-        VStack(spacing: 14) {
-            ClipboardDetailMetaRow(title: "Copied", value: record.timeLabelPrecise, layout: layout)
-            ClipboardDetailMetaRow(title: "Characters", value: "\(record.characterCount)", layout: layout)
-            ClipboardDetailMetaRow(title: "Type", value: record.kind.title, layout: layout)
+        let rows = metadataRows(for: record)
+
+        return VStack(spacing: 14) {
+            ForEach(rows.indices, id: \.self) { index in
+                ClipboardDetailMetaRow(title: rows[index].title, value: rows[index].value, layout: layout)
+            }
         }
         .padding(.top, 2)
+    }
+
+    private func metadataRows(for record: ClipboardRecord) -> [(title: String, value: String)] {
+        var rows: [(title: String, value: String)] = [
+            ("Copied", record.timeLabelPrecise)
+        ]
+
+        switch record.kind {
+        case .image:
+            rows.append(("Image Format", record.imageFormatLabel))
+            rows.append(("Resolution", record.imageResolutionLabel))
+            rows.append(("Image Size", record.imageFileSizeLabel))
+        case .files:
+            rows.append(("File Size", record.fileSizeLabel))
+        default:
+            rows.append(("Characters", "\(record.characterCount)"))
+        }
+
+        rows.append(("Type", record.kind.title))
+        return rows
     }
 
     private func detailButton(title: String, icon: String, action: @escaping () -> Void, isDestructive: Bool = false) -> some View {
@@ -2669,6 +2691,27 @@ extension ClipboardRecord {
         ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
     }
 
+    var imageFormatLabel: String {
+        guard kind == .image else { return "-" }
+        let path = imagePath ?? thumbnailPathValue
+        return Self.fileExtensionLabel(for: path) ?? "PNG"
+    }
+
+    var imageResolutionLabel: String {
+        guard kind == .image, let imagePath else { return "-" }
+        return Self.imageResolutionLabel(forImageAtPath: imagePath) ?? "-"
+    }
+
+    var imageFileSizeLabel: String {
+        guard kind == .image else { return "-" }
+        return Self.fileSizeLabel(forPath: imagePath)
+    }
+
+    var fileSizeLabel: String {
+        guard kind == .files else { return "-" }
+        return Self.fileSizeLabel(forPath: assetPathValue)
+    }
+
     var cachedImagePaths: [String] {
         [imagePath, thumbnailPathValue].compactMap { path in
             guard let path, !path.isEmpty else { return nil }
@@ -2740,6 +2783,79 @@ extension ClipboardRecord {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .medium
+        return formatter
+    }()
+
+    private static func fileExtensionLabel(for path: String?) -> String? {
+        guard let path, !path.isEmpty else { return nil }
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension.trimmingCharacters(in: .whitespacesAndNewlines)
+        return ext.isEmpty ? nil : ext.uppercased()
+    }
+
+    private static func imageResolutionLabel(forImageAtPath path: String) -> String? {
+        let url = URL(fileURLWithPath: path)
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int else {
+            return nil
+        }
+        return "\(width) × \(height)"
+    }
+
+    private static func fileSizeLabel(forPath path: String?) -> String {
+        guard let path, !path.isEmpty else { return "-" }
+        let url = URL(fileURLWithPath: path)
+        guard let size = fileSize(at: url) else { return "-" }
+        return Self.byteCountFormatter.string(fromByteCount: Int64(size))
+    }
+
+    private static func fileSize(at url: URL) -> Int? {
+        let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .totalFileAllocatedSizeKey])
+        if values?.isDirectory == true {
+            return directorySize(at: url)
+        }
+
+        if let allocated = values?.totalFileAllocatedSize, allocated > 0 {
+            return allocated
+        }
+
+        if let fileSize = values?.fileSize, fileSize > 0 {
+            return fileSize
+        }
+
+        return nil
+    }
+
+    private static func directorySize(at url: URL) -> Int? {
+        guard let enumerator = FileManager.default.enumerator(
+            at: url,
+            includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .totalFileAllocatedSizeKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+
+        var total: Int = 0
+        for case let fileURL as URL in enumerator {
+            let values = try? fileURL.resourceValues(forKeys: [.isDirectoryKey, .fileSizeKey, .totalFileAllocatedSizeKey])
+            guard values?.isDirectory != true else { continue }
+            if let allocated = values?.totalFileAllocatedSize, allocated > 0 {
+                total += allocated
+            } else if let fileSize = values?.fileSize, fileSize > 0 {
+                total += fileSize
+            }
+        }
+        return total > 0 ? total : nil
+    }
+
+    private static let byteCountFormatter: ByteCountFormatter = {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        formatter.includesUnit = true
+        formatter.isAdaptive = true
         return formatter
     }()
 
