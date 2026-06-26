@@ -9,7 +9,43 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build_release_archive:
+    name: Build release archive
+    runs-on: macos-latest
+
+    outputs:
+      version: ${{ steps.resolve_version.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve_version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Print Xcode version
+        run: xcodebuild -version
+
+      - name: Build release archive
+        shell: bash
+        run: ./scripts/build_release.sh "${{ steps.resolve_version.outputs.version }}"
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-archive
+          path: dist/ClipDock-${{ steps.resolve_version.outputs.version }}-macOS-universal.zip
+          if-no-files-found: error
+
+  generate_appcast:
+    name: Generate appcast
+    needs: build_release_archive
     runs-on: macos-latest
 
     env:
@@ -22,14 +58,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Resolve version
-        shell: bash
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          echo "VERSION=${version}" >> "$GITHUB_ENV"
+      - name: Download release archive
+        uses: actions/download-artifact@v4
+        with:
+          name: release-archive
+          path: ./artifact
 
       - name: Print Xcode version
         run: xcodebuild -version
+
+      - name: Restore release archive into dist
+        shell: bash
+        run: |
+          version="${{ needs.build_release_archive.outputs.version }}"
+          archive_path="$(find ./artifact -type f -name "ClipDock-${version}-macOS-universal.zip" -print -quit)"
+          if [[ -z "${archive_path}" ]]; then
+            echo "Release archive artifact not found." >&2
+            exit 1
+          fi
+          mkdir -p dist
+          cp "${archive_path}" "dist/ClipDock-${version}-macOS-universal.zip"
 
       - name: Download Sparkle tools
         shell: bash
@@ -55,23 +103,89 @@ jobs:
             exit 1
           fi
 
-      - name: Build release archive
-        shell: bash
-        run: ./scripts/build_release.sh "${VERSION}"
-
       - name: Generate appcast
         shell: bash
-        run: ./scripts/generate_appcast.sh "${VERSION}"
+        run: ./scripts/generate_appcast.sh "${{ needs.build_release_archive.outputs.version }}"
+
+      - name: Upload generated appcast
+        uses: actions/upload-artifact@v4
+        with:
+          name: appcast-xml
+          path: docs/appcast.xml
+          if-no-files-found: error
+
+  create_github_release:
+    name: Create GitHub Release
+    needs: generate_appcast
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve_version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Download release archive
+        uses: actions/download-artifact@v4
+        with:
+          name: release-archive
+          path: ./artifact
+
+      - name: Restore release archive into dist
+        shell: bash
+        run: |
+          version="${{ steps.resolve_version.outputs.version }}"
+          archive_path="$(find ./artifact -type f -name "ClipDock-${version}-macOS-universal.zip" -print -quit)"
+          if [[ -z "${archive_path}" ]]; then
+            echo "Release archive artifact not found." >&2
+            exit 1
+          fi
+          mkdir -p dist
+          cp "${archive_path}" "dist/ClipDock-${version}-macOS-universal.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ClipDock ${{ env.VERSION }}
-          body_path: docs/release-notes/${{ env.VERSION }}/${{ env.VERSION }}.md
-          files: dist/ClipDock-${{ env.VERSION }}-macOS-universal.zip
+          name: ClipDock ${{ steps.resolve_version.outputs.version }}
+          body_path: docs/release-notes/${{ steps.resolve_version.outputs.version }}/${{ steps.resolve_version.outputs.version }}.md
+          files: dist/ClipDock-${{ steps.resolve_version.outputs.version }}-macOS-universal.zip
           draft: false
           prerelease: false
+
+  publish_github_pages:
+    name: Publish GitHub Pages
+    needs: generate_appcast
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated appcast
+        uses: actions/download-artifact@v4
+        with:
+          name: appcast-xml
+          path: ./artifact
+
+      - name: Restore appcast into docs
+        shell: bash
+        run: |
+          appcast_path="$(find ./artifact -type f -name appcast.xml -print -quit)"
+          if [[ -z "${appcast_path}" ]]; then
+            echo "Generated appcast artifact not found." >&2
+            exit 1
+          fi
+          cp "${appcast_path}" docs/appcast.xml
 
       - name: Publish GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
