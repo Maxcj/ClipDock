@@ -52,7 +52,7 @@ struct SimpleClipboardWorkspaceView: View {
         request.predicate = predicate
         request.fetchBatchSize = Self.fetchBatchSize
 
-        _records = FetchRequest(fetchRequest: request, animation: nil)
+        _records = FetchRequest(fetchRequest: request, animation: .default)
     }
 
     var body: some View {

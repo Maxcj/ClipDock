@@ -168,7 +168,9 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(SettingsTab.allCases) { tab in
                     Button {
-                        activeTab = tab
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            activeTab = tab
+                        }
                     } label: {
                         settingsSidebarItem(tab: tab, isSelected: activeTab == tab)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -409,32 +411,32 @@ struct SettingsView: View {
     }
     @ViewBuilder
     private func settingsSidebarItem(tab: SettingsTab, isSelected: Bool) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(isSelected ? tab.tint.opacity(0.16) : Color.white.opacity(0.0))
 
                 Image(systemName: tab.iconName)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.62))
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 32, height: 32)
 
             Text(localizer.text(tab.titleKey))
-                .font(.system(size: 15, weight: .regular))
+                .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.80))
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .frame(height: 62)
+        .padding(.horizontal, 12)
+        .frame(height: 48)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(isSelected ? tab.tint.opacity(0.14) : Color.clear)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(isSelected ? tab.tint.opacity(0.18) : Color.clear, lineWidth: 1)
         )
     }
@@ -716,7 +718,9 @@ struct SettingsView: View {
         HStack(spacing: 10) {
             ForEach(SettingsTab.allCases) { tab in
                 Button {
-                    activeTab = tab
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        activeTab = tab
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: tab.iconName)
@@ -726,7 +730,7 @@ struct SettingsView: View {
                     }
                     .foregroundStyle(activeTab == tab ? Color.white : Color.primary)
                     .padding(.horizontal, 14)
-                    .frame(height: 34)
+                    .frame(height: 32)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .fill(activeTab == tab ? tab.tint : Color.white.opacity(0.72))

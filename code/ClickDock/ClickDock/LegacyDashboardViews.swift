@@ -34,7 +34,7 @@ struct ClipboardDashboardView: View {
         _records = FetchRequest(
             sortDescriptors: sortDescriptors,
             predicate: predicate,
-            animation: nil
+            animation: .default
         )
     }
 
