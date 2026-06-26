@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import KeyboardShortcuts
 
 enum WindowLayout {
     static let defaultSize = CGSize(width: 1008, height: 717)
@@ -18,44 +19,63 @@ enum WindowLayout {
 struct ClipDockApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var clipboardMonitor: ClipboardMonitor
-    @StateObject private var hotkeyManager: GlobalHotkeyManager
+    @StateObject private var keyboardShortcutManager: KeyboardShortcutManager
     @StateObject private var loginItemManager: LoginItemManager
+    @StateObject private var sparkleUpdateManager: SparkleUpdateManager
+    @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
     init() {
         let context = PersistenceController.shared.container.viewContext
         _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: context))
         UserDefaults.standard.register(defaults: [
-            "clipboard.hotkeyEnabled": true,
-            "clipboard.hotkeyKeyCode": 49,
-            "clipboard.hotkeyModifiers": Int(HotKeyConfiguration.defaultModifiers),
-            "clipboard.hotkeyDisplay": HotKeyConfiguration.defaultDisplay,
-            "clipboard.autoHideAfterCopy": false
+            "clipboard.autoHideAfterCopy": false,
+            "clipboard.keepImages": false,
+            "clipboard.retentionEnabled": true,
+            "clipboard.retentionValue": 7,
+            "clipboard.retentionUnit": RetentionUnit.day.rawValue,
+            ClipboardPrivacyRules.ignoreVerificationCodesStorageKey: false,
+            ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey: false,
+            ClipboardPrivacyRules.ignorePrivateKeysStorageKey: false,
+            ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey: false
         ])
-        _hotkeyManager = StateObject(wrappedValue: GlobalHotkeyManager())
+        _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        _sparkleUpdateManager = StateObject(wrappedValue: SparkleUpdateManager())
     }
 
     var body: some Scene {
+        let localizer = AppLocalizer(language: AppDisplayLanguage.resolve(from: languagePreference))
+
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(\.appLocalizer, localizer)
+                .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
                 .environmentObject(clipboardMonitor)
-                .environmentObject(hotkeyManager)
+                .environmentObject(keyboardShortcutManager)
                 .environmentObject(loginItemManager)
+                .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
 
         Window("Settings", id: "settings") {
             SettingsView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(\.appLocalizer, localizer)
+                .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
                 .environmentObject(loginItemManager)
+                .environmentObject(sparkleUpdateManager)
         }
-        .defaultSize(width: 560, height: 560)
+        .defaultSize(width: 720, height: 500)
 
         MenuBarExtra {
             StatusBarMenuView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(\.appLocalizer, localizer)
+                .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
         } label: {
-            Image(systemName: "tray.full")
+            Image("StatusBarIcon")
+                .renderingMode(.original)
         }
     }
 }
@@ -63,7 +83,16 @@ struct ClipDockApp: App {
 @MainActor
 final class LoginItemManager: ObservableObject {
     @Published private(set) var isEnabled: Bool = false
-    @Published private(set) var statusMessage: String?
+    @Published private(set) var statusMessageKey: AppTextKey?
+    @Published private(set) var runtimeErrorMessage: String?
+
+    var statusMessage: String? {
+        if let runtimeErrorMessage, !runtimeErrorMessage.isEmpty {
+            return runtimeErrorMessage
+        }
+        guard let statusMessageKey else { return nil }
+        return AppLocalizer.current.text(statusMessageKey)
+    }
 
     init() {
         refreshStatus()
@@ -73,19 +102,24 @@ final class LoginItemManager: ObservableObject {
         switch SMAppService.mainApp.status {
         case .enabled:
             isEnabled = true
-            statusMessage = nil
+            statusMessageKey = nil
+            runtimeErrorMessage = nil
         case .requiresApproval:
             isEnabled = false
-            statusMessage = "Login item registration needs approval in System Settings."
+            statusMessageKey = .loginApprovalRequired
+            runtimeErrorMessage = nil
         case .notFound:
             isEnabled = false
-            statusMessage = "The app could not register itself as a login item."
+            statusMessageKey = .loginItemNotFound
+            runtimeErrorMessage = nil
         case .notRegistered:
             isEnabled = false
-            statusMessage = nil
+            statusMessageKey = nil
+            runtimeErrorMessage = nil
         @unknown default:
             isEnabled = false
-            statusMessage = "Unable to determine launch-at-login status."
+            statusMessageKey = .loginStatusUnknown
+            runtimeErrorMessage = nil
         }
     }
 
@@ -97,7 +131,7 @@ final class LoginItemManager: ObservableObject {
                 try SMAppService.mainApp.unregister()
             }
         } catch {
-            statusMessage = error.localizedDescription
+            runtimeErrorMessage = error.localizedDescription
         }
 
         refreshStatus()
@@ -106,20 +140,21 @@ final class LoginItemManager: ObservableObject {
 
 private struct StatusBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.appLocalizer) private var localizer
 
     var body: some View {
-        Button("显示/隐藏主窗口") {
+        Button(localizer.text(.showHideMainWindow)) {
             NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
         }
 
-        Button("设置") {
+        Button(localizer.text(.settings)) {
             NSApp.activate(ignoringOtherApps: true)
             openWindow(id: "settings")
         }
 
         Divider()
 
-        Button("退出") {
+        Button(localizer.text(.quit)) {
             NSApplication.shared.terminate(nil)
         }
     }

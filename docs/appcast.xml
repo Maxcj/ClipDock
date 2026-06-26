@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>ClipDock Updates</title>
+    <link>https://maxcj.github.io/ClipDock/appcast.xml</link>
+    <description>ClipDock release feed for Sparkle automatic updates.</description>
+    <language>en</language>
+    <item>
+      <title>ClipDock __VERSION__</title>
+      <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/__VERSION__.html</sparkle:releaseNotesLink>
+      <pubDate>Mon, 01 Jan 2026 00:00:00 +0000</pubDate>
+      <enclosure
+        url="https://github.com/maxcj/ClipDock/releases/download/__VERSION__/ClipDock.dmg"
+        sparkle:version="__SPARKLE_VERSION__"
+        sparkle:shortVersionString="__VERSION__"
+        length="__DMG_SIZE__"
+        type="application/octet-stream"
+        sparkle:edSignature="__EDDSA_SIGNATURE__" />
+    </item>
+  </channel>
+</rss>

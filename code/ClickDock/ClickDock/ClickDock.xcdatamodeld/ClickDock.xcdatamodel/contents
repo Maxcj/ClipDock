@@ -9,6 +9,10 @@
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="imagePath" optional="YES" attributeType="String"/>
         <attribute name="assetPath" optional="YES" attributeType="String"/>
+        <attribute name="linkHost" optional="YES" attributeType="String"/>
+        <attribute name="linkIconData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="linkMetadataCheckedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="linkTitle" optional="YES" attributeType="String"/>
         <attribute name="thumbnailPath" optional="YES" attributeType="String"/>
         <attribute name="isIgnored" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
         <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
