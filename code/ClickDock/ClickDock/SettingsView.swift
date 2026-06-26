@@ -781,7 +781,17 @@ struct SettingsView: View {
 
                 Divider().padding(.vertical, 4)
 
-                SettingsInlineKeyValueRow(title: localizer.text(.author), value: appAuthor)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let appContactEmailURL {
+                        SettingsInlineLinkRow(
+                            title: localizer.text(.email),
+                            value: appContactEmail ?? "",
+                            destination: appContactEmailURL
+                        )
+                    }
+
+                    SettingsInlineKeyValueRow(title: localizer.text(.author), value: appAuthor)
+                }
             }
 
             Spacer(minLength: 0)

@@ -162,6 +162,7 @@ enum AppTextKey: String {
     case shortcutChangeSubtitle
     case appTagline
     case appInfo
+    case email
     case author
     case privacySection
     case privacySectionSubtitle

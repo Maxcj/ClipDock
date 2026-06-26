@@ -117,6 +117,7 @@
 "shortcutChangeSubtitle" = "Click Change and then press a new key combination";
 "appTagline" = "A lightweight macOS clipboard manager.";
 "appInfo" = "App information";
+"email" = "Email";
 "author" = "Author";
 "privacySection" = "Privacy & Security";
 "privacySectionSubtitle" = "Manage apps that should never be recorded";

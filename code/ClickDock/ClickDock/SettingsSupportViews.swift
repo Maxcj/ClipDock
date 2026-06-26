@@ -195,6 +195,26 @@ struct SettingsInlineKeyValueRow: View {
     }
 }
 
+struct SettingsInlineLinkRow: View {
+    let title: String
+    let value: String
+    let destination: URL
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("\(title):")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+
+            Link(value, destination: destination)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(Color.accentColor)
+
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 struct DestructivePillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -319,6 +339,19 @@ struct UpdateReleaseNotesSheetView: View {
 extension SettingsView {
     var appName: String {
         "ClipDock"
+    }
+
+    var appContactEmail: String? {
+        Bundle.main.object(forInfoDictionaryKey: "AppContactEmail") as? String
+    }
+
+    var appContactEmailURL: URL? {
+        guard let appContactEmail else { return nil }
+
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = appContactEmail
+        return components.url
     }
 
     var appAuthor: String {
