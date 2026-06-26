@@ -29,6 +29,14 @@
 "excludeApp" = "排除应用";
 "fileReady" = "文件已准备好，可复制或在 Finder 中打开。";
 "versionLabel" = "版本 %@";
+"updates" = "更新";
+"updatesSubtitle" = "检查新版本并管理已忽略版本";
+"checkForUpdates" = "检查更新";
+"checkForUpdatesSubtitle" = "让 Sparkle 检查 GitHub Pages 上是否有新版本";
+"updatesFeedNotConfigured" = "请先配置 Sparkle appcast 地址再检查更新。";
+"ignoredVersion" = "已忽略版本";
+"ignoredVersionSubtitle" = "该版本会在自动检查更新时被跳过";
+"clearIgnoredVersion" = "重新显示";
 "general" = "通用";
 "privacy" = "安全与隐私";
 "quickOpen" = "快捷键";

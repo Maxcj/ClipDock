@@ -21,6 +21,7 @@ struct ClipDockApp: App {
     @StateObject private var clipboardMonitor: ClipboardMonitor
     @StateObject private var keyboardShortcutManager: KeyboardShortcutManager
     @StateObject private var loginItemManager: LoginItemManager
+    @StateObject private var sparkleUpdateManager: SparkleUpdateManager
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
     init() {
@@ -39,6 +40,7 @@ struct ClipDockApp: App {
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        _sparkleUpdateManager = StateObject(wrappedValue: SparkleUpdateManager())
     }
 
     var body: some Scene {
@@ -52,6 +54,7 @@ struct ClipDockApp: App {
                 .environmentObject(clipboardMonitor)
                 .environmentObject(keyboardShortcutManager)
                 .environmentObject(loginItemManager)
+                .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
 
@@ -61,6 +64,7 @@ struct ClipDockApp: App {
                 .environment(\.appLocalizer, localizer)
                 .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
                 .environmentObject(loginItemManager)
+                .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: 720, height: 500)
 

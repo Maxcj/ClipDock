@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var loginItemManager: LoginItemManager
+    @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @State private var activeTab: SettingsTab = .general
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
@@ -431,6 +432,49 @@ struct SettingsView: View {
                     )
                 }
             }
+        case .updates:
+            VStack(alignment: .leading, spacing: layout.sectionSpacing) {
+                settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
+                    settingsActionRow(
+                        iconName: "arrow.triangle.2.circlepath",
+                        title: localizer.text(.checkForUpdates),
+                        subtitle: localizer.text(.checkForUpdatesSubtitle),
+                        buttonTitle: localizer.text(.checkForUpdates),
+                        isDimmed: !sparkleUpdateManager.canCheckForUpdates,
+                        action: {
+                            sparkleUpdateManager.checkForUpdates()
+                        }
+                    )
+
+                    if let ignoredVersion = sparkleUpdateManager.ignoredVersion {
+                        Divider().padding(.leading, 52)
+
+                        settingsValueRow(
+                            iconName: "eye.slash",
+                            title: localizer.text(.ignoredVersion),
+                            subtitle: localizer.text(.ignoredVersionSubtitle),
+                            accessory: {
+                                HStack(spacing: 10) {
+                                    Text(ignoredVersion)
+                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.trailing)
+
+                                    Button(localizer.text(.clearIgnoredVersion)) {
+                                        sparkleUpdateManager.clearIgnoredVersion()
+                                    }
+                                    .buttonStyle(SettingsSecondaryButtonStyle())
+                                }
+                            }
+                        )
+                    }
+
+                    if !sparkleUpdateManager.isConfigured {
+                        Divider().padding(.leading, 52)
+                        settingsInlineMessage(localizer.text(.updatesFeedNotConfigured))
+                    }
+                }
+            }
         case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.about), subtitle: localizer.text(.appInfo)) {
@@ -573,6 +617,22 @@ struct SettingsView: View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
             Button(buttonTitle, action: action)
                 .buttonStyle(DestructivePillButtonStyle())
+        }
+    }
+
+    @ViewBuilder
+    private func settingsActionRow(
+        iconName: String,
+        title: String,
+        subtitle: String,
+        buttonTitle: String,
+        isDimmed: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle, isDimmed: isDimmed) {
+            Button(buttonTitle, action: action)
+                .buttonStyle(SettingsSecondaryButtonStyle())
+                .disabled(isDimmed)
         }
     }
 

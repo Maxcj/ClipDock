@@ -29,6 +29,14 @@
 "excludeApp" = "Exclude App";
 "fileReady" = "File ready to copy or open from Finder.";
 "versionLabel" = "Version %@";
+"updates" = "Updates";
+"updatesSubtitle" = "Check for new releases and manage ignored versions";
+"checkForUpdates" = "Check for Updates";
+"checkForUpdatesSubtitle" = "Ask Sparkle to look for a newer release on GitHub Pages";
+"updatesFeedNotConfigured" = "Set the Sparkle appcast URL before checking for updates.";
+"ignoredVersion" = "Ignored version";
+"ignoredVersionSubtitle" = "This version is skipped during automatic update checks";
+"clearIgnoredVersion" = "Show again";
 "general" = "General";
 "privacy" = "Privacy & Security";
 "quickOpen" = "Hotkey";

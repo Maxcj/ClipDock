@@ -75,6 +75,14 @@ enum AppTextKey: String {
     case excludeApp
     case fileReady
     case versionLabel
+    case updates
+    case updatesSubtitle
+    case checkForUpdates
+    case checkForUpdatesSubtitle
+    case updatesFeedNotConfigured
+    case ignoredVersion
+    case ignoredVersionSubtitle
+    case clearIgnoredVersion
     case general
     case privacy
     case quickOpen
