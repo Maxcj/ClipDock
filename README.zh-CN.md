@@ -67,7 +67,7 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 
 已发布版本的说明存放在：
 
-`docs/release-notes/`
+`docs/release-note/<version>/`
 
 ## 项目结构
 

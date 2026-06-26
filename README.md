@@ -69,7 +69,7 @@ Open `code/ClickDock/ClickDock.xcodeproj` in Xcode and build the `ClickDock` sch
 
 Release notes for published versions live under:
 
-`docs/release-notes/`
+`docs/release-note/<version>/`
 
 ## Project Structure
 
