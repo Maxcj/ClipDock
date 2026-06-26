@@ -21,18 +21,17 @@ app_path="${derived_data_path}/Build/Products/${configuration}/ClipDock.app"
 archive_path="${dist_dir}/${archive_name}"
 skip_code_signing="${SKIP_CODE_SIGNING:-0}"
 
-signing_identity="${CODESIGN_IDENTITY:-}"
-if [[ -z "${signing_identity}" ]]; then
-  signing_identity="$(
-    security find-identity -v -p codesigning \
-      | awk -F'"' '/Apple Development:/ { print $2; exit }'
-  )"
-fi
-
-if [[ "${skip_code_signing}" == "1" && -z "${signing_identity}" ]]; then
+if [[ "${skip_code_signing}" == "1" ]]; then
   signing_identity="-"
   signing_mode="adhoc"
 else
+  signing_identity="${CODESIGN_IDENTITY:-}"
+  if [[ -z "${signing_identity}" ]]; then
+    signing_identity="$(
+      security find-identity -v -p codesigning \
+        | awk -F'"' '/Apple Development:/ { print $2; exit }'
+    )"
+  fi
   signing_mode="identity"
 fi
 
