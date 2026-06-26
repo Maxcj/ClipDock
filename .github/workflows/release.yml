@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-13
+
+    env:
+      SKIP_CODE_SIGNING: "1"
+      SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Download Sparkle tools
+        shell: bash
+        run: |
+          curl -L \
+            -o sparkle-tools.zip \
+            https://github.com/sparkle-project/Sparkle/releases/latest/download/Sparkle-for-Swift-Package-Manager.zip
+          rm -rf .sparkle-tools
+          mkdir -p .sparkle-tools
+          unzip -q sparkle-tools.zip -d .sparkle-tools
+          sparkle_bin_dir="$(find .sparkle-tools -type f -name generate_appcast -exec dirname {} \; | head -n 1)"
+          if [[ -z "${sparkle_bin_dir}" ]]; then
+            echo "Could not locate Sparkle tools after unpacking." >&2
+            exit 1
+          fi
+          echo "SPARKLE_BIN_DIR=${sparkle_bin_dir}" >> "$GITHUB_ENV"
+
+      - name: Fail fast if Sparkle key is missing
+        shell: bash
+        run: |
+          if [[ -z "${SPARKLE_ED25519_PRIVATE_KEY}" ]]; then
+            echo "Missing SPARKLE_ED25519_PRIVATE_KEY secret." >&2
+            exit 1
+          fi
+
+      - name: Build release archive
+        shell: bash
+        run: ./scripts/build_release.sh "${VERSION}"
+
+      - name: Generate appcast
+        shell: bash
+        run: ./scripts/generate_appcast.sh "${VERSION}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ClipDock ${{ env.VERSION }}
+          body_path: docs/release-notes/${{ env.VERSION }}.md
+          files: dist/ClipDock-${{ env.VERSION }}-macOS-universal.zip
+          draft: false
+          prerelease: false
+
+      - name: Publish GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./docs

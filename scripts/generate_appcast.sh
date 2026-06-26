@@ -23,6 +23,7 @@ archive_name="ClipDock-${version}-macOS-universal.zip"
 archive_path="${repo_root}/dist/${archive_name}"
 release_notes_repo_path="${repo_root}/docs/release-notes/${version}.html"
 staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/clipdock-appcast.XXXXXX")"
+sparkle_private_key="${SPARKLE_ED25519_PRIVATE_KEY:-}"
 trap 'rm -rf "${staging_dir}"' EXIT
 
 if [[ ! -f "${archive_path}" ]]; then
@@ -42,12 +43,23 @@ if [[ -f "${repo_root}/docs/appcast.xml" ]]; then
   cp "${repo_root}/docs/appcast.xml" "${staging_dir}/appcast.xml"
 fi
 
-"${generate_appcast}" \
-  --download-url-prefix "https://github.com/maxcj/ClipDock/releases/download/${tag}/" \
-  --full-release-notes-url "https://maxcj.github.io/ClipDock/release-notes/${version}.html" \
-  --link "https://github.com/maxcj/ClipDock" \
-  -o "${repo_root}/docs/appcast.xml" \
-  "${staging_dir}"
+generate_appcast_args=(
+  --download-url-prefix "https://github.com/maxcj/ClipDock/releases/download/${tag}/"
+  --full-release-notes-url "https://maxcj.github.io/ClipDock/release-notes/${version}.html"
+  --link "https://github.com/maxcj/ClipDock"
+  -o "${repo_root}/docs/appcast.xml"
+)
+
+if [[ -n "${sparkle_private_key}" ]]; then
+  printf '%s' "${sparkle_private_key}" | "${generate_appcast}" \
+    --ed-key-file - \
+    "${generate_appcast_args[@]}" \
+    "${staging_dir}"
+else
+  "${generate_appcast}" \
+    "${generate_appcast_args[@]}" \
+    "${staging_dir}"
+fi
 
 release_notes_url="https://maxcj.github.io/ClipDock/release-notes/${version}.html"
 python3 - "${repo_root}/docs/appcast.xml" "${release_notes_url}" <<'PY'
