@@ -68,7 +68,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ClipDock ${{ env.VERSION }}
-          body_path: docs/release-note/${{ env.VERSION }}/${{ env.VERSION }}.md
+          body_path: docs/release-notes/${{ env.VERSION }}/${{ env.VERSION }}.md
           files: dist/ClipDock-${{ env.VERSION }}-macOS-universal.zip
           draft: false
           prerelease: false

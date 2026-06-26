@@ -21,7 +21,7 @@ fi
 tag="v${version}"
 archive_name="ClipDock-${version}-macOS-universal.zip"
 archive_path="${repo_root}/dist/${archive_name}"
-release_notes_repo_path="${repo_root}/docs/release-note/${version}/${version}.html"
+release_notes_repo_path="${repo_root}/docs/release-notes/${version}/${version}.html"
 staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/clipdock-appcast.XXXXXX")"
 sparkle_private_key="${SPARKLE_ED25519_PRIVATE_KEY:-}"
 trap 'rm -rf "${staging_dir}"' EXIT
@@ -45,7 +45,7 @@ fi
 
 generate_appcast_args=(
   --download-url-prefix "https://github.com/maxcj/ClipDock/releases/download/${tag}/"
-  --full-release-notes-url "https://maxcj.github.io/ClipDock/release-note/${version}/${version}.html"
+  --full-release-notes-url "https://maxcj.github.io/ClipDock/release-notes/${version}/${version}.html"
   --link "https://github.com/maxcj/ClipDock"
   --maximum-versions 5
   -o "${repo_root}/docs/appcast.xml"
@@ -62,7 +62,7 @@ else
     "${staging_dir}"
 fi
 
-release_notes_url="https://maxcj.github.io/ClipDock/release-note/${version}/${version}.html"
+release_notes_url="https://maxcj.github.io/ClipDock/release-notes/${version}/${version}.html"
 python3 - "${repo_root}/docs/appcast.xml" "${release_notes_url}" "${version}" <<'PY'
 from pathlib import Path
 import re
