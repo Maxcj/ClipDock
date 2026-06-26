@@ -15,6 +15,7 @@ struct ClipboardStorageSnapshot {
 }
 
 struct ClipboardStorageSummary {
+    let totalItemCount: Int
     let textItemCount: Int
     let imageItemCount: Int
     let imageBytes: Int64
@@ -22,12 +23,17 @@ struct ClipboardStorageSummary {
     let linkMetadataBytes: Int64
 
     static let empty = ClipboardStorageSummary(
+        totalItemCount: 0,
         textItemCount: 0,
         imageItemCount: 0,
         imageBytes: 0,
         filesCacheBytes: 0,
         linkMetadataBytes: 0
     )
+
+    var totalItemsValue: String {
+        Self.countFormatter.string(from: NSNumber(value: totalItemCount)) ?? "\(totalItemCount)"
+    }
 
     var textItemsValue: String {
         Self.countFormatter.string(from: NSNumber(value: textItemCount)) ?? "\(textItemCount)"
@@ -65,6 +71,7 @@ struct ClipboardStorageSummary {
 
 enum ClipboardStorageCalculator {
     static func summary(for snapshots: [ClipboardStorageSnapshot]) -> ClipboardStorageSummary {
+        let totalItemCount = snapshots.count
         var textItemCount = 0
         var imageItemCount = 0
         var imageBytes: Int64 = 0
@@ -96,6 +103,7 @@ enum ClipboardStorageCalculator {
         }
 
         return ClipboardStorageSummary(
+            totalItemCount: totalItemCount,
             textItemCount: textItemCount,
             imageItemCount: imageItemCount,
             imageBytes: imageBytes,

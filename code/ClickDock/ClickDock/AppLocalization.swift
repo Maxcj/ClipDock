@@ -105,6 +105,8 @@ enum AppTextKey: String {
     case clear
     case storageSectionTitle
     case storageSectionSubtitle
+    case storageTotalItems
+    case storageTotalItemsSubtitle
     case storageTextItems
     case storageTextItemsSubtitle
     case storageImages
@@ -113,6 +115,8 @@ enum AppTextKey: String {
     case storageFilesCacheSubtitle
     case storageLinkMetadata
     case storageLinkMetadataSubtitle
+    case clearCache
+    case clearCacheSubtitle
     case contentFilters
     case contentFiltersSubtitle
     case ignoreVerificationCodes

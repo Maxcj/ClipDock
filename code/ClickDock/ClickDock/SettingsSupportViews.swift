@@ -97,44 +97,52 @@ struct SettingsPreferenceRow<Accessory: View>: View {
     let title: String
     let subtitle: String
     let accessory: Accessory
+    let isDimmed: Bool
 
     init(
         iconName: String,
         title: String,
         subtitle: String,
+        isDimmed: Bool = false,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.iconName = iconName
         self.title = title
         self.subtitle = subtitle
         self.accessory = accessory()
+        self.isDimmed = isDimmed
     }
 
     var body: some View {
+        let iconColor: Color = isDimmed ? Color.secondary.opacity(0.52) : Color.secondary
+        let titleColor: Color = isDimmed ? Color.secondary : Color.primary
+        let subtitleColor: Color = isDimmed ? Color.secondary.opacity(0.82) : Color.secondary
+
         HStack(alignment: .center, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.black.opacity(0.04))
+                    .fill(Color.black.opacity(isDimmed ? 0.02 : 0.04))
 
                 Image(systemName: iconName)
                     .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(iconColor)
             }
             .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(titleColor)
                 Text(subtitle)
                     .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(subtitleColor)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 12)
 
             accessory
+                .opacity(isDimmed ? 0.55 : 1.0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)

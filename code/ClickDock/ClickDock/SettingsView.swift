@@ -111,6 +111,9 @@ struct SettingsView: View {
         .onAppear {
             loginItemManager.refreshStatus()
             startAtLogin = loginItemManager.isEnabled
+            if retentionValue <= 0 {
+                retentionValue = 7
+            }
         }
         .onChange(of: startAtLogin) { newValue in
             guard newValue != loginItemManager.isEnabled else { return }
@@ -244,18 +247,6 @@ struct SettingsView: View {
                         isOn: $keepImages
                     )
                 }
-
-                settingsSection(title: localizer.text(.dataManagement), subtitle: localizer.text(.dataManagementSubtitle)) {
-                    settingsDestructiveRow(
-                        iconName: "trash",
-                        title: localizer.text(.clearAllHistory),
-                        subtitle: localizer.text(.clearAllHistorySubtitle),
-                        buttonTitle: localizer.text(.clear),
-                        action: {
-                            clearAllHistory()
-                        }
-                    )
-                }
             }
         case .quickOpen:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
@@ -326,6 +317,15 @@ struct SettingsView: View {
                 settingsSection(title: localizer.text(.storageSectionTitle), subtitle: localizer.text(.storageSectionSubtitle)) {
                     if let storageSummary = storageSummaryLoader.summary {
                         settingsStaticValueRow(
+                            iconName: "tray.full",
+                            title: localizer.text(.storageTotalItems),
+                            subtitle: localizer.text(.storageTotalItemsSubtitle),
+                            value: storageSummary.totalItemsValue
+                        )
+
+                        Divider().padding(.leading, 52)
+
+                        settingsStaticValueRow(
                             iconName: "text.alignleft",
                             title: localizer.text(.storageTextItems),
                             subtitle: localizer.text(.storageTextItemsSubtitle),
@@ -358,6 +358,9 @@ struct SettingsView: View {
                             subtitle: localizer.text(.storageLinkMetadataSubtitle),
                             value: storageSummary.linkMetadataValue
                         )
+
+                        Divider().padding(.leading, 52)
+
                     } else {
                         HStack {
                             Spacer(minLength: 0)
@@ -382,6 +385,7 @@ struct SettingsView: View {
                         iconName: "calendar.badge.clock",
                         title: localizer.text(.retentionDuration),
                         subtitle: localizer.text(.retentionDurationSubtitle),
+                        isDimmed: !retentionEnabled,
                         accessory: {
                             HStack(spacing: 8) {
                                 TextField("", value: $retentionValue, format: .number)
@@ -397,6 +401,34 @@ struct SettingsView: View {
                                 .pickerStyle(.menu)
                                 .frame(width: 98)
                             }
+                            .disabled(!retentionEnabled)
+                            .opacity(retentionEnabled ? 1.0 : 0.45)
+                        }
+                    )
+                }
+
+                settingsSection(title: localizer.text(.dataManagement), subtitle: localizer.text(.dataManagementSubtitle)) {
+                    settingsDestructiveRow(
+                        iconName: "externaldrive.fill",
+                        title: localizer.text(.clearCache),
+                        subtitle: localizer.text(.clearCacheSubtitle),
+                        buttonTitle: localizer.text(.clear),
+                        buttonSymbolName: "trash",
+                        action: {
+                            clearStorageCache()
+                        }
+                    )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsDestructiveRow(
+                        iconName: "trash",
+                        title: localizer.text(.clearAllHistory),
+                        subtitle: localizer.text(.clearAllHistorySubtitle),
+                        buttonTitle: localizer.text(.clear),
+                        buttonSymbolName: "trash",
+                        action: {
+                            clearAllHistory()
                         }
                     )
                 }
@@ -496,9 +528,10 @@ struct SettingsView: View {
         iconName: String,
         title: String,
         subtitle: String,
+        isDimmed: Bool = false,
         @ViewBuilder accessory: () -> Accessory
     ) -> some View {
-        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
+        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle, isDimmed: isDimmed) {
             accessory()
         }
     }
@@ -537,10 +570,13 @@ struct SettingsView: View {
         title: String,
         subtitle: String,
         buttonTitle: String,
+        buttonSymbolName: String = "trash",
         action: @escaping () -> Void
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
-            Button(buttonTitle, action: action)
+            Button(action: action) {
+                Label(buttonTitle, systemImage: buttonSymbolName)
+            }
                 .buttonStyle(DestructivePillButtonStyle())
         }
     }
@@ -651,6 +687,48 @@ struct SettingsView: View {
             }
         } catch {
             NSLog("Failed to clear clipboard history from settings: \(error.localizedDescription)")
+        }
+    }
+
+    private func clearStorageCache() {
+        let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+
+        do {
+            let records = try viewContext.fetch(request)
+            var changed = false
+
+            for record in records {
+                switch record.kind {
+                case .link:
+                    if record.linkTitleValue != nil || record.linkHostValue != nil || record.linkIconDataValue != nil || record.linkMetadataCheckedAtValue != nil {
+                        record.linkTitleValue = nil
+                        record.linkHostValue = nil
+                        record.linkIconDataValue = nil
+                        record.linkMetadataCheckedAtValue = nil
+                        changed = true
+                    }
+                case .files:
+                    if let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL {
+                        try? FileManager.default.removeItem(at: legacyCacheFolderURL)
+                    }
+                    if record.assetPathValue != nil {
+                        record.assetPathValue = nil
+                        changed = true
+                    }
+                default:
+                    continue
+                }
+            }
+
+            if changed {
+                try viewContext.save()
+            }
+
+            if activeTab == .storage {
+                storageSummaryLoader.load(context: viewContext)
+            }
+        } catch {
+            NSLog("Failed to clear storage cache from settings: \(error.localizedDescription)")
         }
     }
 

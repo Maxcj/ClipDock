@@ -131,6 +131,10 @@ final class ClipboardMonitor: ObservableObject {
             let fullText = fileURLs.map(\.path).joined(separator: "\n")
             let isSingleImageFile = fileURLs.count == 1 && Self.imageFileExtensions.contains(fileURLs[0].pathExtension.lowercased())
 
+            if ClipboardPrivacyRules.shouldIgnoreCapturedFileURLs(fileURLs) {
+                return nil
+            }
+
             if ClipboardPrivacyRules.shouldIgnoreCapturedText(fullText) {
                 return nil
             }

@@ -59,6 +59,8 @@
 "clear" = "清除";
 "storageSectionTitle" = "存储";
 "storageSectionSubtitle" = "当前设备上的剪贴板存储占用";
+"storageTotalItems" = "总条数";
+"storageTotalItemsSubtitle" = "当前存储的所有剪贴板历史条目";
 "storageTextItems" = "文本条目";
 "storageTextItemsSubtitle" = "文本、代码和未分类剪贴板历史记录数量";
 "storageImages" = "图片";
@@ -67,6 +69,8 @@
 "storageFilesCacheSubtitle" = "旧版本 ClipDock 遗留的文件副本缓存";
 "storageLinkMetadata" = "链接元数据";
 "storageLinkMetadataSubtitle" = "链接的网站标题、域名和 favicon 缓存数据";
+"clearCache" = "清理缓存";
+"clearCacheSubtitle" = "移除可重建的元数据和旧缓存文件";
 "contentFilters" = "内容过滤";
 "contentFiltersSubtitle" = "跳过记录敏感剪贴板内容";
 "ignoreVerificationCodes" = "忽略验证码";

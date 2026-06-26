@@ -69,7 +69,26 @@ enum ClipboardPrivacyRules {
             }
 
             if defaults.bool(forKey: ignoreLongSensitiveTextStorageKey),
-               matchesLongSensitiveText(candidate) {
+               matchesLongSensitiveText(candidate, includePrivateKeys: defaults.bool(forKey: ignorePrivateKeysStorageKey)) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    static func shouldIgnoreCapturedFileURLs(_ fileURLs: [URL], defaults: UserDefaults = .standard) -> Bool {
+        guard !fileURLs.isEmpty else { return false }
+
+        if defaults.bool(forKey: ignorePrivateKeysStorageKey) {
+            for url in fileURLs where isLikelyPrivateKeyFile(url) {
+                return true
+            }
+        }
+
+        for url in fileURLs {
+            guard let text = textContent(from: url) else { continue }
+            if shouldIgnoreCapturedText(text, defaults: defaults) {
                 return true
             }
         }
@@ -141,10 +160,38 @@ enum ClipboardPrivacyRules {
         return lowercased.contains("-----begin") && lowercased.contains("private key-----")
     }
 
-    static func matchesLongSensitiveText(_ text: String) -> Bool {
+    private static func isLikelyPrivateKeyFile(_ url: URL) -> Bool {
+        let extensionName = url.pathExtension.lowercased()
+        if extensionName == "pem" || extensionName == "key" {
+            return true
+        }
+
+        let lowerName = url.lastPathComponent.lowercased()
+        return lowerName.contains("private") && (lowerName.contains("key") || extensionName == "txt")
+    }
+
+    private static func textContent(from url: URL, byteLimit: Int = 64 * 1024) -> String? {
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        guard values?.isRegularFile == true else { return nil }
+
+        if let fileSize = values?.fileSize, fileSize > 2 * 1024 * 1024 {
+            return nil
+        }
+
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { handle.closeFile() }
+
+        guard let data = try? handle.read(upToCount: byteLimit), !data.isEmpty else {
+            return nil
+        }
+
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func matchesLongSensitiveText(_ text: String, includePrivateKeys: Bool = true) -> Bool {
         guard text.count >= 160 else { return false }
 
-        if matchesPrivateKeys(text) || containsSensitiveEnvContent(text) || isLikelyJWT(text) {
+        if (includePrivateKeys && matchesPrivateKeys(text)) || containsSensitiveEnvContent(text) || isLikelyJWT(text) {
             return true
         }
 
@@ -154,11 +201,14 @@ enum ClipboardPrivacyRules {
             "secret",
             "token",
             "authorization",
-            "private key",
             "api_key",
             "access_token",
             "refresh_token"
         ]
+
+        if includePrivateKeys, lowercased.contains("private key") {
+            return true
+        }
 
         let signalCount = sensitiveSignals.reduce(0) { partialResult, signal in
             partialResult + (lowercased.contains(signal) ? 1 : 0)

@@ -23,7 +23,8 @@ struct RetentionRule {
     static func current() -> RetentionRule {
         let defaults = UserDefaults.standard
         let isEnabled = defaults.object(forKey: "clipboard.retentionEnabled") as? Bool ?? true
-        let value = defaults.object(forKey: "clipboard.retentionValue") as? Int ?? 7
+        let storedValue = defaults.object(forKey: "clipboard.retentionValue") as? Int ?? 7
+        let value = storedValue > 0 ? storedValue : 7
         let unit = RetentionUnit(rawValue: defaults.string(forKey: "clipboard.retentionUnit") ?? RetentionUnit.day.rawValue) ?? .day
         return RetentionRule(isEnabled: isEnabled, value: value, unit: unit)
     }

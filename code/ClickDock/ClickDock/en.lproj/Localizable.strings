@@ -59,6 +59,8 @@
 "clear" = "Clear";
 "storageSectionTitle" = "Storage";
 "storageSectionSubtitle" = "Current on-device clipboard storage usage";
+"storageTotalItems" = "Total items";
+"storageTotalItemsSubtitle" = "All clipboard history entries currently stored";
 "storageTextItems" = "Text items";
 "storageTextItemsSubtitle" = "Text, code, and uncategorized clipboard history entries";
 "storageImages" = "Images";
@@ -67,6 +69,8 @@
 "storageFilesCacheSubtitle" = "Legacy cached file copies kept by older versions of ClipDock";
 "storageLinkMetadata" = "Link metadata";
 "storageLinkMetadataSubtitle" = "Website titles, hosts, and favicon data cached for links";
+"clearCache" = "Clear cache";
+"clearCacheSubtitle" = "Remove rebuildable metadata and legacy cache files";
 "contentFilters" = "Content Filters";
 "contentFiltersSubtitle" = "Skip recording sensitive clipboard content";
 "ignoreVerificationCodes" = "Ignore verification codes";
