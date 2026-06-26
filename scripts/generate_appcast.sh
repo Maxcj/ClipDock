@@ -62,21 +62,41 @@ else
 fi
 
 release_notes_url="https://maxcj.github.io/ClipDock/release-notes/${version}.html"
-python3 - "${repo_root}/docs/appcast.xml" "${release_notes_url}" <<'PY'
+python3 - "${repo_root}/docs/appcast.xml" "${release_notes_url}" "${version}" <<'PY'
 from pathlib import Path
+import re
 import sys
 
 appcast_path = Path(sys.argv[1])
 release_notes_url = sys.argv[2]
+version = sys.argv[3]
+
 text = appcast_path.read_text()
-start = text.find("<sparkle:releaseNotesLink>")
-end = text.find("</sparkle:releaseNotesLink>", start)
-if start != -1 and end != -1:
-    text = (
-        text[:start]
-        + f"<sparkle:releaseNotesLink>{release_notes_url}</sparkle:releaseNotesLink>"
-        + text[end + len("</sparkle:releaseNotesLink>") :]
+match = re.search(r"(<item>.*?</item>)", text, re.S)
+if match:
+    item = match.group(1)
+    item = re.sub(
+        r"(<title>)(.*?)(</title>)",
+        rf"\1{version}\3",
+        item,
+        count=1,
+        flags=re.S,
     )
+    item = re.sub(
+        r"(<sparkle:fullReleaseNotesLink>)(.*?)(</sparkle:fullReleaseNotesLink>)",
+        rf"\1{release_notes_url}\3",
+        item,
+        count=1,
+        flags=re.S,
+    )
+    item = re.sub(
+        r"(<sparkle:releaseNotesLink>)(.*?)(</sparkle:releaseNotesLink>)",
+        rf"\1{release_notes_url}\3",
+        item,
+        count=1,
+        flags=re.S,
+    )
+    text = text[: match.start()] + item + text[match.end() :]
     appcast_path.write_text(text)
 PY
 
