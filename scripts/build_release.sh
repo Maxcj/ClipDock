@@ -22,28 +22,35 @@ archive_path="${dist_dir}/${archive_name}"
 skip_code_signing="${SKIP_CODE_SIGNING:-0}"
 
 signing_identity="${CODESIGN_IDENTITY:-}"
-if [[ "${skip_code_signing}" != "1" && -z "${signing_identity}" ]]; then
+if [[ -z "${signing_identity}" ]]; then
   signing_identity="$(
     security find-identity -v -p codesigning \
       | awk -F'"' '/Apple Development:/ { print $2; exit }'
   )"
 fi
 
-if [[ "${skip_code_signing}" != "1" && -z "${signing_identity}" ]]; then
+if [[ "${skip_code_signing}" == "1" && -z "${signing_identity}" ]]; then
+  signing_identity="-"
+  signing_mode="adhoc"
+else
+  signing_mode="identity"
+fi
+
+if [[ "${skip_code_signing}" != "1" && "${signing_identity}" == "-" ]]; then
   echo "No Apple Development code signing identity found." >&2
   echo "Set CODESIGN_IDENTITY or install a signing certificate in Keychain." >&2
   exit 1
 fi
 
 sign_path() {
-  if [[ "${skip_code_signing}" == "1" ]]; then
-    return
-  fi
-
   local target_path="$1"
   if [[ -e "${target_path}" ]]; then
-    echo "Signing ${target_path}..."
-    codesign -f -s "${signing_identity}" -o runtime "${target_path}"
+    echo "Signing ${target_path} (${signing_mode})..."
+    if [[ "${signing_mode}" == "adhoc" ]]; then
+      codesign -f -s - --deep --timestamp=none "${target_path}"
+    else
+      codesign -f -s "${signing_identity}" -o runtime "${target_path}"
+    fi
   fi
 }
 
@@ -66,6 +73,10 @@ if [[ ! -d "${app_path}" ]]; then
 fi
 
 sign_path "${app_path}"
+
+if [[ "${signing_mode}" == "adhoc" ]]; then
+  codesign --verify --deep --strict --verbose=2 "${app_path}"
+fi
 
 rm -f "${archive_path}"
 echo "Creating ${archive_name}..."
