@@ -62,6 +62,8 @@ xcodebuild \
   -scheme "${scheme}" \
   -configuration "${configuration}" \
   -derivedDataPath "${derived_data_path}" \
+  ARCHS="arm64 x86_64" \
+  ONLY_ACTIVE_ARCH=NO \
   CODE_SIGNING_ALLOWED=$([[ "${skip_code_signing}" == "1" ]] && echo NO || echo YES) \
   CODE_SIGNING_REQUIRED=$([[ "${skip_code_signing}" == "1" ]] && echo NO || echo YES) \
   CODE_SIGN_IDENTITY="${signing_identity}" \
