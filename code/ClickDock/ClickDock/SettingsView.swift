@@ -32,6 +32,20 @@ struct SettingsView: View {
     @AppStorage(ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey) private var ignoreLongSensitiveText = false
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
+    private var automaticCheckForUpdatesBinding: Binding<Bool> {
+        Binding(
+            get: { sparkleUpdateManager.automaticallyChecksForUpdates },
+            set: { sparkleUpdateManager.setAutomaticallyChecksForUpdates($0) }
+        )
+    }
+
+    private var updateCheckIntervalBinding: Binding<UpdateCheckIntervalOption> {
+        Binding(
+            get: { UpdateCheckIntervalOption.from(interval: sparkleUpdateManager.updateCheckInterval) },
+            set: { sparkleUpdateManager.setUpdateCheckInterval($0.rawValue) }
+        )
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let layout = SettingsWindowMetrics(containerSize: proxy.size)
@@ -165,10 +179,15 @@ struct SettingsView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(appName)
-                        .font(.system(size: 20, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .allowsTightening(true)
                     Text(localizer.text(.versionLabel, appVersion))
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .allowsTightening(true)
                 }
 
                 Spacer(minLength: 0)
@@ -447,6 +466,35 @@ struct SettingsView: View {
         case .updates:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
+                    settingsToggleRow(
+                        iconName: "clock.arrow.circlepath",
+                        title: localizer.text(.automaticCheckForUpdates),
+                        subtitle: localizer.text(.automaticCheckForUpdatesSubtitle),
+                        isOn: automaticCheckForUpdatesBinding,
+                        isDimmed: !sparkleUpdateManager.isConfigured
+                    )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsValueRow(
+                        iconName: "calendar.badge.clock",
+                        title: localizer.text(.automaticCheckInterval),
+                        subtitle: localizer.text(.automaticCheckIntervalSubtitle),
+                        isDimmed: !sparkleUpdateManager.isConfigured || !sparkleUpdateManager.automaticallyChecksForUpdates
+                    ) {
+                        Picker("", selection: updateCheckIntervalBinding) {
+                            ForEach(UpdateCheckIntervalOption.allCases) { option in
+                                Text(localizer.text(option.titleKey)).tag(option)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 160)
+                        .disabled(!sparkleUpdateManager.isConfigured || !sparkleUpdateManager.automaticallyChecksForUpdates)
+                    }
+
+                    Divider().padding(.leading, 52)
+
                     settingsActionRow(
                         iconName: "arrow.triangle.2.circlepath",
                         title: localizer.text(.checkForUpdates),
@@ -568,12 +616,14 @@ struct SettingsView: View {
         iconName: String,
         title: String,
         subtitle: String,
-        isOn: Binding<Bool>
+        isOn: Binding<Bool>,
+        isDimmed: Bool = false
     ) -> some View {
-        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
+        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle, isDimmed: isDimmed) {
             Toggle("", isOn: isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
+                .disabled(isDimmed)
         }
     }
 

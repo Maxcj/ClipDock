@@ -13,6 +13,7 @@ import Combine
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
+    @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @Environment(\.openWindow) private var openWindow
 
     @State private var searchText = ""
@@ -62,6 +63,9 @@ struct ContentView: View {
         .task {
             clipboardMonitor.start()
         }
+        .task {
+            sparkleUpdateManager.performStartupUpdateCheckIfNeeded()
+        }
         .onDisappear {
             clipboardMonitor.stop()
         }
@@ -70,6 +74,17 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .clipDockHidePanelRequested)) { _ in
             hideMainWindow()
+        }
+        .sheet(item: $sparkleUpdateManager.releaseNotesPresentation) { presentation in
+            UpdateReleaseNotesSheetView(
+                presentation: presentation,
+                onDownload: {
+                    sparkleUpdateManager.openDownloadURL(for: presentation)
+                },
+                onClose: {
+                    sparkleUpdateManager.dismissReleaseNotesPresentation()
+                }
+            )
         }
     }
 

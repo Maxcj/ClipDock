@@ -54,6 +54,29 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     }
 }
 
+enum UpdateCheckIntervalOption: Double, CaseIterable, Identifiable {
+    case daily = 86400
+    case every3Days = 259200
+    case weekly = 604800
+    case every2Weeks = 1209600
+
+    var id: Double { rawValue }
+
+    var titleKey: AppTextKey {
+        switch self {
+        case .daily: return .automaticCheckIntervalDaily
+        case .every3Days: return .automaticCheckIntervalEvery3Days
+        case .weekly: return .automaticCheckIntervalWeekly
+        case .every2Weeks: return .automaticCheckIntervalEvery2Weeks
+        }
+    }
+
+    static func from(interval: TimeInterval) -> UpdateCheckIntervalOption {
+        let normalized = interval.rounded()
+        return allCases.first { $0.rawValue == normalized } ?? .daily
+    }
+}
+
 struct SettingsWindowMetrics {
     let containerSize: CGSize
 
@@ -226,6 +249,70 @@ struct SettingsTabCard<Content: View>: View {
                 )
         )
         .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+    }
+}
+
+struct UpdateReleaseNotesSheetView: View {
+    @Environment(\.appLocalizer) private var localizer
+
+    let presentation: UpdateReleaseNotesPresentation
+    let onDownload: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(localizer.text(.releaseNotes))
+                        .font(.system(size: 20, weight: .semibold))
+                    Text(localizer.text(.updateAvailableTitle, presentation.version))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            ScrollView {
+                Text(presentation.releaseNotesText)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .lineSpacing(3)
+                    .padding(16)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.white.opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
+            )
+
+            HStack {
+                Spacer(minLength: 0)
+
+                Button(localizer.text(.downloadUpdate), action: onDownload)
+                    .buttonStyle(SettingsSecondaryButtonStyle())
+
+                Button(localizer.text(.close), action: onClose)
+                    .buttonStyle(SettingsSecondaryButtonStyle())
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 680, minHeight: 520)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white,
+                    Color(red: 0.97, green: 0.98, blue: 1.0)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
     }
 }
 

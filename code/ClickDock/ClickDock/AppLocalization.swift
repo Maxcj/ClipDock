@@ -80,12 +80,22 @@ enum AppTextKey: String {
     case versionLabel
     case updates
     case updatesSubtitle
+    case automaticCheckForUpdates
+    case automaticCheckForUpdatesSubtitle
+    case automaticCheckInterval
+    case automaticCheckIntervalSubtitle
+    case automaticCheckIntervalDaily
+    case automaticCheckIntervalEvery3Days
+    case automaticCheckIntervalWeekly
+    case automaticCheckIntervalEvery2Weeks
     case checkForUpdates
     case checkForUpdatesSubtitle
     case updatesFeedNotConfigured
     case updateAvailableTitle
     case updateAvailableSubtitle
     case downloadUpdate
+    case releaseNotes
+    case releaseNotesUnavailable
     case ok
     case noUpdateTitle
     case noUpdateSubtitle
