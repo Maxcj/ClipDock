@@ -115,6 +115,10 @@ struct ClipboardPreviewCard: View {
                         .frame(height: layout.cardImageHeight)
                         .clipped()
                         .clipShape(RoundedRectangle(cornerRadius: layout.mediumCornerRadius, style: .continuous))
+                } else if record.kind == .colors, let color = record.clipboardColorValue {
+                    RoundedRectangle(cornerRadius: layout.mediumCornerRadius, style: .continuous)
+                        .fill(color.color)
+                        .frame(height: layout.cardImageHeight)
                 } else {
                     Text(record.previewTitle)
                         .font(.system(size: layout.cardTitleSize, weight: .semibold))

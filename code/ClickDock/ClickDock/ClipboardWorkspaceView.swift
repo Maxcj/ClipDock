@@ -171,7 +171,7 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     private var navigationFilters: [ClipboardFilter] {
-        [.all, .text, .links, .images, .code, .files]
+        [.all, .text, .links, .images, .code, .files, .colors]
     }
 
     private func moveRecordSelection(by offset: Int) {

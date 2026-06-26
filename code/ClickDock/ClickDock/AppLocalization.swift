@@ -184,6 +184,7 @@ enum AppTextKey: String {
     case image
     case code
     case files
+    case colors
     case other
     case all
     case links

@@ -74,7 +74,7 @@ enum ClipboardFilter: String, CaseIterable, Identifiable {
         case .images: return AppLocalizer.current.text(.images)
         case .code: return AppLocalizer.current.text(.code)
         case .files: return AppLocalizer.current.text(.files)
-        case .colors: return "Colors"
+        case .colors: return AppLocalizer.current.text(.colors)
         case .other: return AppLocalizer.current.text(.other)
         }
     }
@@ -100,7 +100,7 @@ enum ClipboardFilter: String, CaseIterable, Identifiable {
         case .images: return Color(red: 0.16, green: 0.54, blue: 0.96)
         case .code: return Color(red: 0.60, green: 0.35, blue: 0.95)
         case .files: return Color(red: 0.99, green: 0.67, blue: 0.15)
-        case .colors: return Color.orange
+        case .colors: return Color(red: 0.95, green: 0.49, blue: 0.16)
         case .other: return Color.secondary
         }
     }
@@ -112,6 +112,7 @@ enum ClipboardContentKind: String {
     case image
     case code
     case files
+    case colors
     case unknown
 
     var title: String {
@@ -121,6 +122,7 @@ enum ClipboardContentKind: String {
         case .image: return AppLocalizer.current.text(.image)
         case .code: return AppLocalizer.current.text(.code)
         case .files: return AppLocalizer.current.text(.files)
+        case .colors: return AppLocalizer.current.text(.colors)
         case .unknown: return AppLocalizer.current.text(.other)
         }
     }
@@ -132,6 +134,7 @@ enum ClipboardContentKind: String {
         case .image: return "photo"
         case .code: return "chevron.left.forwardslash.chevron.right"
         case .files: return "doc"
+        case .colors: return "paintpalette"
         case .unknown: return "questionmark.circle"
         }
     }
@@ -143,6 +146,7 @@ enum ClipboardContentKind: String {
         case .image: return Color(red: 0.16, green: 0.54, blue: 0.96)
         case .code: return Color(red: 0.60, green: 0.35, blue: 0.95)
         case .files: return Color(red: 0.99, green: 0.67, blue: 0.15)
+        case .colors: return Color(red: 0.95, green: 0.49, blue: 0.16)
         case .unknown: return Color.secondary
         }
     }
@@ -182,6 +186,10 @@ extension ClipboardRecord {
 
         if kind == .files {
             return AppLocalizer.current.text(.fileList)
+        }
+
+        if kind == .colors {
+            return clipboardColorValue?.displayText ?? AppLocalizer.current.text(.colors)
         }
 
         return AppLocalizer.current.text(.empty)
@@ -246,6 +254,10 @@ extension ClipboardRecord {
 
         if kind == .files {
             return fileStatusText
+        }
+
+        if kind == .colors {
+            return colorFormatLabel
         }
 
         return detailText
@@ -314,6 +326,10 @@ extension ClipboardRecord {
             return fullText
         }
 
+        if kind == .colors {
+            return clipboardColorValue?.displayText ?? previewTitle
+        }
+
         if kind == .image {
             return imagePath ?? "Image saved locally"
         }
@@ -323,7 +339,7 @@ extension ClipboardRecord {
 
     var rowSnippet: String {
         switch kind {
-        case .text, .code, .unknown:
+        case .text, .code, .colors, .unknown:
             return detailText
         case .link:
             return fullText ?? previewTitle
@@ -519,7 +535,7 @@ extension ClipboardRecord {
         case .files:
             predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.files.rawValue))
         case .colors:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.text.rawValue))
+            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.colors.rawValue))
         case .other:
             predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.unknown.rawValue))
         }

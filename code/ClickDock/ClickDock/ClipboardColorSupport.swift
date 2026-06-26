@@ -1,0 +1,141 @@
+//
+//  ClipboardColorSupport.swift
+//  ClipDock
+//
+
+import SwiftUI
+import AppKit
+
+extension ClipboardRecord {
+    var clipboardColorValue: ClipboardColorValue? {
+        guard kind == .colors else { return nil }
+        return ClipboardColorDetector.detect(from: fullText ?? displayText ?? "")
+    }
+
+    var colorFormatLabel: String {
+        clipboardColorValue?.summaryText ?? AppLocalizer.current.text(.colors)
+    }
+
+    var colorDisplayText: String {
+        clipboardColorValue?.displayText ?? previewTitle
+    }
+
+    var colorDetailValue: String {
+        clipboardColorValue?.sourceText ?? detailText
+    }
+}
+
+struct ClipboardColorDetailView: View {
+    @Environment(\.appLocalizer) private var localizer
+    let record: ClipboardRecord
+    let layout: SimpleClipboardLayout
+    let onCopyOriginal: () -> Void
+    let onCopyHex: () -> Void
+    let onCopyRGB: () -> Void
+    let onCopyRGBA: () -> Void
+    let onCopySwiftUI: () -> Void
+
+    var body: some View {
+        let color = record.clipboardColorValue
+
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 16) {
+                if let color {
+                    colorPreview(color)
+                    colorValues(color)
+                    actionButtons
+                } else {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(record.previewTitle)
+                            .font(.system(size: 28, weight: .semibold))
+                        Text(record.detailText)
+                            .font(.system(size: layout.detailSubtitleSize))
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+            .padding(.trailing, 2)
+        }
+    }
+
+    private func colorPreview(_ color: ClipboardColorValue) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(color.color)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
+                )
+                .frame(height: 180)
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(color.normalizedHexString)
+                            .font(.system(size: 30, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 2)
+                        Text(color.sourceFormat.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.92))
+                            .shadow(color: .black.opacity(0.28), radius: 4, x: 0, y: 1)
+                    }
+                    .padding(18)
+                }
+
+            HStack(spacing: 10) {
+                Text(record.previewTitle)
+                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                    .textSelection(.enabled)
+                Spacer()
+            }
+        }
+    }
+
+    private func colorValues(_ color: ClipboardColorValue) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            colorValueRow(title: "HEX", value: color.normalizedHexString, action: onCopyHex)
+            colorValueRow(title: "RGB", value: color.rgbString, action: onCopyRGB)
+            colorValueRow(title: "RGBA", value: color.rgbaString, action: onCopyRGBA)
+            colorValueRow(title: "SwiftUI", value: color.swiftUIColorString, action: onCopySwiftUI)
+            colorValueRow(title: localizer.text(.copy), value: color.sourceText, action: onCopyOriginal)
+        }
+    }
+
+    private func colorValueRow(title: String, value: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .font(.system(size: layout.footerFontSize, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 74, alignment: .leading)
+                Text(value)
+                    .font(.system(size: layout.detailSubtitleSize, design: .monospaced))
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+                Spacer(minLength: 0)
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.white.opacity(0.20))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
+            actionButton(title: "Copy HEX", action: onCopyHex)
+            actionButton(title: "Copy RGB", action: onCopyRGB)
+            actionButton(title: "Copy SwiftUI", action: onCopySwiftUI)
+            actionButton(title: localizer.text(.copy), action: onCopyOriginal)
+        }
+    }
+
+    private func actionButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(title, action: action)
+            .buttonStyle(.bordered)
+    }
+}

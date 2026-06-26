@@ -59,7 +59,7 @@ final class ClipboardMonitor: ObservableObject {
         pasteboard.clearContents()
 
         switch kind {
-        case .text, .code, .unknown:
+        case .text, .code, .colors, .unknown:
             pasteboard.setString(record.fullText ?? record.displayText ?? "", forType: .string)
         case .link:
             let value = record.fullText ?? record.displayText ?? ""
@@ -213,6 +213,19 @@ final class ClipboardMonitor: ObservableObject {
             let kind: ClipboardContentKind
             if ClipboardRecord.webURL(from: trimmed) != nil {
                 kind = .link
+            } else if let color = ClipboardColorDetector.detect(from: trimmed) {
+                kind = .colors
+                return ClipboardSnapshot(
+                    kind: kind,
+                    displayText: color.displayText,
+                    fullText: color.sourceText,
+                    imagePath: nil,
+                    assetPath: nil,
+                    thumbnailPath: nil,
+                    sourceAppName: appName,
+                    sourceBundleId: bundleId,
+                    hash: Self.hash(kind: kind, text: color.sourceText)
+                )
             } else if isLikelyCode(trimmed) {
                 kind = .code
             } else {

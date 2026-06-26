@@ -85,22 +85,24 @@ struct ClipboardDashboardView: View {
 
     @ViewBuilder
     private var categoryRow: some View {
-        HStack(spacing: layout.categorySpacing) {
-            ForEach(ClipboardFilter.allCases) { option in
-                Button {
-                    filterSelection = option
-                } label: {
-                    FilterChip(
-                        title: option.title,
-                        symbolName: option.symbolName,
-                        isSelected: option == activeFilter,
-                        layout: layout
-                    )
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: layout.categorySpacing) {
+                ForEach(ClipboardFilter.allCases) { option in
+                    Button {
+                        filterSelection = option
+                    } label: {
+                        FilterChip(
+                            title: option.title,
+                            symbolName: option.symbolName,
+                            isSelected: option == activeFilter,
+                            layout: layout
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
 
-            Spacer()
+                Spacer(minLength: 0)
+            }
         }
     }
 
@@ -486,6 +488,27 @@ struct ClipboardHeroDetailPanel: View {
                         endPoint: .bottomTrailing
                     )
                 )
+            } else if record.kind == .colors, let color = record.clipboardColorValue {
+                VStack(alignment: .leading, spacing: 16) {
+                    RoundedRectangle(cornerRadius: layout.mediumCornerRadius, style: .continuous)
+                        .fill(color.color)
+                        .frame(height: layout.heroPreviewMinHeight)
+                        .overlay(
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(color.normalizedHexString)
+                                    .font(.system(size: layout.detailBodyTitleSize + 8, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(.white)
+                                    .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 2)
+                                Text(color.sourceFormat.title)
+                                    .font(.system(size: layout.footerFontSize, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .shadow(color: .black.opacity(0.28), radius: 4, x: 0, y: 1)
+                                Spacer()
+                            }
+                            .padding(layout.cardPadding),
+                            alignment: .bottomLeading
+                        )
+                }
             } else if record.kind == .files {
                 FileDetailPreview(
                     record: record,

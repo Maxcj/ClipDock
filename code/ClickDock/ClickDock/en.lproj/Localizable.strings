@@ -138,6 +138,7 @@
 "image" = "Image";
 "code" = "Code";
 "files" = "Files";
+"colors" = "Colors";
 "other" = "Other";
 "all" = "All";
 "links" = "Links";

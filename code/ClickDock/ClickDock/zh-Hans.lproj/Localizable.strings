@@ -138,6 +138,7 @@
 "image" = "图片";
 "code" = "代码";
 "files" = "文件";
+"colors" = "颜色";
 "other" = "其他";
 "all" = "全部";
 "links" = "链接";

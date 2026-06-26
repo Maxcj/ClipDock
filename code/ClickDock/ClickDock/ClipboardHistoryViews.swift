@@ -22,7 +22,7 @@ struct ClipboardHistorySidebar: View {
     let onOpenSettings: () -> Void
     @FocusState private var isSearchFieldFocused: Bool
 
-    private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files]
+    private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files, .colors]
 
     var body: some View {
         let sections = groupedSections
@@ -33,21 +33,24 @@ struct ClipboardHistorySidebar: View {
                 settingsButton
             }
 
-            HStack(spacing: layout.chipSpacing) {
-                ForEach(visibleFilters) { option in
-                    Button {
-                        filterSelection = option
-                    } label: {
-                        SimpleFilterChip(
-                            title: option.title,
-                            symbolName: option.symbolName,
-                            accentColor: option.accentColor,
-                            isSelected: option == activeFilter,
-                            layout: layout
-                        )
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: layout.chipSpacing) {
+                    ForEach(visibleFilters) { option in
+                        Button {
+                            filterSelection = option
+                        } label: {
+                            SimpleFilterChip(
+                                title: option.title,
+                                symbolName: option.symbolName,
+                                accentColor: option.accentColor,
+                                isSelected: option == activeFilter,
+                                layout: layout
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.trailing, 2)
             }
 
             ScrollView(.vertical, showsIndicators: false) {
@@ -388,7 +391,19 @@ struct ClipboardHistoryRow: View {
             imageThumbnail(preview)
         } else if record.kind == .files {
             fileThumbnail
+        } else if record.kind == .colors, let color = record.clipboardColorValue {
+            colorThumbnail(color)
         }
+    }
+
+    private func colorThumbnail(_ color: ClipboardColorValue) -> some View {
+        RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
+            .fill(color.color)
+            .overlay(
+                RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            )
+            .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
     }
 
     private func imageThumbnail(_ image: NSImage) -> some View {

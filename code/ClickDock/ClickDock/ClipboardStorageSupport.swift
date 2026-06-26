@@ -83,7 +83,7 @@ enum ClipboardStorageCalculator {
 
         for snapshot in snapshots {
             switch snapshot.kind {
-            case .text, .code, .unknown:
+            case .text, .code, .colors, .unknown:
                 textItemCount += 1
             case .image:
                 imageItemCount += 1

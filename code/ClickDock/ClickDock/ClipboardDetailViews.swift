@@ -174,6 +174,19 @@ struct ClipboardDetailInspector: View {
                 ClipboardCodePane(record: record)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             )
+        case .colors:
+            return AnyView(
+                ClipboardColorDetailView(
+                    record: record,
+                    layout: layout,
+                    onCopyOriginal: onCopy,
+                    onCopyHex: { copyColorValue(record.clipboardColorValue?.normalizedHexString ?? record.fullText ?? record.displayText ?? "") },
+                    onCopyRGB: { copyColorValue(record.clipboardColorValue?.rgbString ?? "") },
+                    onCopyRGBA: { copyColorValue(record.clipboardColorValue?.rgbaString ?? "") },
+                    onCopySwiftUI: { copyColorValue(record.clipboardColorValue?.swiftUIColorString ?? "") }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            )
         case .text, .unknown:
             return AnyView(
                 ScrollView(.vertical, showsIndicators: false) {
@@ -189,6 +202,12 @@ struct ClipboardDetailInspector: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             )
         }
+    }
+
+    private func copyColorValue(_ value: String) {
+        guard !value.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
     }
 
     private func imagePreview(_ image: NSImage) -> some View {
