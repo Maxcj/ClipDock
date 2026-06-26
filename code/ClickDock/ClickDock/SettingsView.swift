@@ -413,7 +413,6 @@ struct SettingsView: View {
                         title: localizer.text(.clearCache),
                         subtitle: localizer.text(.clearCacheSubtitle),
                         buttonTitle: localizer.text(.clear),
-                        buttonSymbolName: "trash",
                         action: {
                             clearStorageCache()
                         }
@@ -426,7 +425,6 @@ struct SettingsView: View {
                         title: localizer.text(.clearAllHistory),
                         subtitle: localizer.text(.clearAllHistorySubtitle),
                         buttonTitle: localizer.text(.clear),
-                        buttonSymbolName: "trash",
                         action: {
                             clearAllHistory()
                         }
@@ -570,13 +568,10 @@ struct SettingsView: View {
         title: String,
         subtitle: String,
         buttonTitle: String,
-        buttonSymbolName: String = "trash",
         action: @escaping () -> Void
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
-            Button(action: action) {
-                Label(buttonTitle, systemImage: buttonSymbolName)
-            }
+            Button(buttonTitle, action: action)
                 .buttonStyle(DestructivePillButtonStyle())
         }
     }
