@@ -174,7 +174,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             return
         }
 
-        if nsError.code != SUNoUpdateError {
+        if nsError.code != 1001 {
             shouldShowReleaseNotesForNextManualCheck = false
             NSLog("Sparkle update cycle finished with error: \(nsError.localizedDescription)")
         }
