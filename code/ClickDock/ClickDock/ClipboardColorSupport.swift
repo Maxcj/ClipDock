@@ -74,10 +74,10 @@ struct ClipboardColorDetailView: View {
                             .font(.system(size: 30, weight: .bold, design: .monospaced))
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.28), radius: 8, x: 0, y: 2)
-                        Text(color.sourceFormat.title)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.92))
-                            .shadow(color: .black.opacity(0.28), radius: 4, x: 0, y: 1)
+                        HStack(spacing: 8) {
+                            infoPill(text: color.sourceFormat.title)
+                            infoPill(text: opacityLabel(for: color))
+                        }
                     }
                     .padding(18)
                 }
@@ -88,6 +88,12 @@ struct ClipboardColorDetailView: View {
                     .textSelection(.enabled)
                 Spacer()
             }
+
+            HStack(spacing: 8) {
+                infoTag(title: localizer.text(.source), value: color.sourceText)
+                infoTag(title: localizer.text(.format), value: color.sourceFormat.title)
+                infoTag(title: localizer.text(.opacity), value: opacityLabel(for: color))
+            }
         }
     }
 
@@ -97,7 +103,6 @@ struct ClipboardColorDetailView: View {
             colorValueRow(title: "RGB", value: color.rgbString, action: onCopyRGB)
             colorValueRow(title: "RGBA", value: color.rgbaString, action: onCopyRGBA)
             colorValueRow(title: "SwiftUI", value: color.swiftUIColorString, action: onCopySwiftUI)
-            colorValueRow(title: localizer.text(.copy), value: color.sourceText, action: onCopyOriginal)
         }
     }
 
@@ -130,12 +135,43 @@ struct ClipboardColorDetailView: View {
             actionButton(title: "Copy HEX", action: onCopyHex)
             actionButton(title: "Copy RGB", action: onCopyRGB)
             actionButton(title: "Copy SwiftUI", action: onCopySwiftUI)
-            actionButton(title: localizer.text(.copy), action: onCopyOriginal)
+            actionButton(title: localizer.text(.copyOriginal), action: onCopyOriginal)
         }
     }
 
     private func actionButton(title: String, action: @escaping () -> Void) -> some View {
         Button(title, action: action)
             .buttonStyle(.bordered)
+    }
+
+    private func infoPill(text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.95))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.white.opacity(0.18))
+            .clipShape(Capsule())
+    }
+
+    private func infoTag(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.black.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func opacityLabel(for color: ClipboardColorValue) -> String {
+        color.alpha >= 0.999 ? "Opaque" : String(format: "%.0f%%", color.alpha * 100)
     }
 }

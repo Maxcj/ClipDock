@@ -100,11 +100,11 @@ struct SimpleClipboardLayout {
     var searchIconSize: CGFloat { s(15) }
     var searchTextSize: CGFloat { s(14) }
     var searchHintSize: CGFloat { s(12) }
-    var chipSpacing: CGFloat { s(8) }
-    var chipHeight: CGFloat { s(34) }
-    var chipPaddingX: CGFloat { s(16) }
+    var chipSpacing: CGFloat { s(6) }
+    var chipHeight: CGFloat { s(30) }
+    var chipPaddingX: CGFloat { s(12) }
     var chipIconSize: CGFloat { s(12) }
-    var chipTextSize: CGFloat { s(13) }
+    var chipTextSize: CGFloat { s(12) }
     var sectionLabelSize: CGFloat { s(13) }
     var rowSpacing: CGFloat { s(10) }
     var rowHeight: CGFloat { s(122) }
@@ -199,4 +199,3 @@ struct SimpleClipboardLayout {
     var heroBodySize: CGFloat { s(14) }
     var codePaneMinHeight: CGFloat { s(124) }
 }
-
