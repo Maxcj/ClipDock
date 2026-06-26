@@ -14,7 +14,8 @@
         color: #1f2937;
         background: #ffffff;
       }
-      h1, h2 {
+      h1,
+      h2 {
         line-height: 1.2;
       }
       ul {
@@ -29,6 +30,21 @@
         border-radius: 16px;
         padding: 20px 24px;
         background: #fafafa;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        margin-top: 0;
+      }
+      .label {
+        display: inline-block;
+        margin-bottom: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #111827;
+        color: #fff;
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
     </style>
   </head>
@@ -37,12 +53,26 @@
     <p class="meta">Release notes for the Sparkle-powered update channel.</p>
 
     <div class="card">
-      <h2>What's new</h2>
+      <span class="label">中文</span>
+      <h2 class="section-title">本次更新</h2>
+      <p>ClipDock 1.2.1 正式接入 Sparkle 自动更新通道，增强了应用分发与版本管理能力。</p>
       <ul>
-        <li>Added Sparkle update support with automatic checks, download, verification, and installation.</li>
-        <li>Added a dedicated Updates tab in Settings with a manual Check for Updates action.</li>
-        <li>Added support for ignoring a version and showing it again later.</li>
-        <li>Configured GitHub Pages appcast publishing for <code>https://maxcj.github.io/ClipDock/appcast.xml</code>.</li>
+        <li>正式接入 Sparkle 自动更新，支持检查、下载、校验与安装更新。</li>
+        <li>设置页新增独立的 Updates 标签页，支持手动检查更新。</li>
+        <li>支持忽略指定版本，并可在后续重新显示该版本。</li>
+        <li>通过 GitHub Pages 发布 appcast，GitHub Releases 承载安装包下载。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="label">English</span>
+      <h2 class="section-title">What’s New</h2>
+      <p>ClipDock 1.2.1 formally introduces the Sparkle update channel to improve distribution and version management.</p>
+      <ul>
+        <li>Sparkle automatic updates are now integrated for update checks, download, verification, and installation.</li>
+        <li>A dedicated Updates tab has been added to Settings for manual update checks.</li>
+        <li>Users can ignore a version and bring it back later when needed.</li>
+        <li>The appcast is published through GitHub Pages, while GitHub Releases hosts the installer archive.</li>
       </ul>
     </div>
   </body>
