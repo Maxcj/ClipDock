@@ -49,4 +49,23 @@ fi
   -o "${repo_root}/docs/appcast.xml" \
   "${staging_dir}"
 
+release_notes_url="https://maxcj.github.io/ClipDock/release-notes/${version}.html"
+python3 - "${repo_root}/docs/appcast.xml" "${release_notes_url}" <<'PY'
+from pathlib import Path
+import sys
+
+appcast_path = Path(sys.argv[1])
+release_notes_url = sys.argv[2]
+text = appcast_path.read_text()
+start = text.find("<sparkle:releaseNotesLink>")
+end = text.find("</sparkle:releaseNotesLink>", start)
+if start != -1 and end != -1:
+    text = (
+        text[:start]
+        + f"<sparkle:releaseNotesLink>{release_notes_url}</sparkle:releaseNotesLink>"
+        + text[end + len("</sparkle:releaseNotesLink>") :]
+    )
+    appcast_path.write_text(text)
+PY
+
 echo "Generated ${repo_root}/docs/appcast.xml"
