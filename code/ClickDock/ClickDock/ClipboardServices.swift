@@ -6,7 +6,6 @@
 import AppKit
 import Combine
 import CoreData
-import Carbon.HIToolbox
 import CryptoKit
 import ImageIO
 import UniformTypeIdentifiers
@@ -69,10 +68,9 @@ final class ClipboardMonitor: ObservableObject {
                 pasteboard.writeObjects([url as NSURL])
             }
         case .files:
-            if let assetPath = record.assetPathValue,
-               let urls = Self.fileURLs(in: URL(fileURLWithPath: assetPath)),
-               !urls.isEmpty {
-                pasteboard.writeObjects(urls.map { $0 as NSURL })
+            let fileURLs = record.fileReferenceSet.preferredURLsForPasteboard
+            if !fileURLs.isEmpty {
+                pasteboard.writeObjects(fileURLs.map { $0 as NSURL })
             } else if let text = record.fullText ?? record.displayText {
                 pasteboard.setString(text, forType: .string)
             }
@@ -133,6 +131,10 @@ final class ClipboardMonitor: ObservableObject {
             let fullText = fileURLs.map(\.path).joined(separator: "\n")
             let isSingleImageFile = fileURLs.count == 1 && Self.imageFileExtensions.contains(fileURLs[0].pathExtension.lowercased())
 
+            if ClipboardPrivacyRules.shouldIgnoreCapturedText(fullText) {
+                return nil
+            }
+
             if isSingleImageFile, let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let assets = saveImageAssets(from: image) {
                 return ClipboardSnapshot(
                     kind: .image,
@@ -152,7 +154,7 @@ final class ClipboardMonitor: ObservableObject {
                 displayText: names.joined(separator: ", "),
                 fullText: fullText,
                 imagePath: nil,
-                assetPath: saveFileAssets(from: fileURLs)?.path,
+                assetPath: nil,
                 thumbnailPath: nil,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
@@ -176,6 +178,7 @@ final class ClipboardMonitor: ObservableObject {
 
         let urlType = NSPasteboard.PasteboardType(UTType.url.identifier)
         if let urlText = pasteboard.string(forType: urlType),
+           !ClipboardPrivacyRules.shouldIgnoreCapturedText(urlText),
            ClipboardRecord.webURL(from: urlText) != nil {
             return ClipboardSnapshot(
                 kind: .link,
@@ -192,6 +195,9 @@ final class ClipboardMonitor: ObservableObject {
 
         if let text = pasteboard.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if ClipboardPrivacyRules.shouldIgnoreCapturedText(trimmed) {
+                return nil
+            }
             let kind: ClipboardContentKind
             if ClipboardRecord.webURL(from: trimmed) != nil {
                 kind = .link
@@ -310,24 +316,6 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
-    private func saveFileAssets(from urls: [URL]) -> URL? {
-        let folderURL = Self.assetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
-        do {
-            try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
-            for sourceURL in urls {
-                let destinationURL = folderURL.appendingPathComponent(sourceURL.lastPathComponent)
-                if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    try FileManager.default.removeItem(at: destinationURL)
-                }
-                try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-            }
-            return folderURL
-        } catch {
-            NSLog("Failed to save clipboard files: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
     private func currentFrontmostApplicationName() -> String? {
         NSWorkspace.shared.frontmostApplication?.localizedName
     }
@@ -363,16 +351,6 @@ final class ClipboardMonitor: ObservableObject {
         }
         let rep = NSBitmapImageRep(cgImage: cgImage)
         return rep.representation(using: .png, properties: [:])
-    }
-
-    private static func fileURLs(in folderURL: URL) -> [URL]? {
-        let keys: [URLResourceKey] = [.isRegularFileKey]
-        guard let contents = try? FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles]) else {
-            return nil
-        }
-        return contents.filter { url in
-            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
-        }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     private static func hash(kind: ClipboardContentKind, data: Data) -> String {
@@ -675,84 +653,6 @@ private enum LinkMetadataFetcher {
         }
 
         return url.deletingLastPathComponent().appendingPathComponent("favicon.ico")
-    }
-}
-
-final class GlobalHotkeyManager: ObservableObject {
-    private var hotKeyRef: EventHotKeyRef?
-    private var eventHandler: EventHandlerRef?
-    private var defaultsObserver: NSObjectProtocol?
-    private let hotKeyID = EventHotKeyID(signature: OSType(0x434C444B), id: 1)
-
-    init() {
-        installEventHandler()
-        defaultsObserver = NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.refreshRegistration()
-        }
-        refreshRegistration()
-    }
-
-    deinit {
-        unregister()
-        if let defaultsObserver {
-            NotificationCenter.default.removeObserver(defaultsObserver)
-        }
-    }
-
-    private func refreshRegistration() {
-        unregister()
-
-        let defaults = UserDefaults.standard
-        let enabled = defaults.object(forKey: "clipboard.hotkeyEnabled") as? Bool ?? false
-        guard enabled else { return }
-
-        let keyCode = UInt32(defaults.object(forKey: "clipboard.hotkeyKeyCode") as? Int ?? HotKeyConfiguration.defaultKeyCode)
-        let modifiers = UInt32(defaults.object(forKey: "clipboard.hotkeyModifiers") as? Int ?? Int(HotKeyConfiguration.defaultModifiers))
-        guard keyCode != 0, modifiers != 0 else { return }
-
-        var hotKeyRef: EventHotKeyRef?
-        let status = RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
-        if status == noErr {
-            self.hotKeyRef = hotKeyRef
-        } else {
-            NSLog("Failed to register global hotkey: \(status)")
-        }
-    }
-
-    private func unregister() {
-        if let hotKeyRef {
-            UnregisterEventHotKey(hotKeyRef)
-            self.hotKeyRef = nil
-        }
-    }
-
-    private func installEventHandler() {
-        let eventType = EventTypeSpec(eventClass: UInt32(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        let userData = Unmanaged.passUnretained(self).toOpaque()
-
-        let status = InstallEventHandler(
-            GetApplicationEventTarget(),
-            { _, _, userData in
-                guard let userData else { return noErr }
-                _ = Unmanaged<GlobalHotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
-                }
-                return noErr
-            },
-            1,
-            [eventType],
-            userData,
-            &eventHandler
-        )
-
-        if status != noErr {
-            NSLog("Failed to install hotkey event handler: \(status)")
-        }
     }
 }
 

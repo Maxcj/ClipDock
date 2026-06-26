@@ -10,7 +10,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case privacy
     case quickOpen
-    case autoClean
+    case storage
     case about
 
     var id: String { rawValue }
@@ -20,7 +20,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return .general
         case .privacy: return .privacy
         case .quickOpen: return .quickOpen
-        case .autoClean: return .autoClean
+        case .storage: return .storage
         case .about: return .about
         }
     }
@@ -34,7 +34,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return "gearshape.fill"
         case .privacy: return "hand.raised.fill"
         case .quickOpen: return "keyboard"
-        case .autoClean: return "clock.arrow.circlepath"
+        case .storage: return "internaldrive.fill"
         case .about: return "info.circle"
         }
     }
@@ -44,7 +44,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .general: return Color(red: 0.20, green: 0.49, blue: 0.98)
         case .privacy: return Color(red: 0.56, green: 0.36, blue: 0.83)
         case .quickOpen: return Color(red: 0.16, green: 0.68, blue: 0.34)
-        case .autoClean: return Color(red: 0.99, green: 0.67, blue: 0.15)
+        case .storage: return Color(red: 0.21, green: 0.64, blue: 0.88)
         case .about: return Color(red: 0.61, green: 0.39, blue: 0.95)
         }
     }
@@ -229,133 +229,5 @@ extension SettingsView {
     var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         ?? "Unknown"
-    }
-}
-
-struct ShortcutRecorderField: View {
-    @Environment(\.appLocalizer) private var localizer
-    @Binding var keyCode: Int
-    @Binding var modifiers: Int
-    @Binding var displayText: String
-
-    let defaultKeyCode: Int
-    let defaultModifiers: Int
-    let defaultDisplay: String
-
-    @State private var isCapturing = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(localizer.text(.shortcutRecordTitle))
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(localizer.text(.shortcutRecordHint))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer(minLength: 0)
-
-                Button(isCapturing ? localizer.text(.recording) : localizer.text(.change)) {
-                    isCapturing = true
-                }
-                .buttonStyle(SettingsSecondaryButtonStyle())
-
-                Button(localizer.text(.reset)) {
-                    keyCode = defaultKeyCode
-                    modifiers = defaultModifiers
-                    displayText = defaultDisplay
-                }
-                .buttonStyle(SettingsSecondaryButtonStyle())
-            }
-
-            HStack(spacing: 8) {
-                Image(systemName: "command")
-                    .foregroundStyle(.secondary)
-                Text(displayText.isEmpty ? localizer.text(.noShortcutSet) : displayText)
-                    .font(.system(size: 12, design: .monospaced))
-                    .monospacedDigit()
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 38)
-            .background(Color.white.opacity(0.18))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
-            )
-            .overlay(
-                Group {
-                    if isCapturing {
-                        ShortcutCaptureView(
-                            onCapture: { capturedKeyCode, capturedModifiers, capturedDisplay in
-                                keyCode = capturedKeyCode
-                                modifiers = capturedModifiers
-                                displayText = capturedDisplay
-                                isCapturing = false
-                            },
-                            onCancel: {
-                                isCapturing = false
-                            }
-                        )
-                        .allowsHitTesting(true)
-                    }
-                }
-            )
-        }
-    }
-}
-
-struct ShortcutCaptureView: NSViewRepresentable {
-    let onCapture: (Int, Int, String) -> Void
-    let onCancel: () -> Void
-
-    func makeNSView(context: Context) -> KeyCaptureNSView {
-        KeyCaptureNSView(onCapture: onCapture, onCancel: onCancel)
-    }
-
-    func updateNSView(_ nsView: KeyCaptureNSView, context: Context) {
-        nsView.onCapture = onCapture
-        nsView.onCancel = onCancel
-    }
-
-    final class KeyCaptureNSView: NSView {
-        var onCapture: (Int, Int, String) -> Void
-        var onCancel: () -> Void
-
-        init(onCapture: @escaping (Int, Int, String) -> Void, onCancel: @escaping () -> Void) {
-            self.onCapture = onCapture
-            self.onCancel = onCancel
-            super.init(frame: .zero)
-        }
-
-        @available(*, unavailable)
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-
-        override var acceptsFirstResponder: Bool { true }
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            DispatchQueue.main.async { [weak self] in
-                self?.window?.makeFirstResponder(self)
-            }
-        }
-
-        override func keyDown(with event: NSEvent) {
-            let keyCode = Int(event.keyCode)
-            if keyCode == 53 {
-                onCancel()
-                return
-            }
-
-            let modifiers = HotKeyConfiguration.carbonModifiers(from: event.modifierFlags)
-            guard modifiers != 0 else { return }
-
-            onCapture(keyCode, modifiers, HotKeyConfiguration.displayString(for: event))
-        }
     }
 }

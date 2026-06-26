@@ -110,9 +110,7 @@ struct ClipboardHistorySidebar: View {
 
     private var groupedSections: [ClipboardHistorySection] {
         let calendar = Calendar.current
-        let pinnedRecords = records
-            .filter(\.isPinned)
-            .sorted(by: clipboardRecordDisplaysBefore)
+        let pinnedRecords = records.filter(\.isPinned)
         let unpinnedRecords = records.filter { !$0.isPinned }
         let dayKeys = Dictionary(grouping: unpinnedRecords, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
         let sortedDays = dayKeys.keys.sorted(by: >)
@@ -131,9 +129,7 @@ struct ClipboardHistorySidebar: View {
         }
 
         sections.append(contentsOf: sortedDays.map { day in
-            let sectionRecords = (dayKeys[day] ?? []).sorted { lhs, rhs in
-                clipboardRecordDisplaysBefore(lhs, rhs)
-            }
+            let sectionRecords = dayKeys[day] ?? []
 
             return ClipboardHistorySection(
                 id: day,
@@ -486,4 +482,3 @@ struct ClipboardHistoryRow: View {
         }
     }
 }
-

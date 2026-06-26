@@ -7,56 +7,7 @@ import SwiftUI
 import CoreData
 import AppKit
 import ImageIO
-import Carbon.HIToolbox
 import UniformTypeIdentifiers
-
-enum HotKeyConfiguration {
-    static let defaultKeyCode = 12
-    static let defaultModifiers = UInt32(controlKey)
-    static let defaultDisplay = "⌃Q"
-
-    static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> Int {
-        var carbonFlags: UInt32 = 0
-        let modifierFlags = flags.intersection([.command, .option, .control, .shift])
-
-        if modifierFlags.contains(.command) { carbonFlags |= UInt32(cmdKey) }
-        if modifierFlags.contains(.option) { carbonFlags |= UInt32(optionKey) }
-        if modifierFlags.contains(.control) { carbonFlags |= UInt32(controlKey) }
-        if modifierFlags.contains(.shift) { carbonFlags |= UInt32(shiftKey) }
-        return Int(carbonFlags)
-    }
-
-    static func displayString(for event: NSEvent) -> String {
-        let modifiers = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        var pieces: [String] = []
-        if modifiers.contains(.control) { pieces.append("⌃") }
-        if modifiers.contains(.option) { pieces.append("⌥") }
-        if modifiers.contains(.shift) { pieces.append("⇧") }
-        if modifiers.contains(.command) { pieces.append("⌘") }
-
-        pieces.append(displayName(for: event))
-        return pieces.joined()
-    }
-
-    private static func displayName(for event: NSEvent) -> String {
-        switch Int(event.keyCode) {
-        case 49: return "Space"
-        case 36: return "Return"
-        case 53: return "Esc"
-        case 51: return "Delete"
-        case 123: return "Left"
-        case 124: return "Right"
-        case 125: return "Down"
-        case 126: return "Up"
-        default:
-            let chars = event.charactersIgnoringModifiers?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let chars, !chars.isEmpty {
-                return chars.uppercased()
-            }
-            return "Key \(event.keyCode)"
-        }
-    }
-}
 
 struct RetentionRule {
     let isEnabled: Bool
@@ -292,6 +243,10 @@ extension ClipboardRecord {
             return linkHostLabel ?? linkTitleLabel ?? previewTitle
         }
 
+        if kind == .files {
+            return fileStatusText
+        }
+
         return detailText
     }
 
@@ -318,7 +273,7 @@ extension ClipboardRecord {
 
     var fileSizeLabel: String {
         guard kind == .files else { return "-" }
-        return Self.fileSizeLabel(forPath: assetPathValue)
+        return fileReferenceSet.fileSizeLabel
     }
 
     var cachedImagePaths: [String] {
@@ -334,32 +289,24 @@ extension ClipboardRecord {
     }
 
     var fileRepresentativeURL: URL? {
-        guard kind == .files,
-              let assetPath = assetPathValue,
-              !assetPath.isEmpty else {
-            return nil
-        }
-
-        let folderURL = URL(fileURLWithPath: assetPath)
-        let keys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey]
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: folderURL,
-            includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles]
-        ) else {
-            return nil
-        }
-
-        let files = contents.filter { url in
-            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
-        }.sorted { $0.lastPathComponent < $1.lastPathComponent }
-
-        return files.first
+        guard kind == .files else { return nil }
+        return fileReferenceSet.representativeURL
     }
 
     var detailText: String {
         if kind == .link {
             return fullText ?? displayText ?? "-"
+        }
+
+        if kind == .files {
+            if fileReferenceSet.hasMissingOriginalFiles {
+                return AppLocalizer.current.text(.originalFileNoLongerExists)
+            }
+
+            let filePaths = fileReferenceSet.displayPathText
+            if !filePaths.isEmpty {
+                return filePaths
+            }
         }
 
         if let fullText, !fullText.isEmpty {
@@ -382,8 +329,20 @@ extension ClipboardRecord {
         case .image:
             return "Image saved locally"
         case .files:
-            return "File ready to paste or open."
+            return fileStatusText
         }
+    }
+
+    var fileStatusText: String {
+        guard kind == .files else { return "" }
+        if fileReferenceSet.hasMissingOriginalFiles {
+            return AppLocalizer.current.text(.originalFileNoLongerExists)
+        }
+        return AppLocalizer.current.text(.fileReady)
+    }
+
+    var fileReferenceSet: ClipboardFileReferenceSet {
+        ClipboardFileReferenceSet(originalPathsText: fullText, legacyCacheFolderPath: assetPathValue)
     }
 
     var characterCount: Int {
@@ -583,8 +542,8 @@ func removeCachedAssets(for record: ClipboardRecord) {
         try? FileManager.default.removeItem(atPath: imagePath)
         ClipboardImageCache.shared.remove(path: imagePath)
     }
-    if let assetPath = record.assetPathValue, !assetPath.isEmpty {
-        try? FileManager.default.removeItem(atPath: assetPath)
+    if let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL {
+        try? FileManager.default.removeItem(at: legacyCacheFolderURL)
     }
     if let thumbnailPath = record.thumbnailPathValue, !thumbnailPath.isEmpty {
         try? FileManager.default.removeItem(atPath: thumbnailPath)
@@ -598,7 +557,8 @@ final class ClipboardImageCache {
     private let cache = NSCache<NSString, NSImage>()
 
     private init() {
-        cache.countLimit = 120
+        cache.countLimit = 48
+        cache.totalCostLimit = 48 * 1024 * 1024
     }
 
     func image(at path: String, preferredSize: CGSize? = nil) -> NSImage? {
@@ -615,7 +575,7 @@ final class ClipboardImageCache {
             image.size = preferredSize
         }
 
-        cache.setObject(image, forKey: key)
+        cache.setObject(image, forKey: key, cost: Self.cacheCost(for: image))
         return image
     }
 
@@ -647,6 +607,12 @@ final class ClipboardImageCache {
     func remove(paths: [String]) {
         paths.forEach { cache.removeObject(forKey: $0 as NSString) }
     }
+
+    private static func cacheCost(for image: NSImage) -> Int {
+        let pixelWidth = max(1, Int(image.size.width))
+        let pixelHeight = max(1, Int(image.size.height))
+        return pixelWidth * pixelHeight * 4
+    }
 }
 
 final class ClipboardAppIconCache {
@@ -655,7 +621,8 @@ final class ClipboardAppIconCache {
     private let cache = NSCache<NSString, NSImage>()
 
     private init() {
-        cache.countLimit = 64
+        cache.countLimit = 24
+        cache.totalCostLimit = 8 * 1024 * 1024
     }
 
     func icon(bundleId: String?) -> NSImage? {
@@ -672,8 +639,14 @@ final class ClipboardAppIconCache {
             icon = NSWorkspace.shared.icon(for: UTType.application)
         }
         icon.size = NSSize(width: 128, height: 128)
-        cache.setObject(icon, forKey: key as NSString)
+        cache.setObject(icon, forKey: key as NSString, cost: Self.cacheCost(for: icon))
         return icon
+    }
+
+    private static func cacheCost(for icon: NSImage) -> Int {
+        let pixelWidth = max(1, Int(icon.size.width))
+        let pixelHeight = max(1, Int(icon.size.height))
+        return pixelWidth * pixelHeight * 4
     }
 }
 
@@ -683,7 +656,8 @@ final class ClipboardFileIconCache {
     private let cache = NSCache<NSString, NSImage>()
 
     private init() {
-        cache.countLimit = 96
+        cache.countLimit = 24
+        cache.totalCostLimit = 8 * 1024 * 1024
     }
 
     func icon(for url: URL?) -> NSImage? {
@@ -696,7 +670,7 @@ final class ClipboardFileIconCache {
 
         let icon = NSWorkspace.shared.icon(for: contentType ?? .data)
         icon.size = NSSize(width: 256, height: 256)
-        cache.setObject(icon, forKey: cacheKey as NSString)
+        cache.setObject(icon, forKey: cacheKey as NSString, cost: Self.cacheCost(for: icon))
         return icon
     }
 
@@ -865,6 +839,12 @@ final class ClipboardFileIconCache {
             return nil
         }
     }
+
+    private static func cacheCost(for icon: NSImage) -> Int {
+        let pixelWidth = max(1, Int(icon.size.width))
+        let pixelHeight = max(1, Int(icon.size.height))
+        return pixelWidth * pixelHeight * 4
+    }
 }
 
 final class ClipboardCodeLineCache {
@@ -873,7 +853,7 @@ final class ClipboardCodeLineCache {
     private let cache = NSCache<NSString, NSArray>()
 
     private init() {
-        cache.countLimit = 256
+        cache.countLimit = 96
     }
 
     func lines(for record: ClipboardRecord) -> [String] {
@@ -900,45 +880,6 @@ struct ClipboardSnapshot {
     let sourceAppName: String?
     let sourceBundleId: String?
     let hash: String
-}
-
-enum ClipboardPrivacyRules {
-    static let excludedBundleIdentifiersStorageKey = "clipboard.excludedSourceBundleIdentifiers"
-
-    static func bundleIdentifiers(from storageValue: String) -> [String] {
-        storageValue
-            .split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-    }
-
-    static func storageValue(from bundleIdentifiers: [String]) -> String {
-        var seen = Set<String>()
-        return bundleIdentifiers
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .filter { seen.insert($0).inserted }
-            .joined(separator: "\n")
-    }
-
-    static func isExcluded(bundleIdentifier: String?) -> Bool {
-        guard let bundleIdentifier, !bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return false
-        }
-        let excluded = bundleIdentifiers(from: UserDefaults.standard.string(forKey: excludedBundleIdentifiersStorageKey) ?? "")
-        return excluded.contains(bundleIdentifier)
-    }
-
-    static func displayName(for bundleIdentifier: String) -> String {
-        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
-            let values = try? url.resourceValues(forKeys: [.localizedNameKey])
-            if let localizedName = values?.localizedName, !localizedName.isEmpty {
-                return localizedName
-            }
-            return url.deletingPathExtension().lastPathComponent
-        }
-        return bundleIdentifier
-    }
 }
 
 struct SavedImageAssets {

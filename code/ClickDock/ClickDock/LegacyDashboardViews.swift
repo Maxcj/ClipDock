@@ -28,12 +28,13 @@ struct ClipboardDashboardView: View {
         let predicate = ClipboardRecord.fetchPredicate(searchText: searchText, filter: filter)
         let sortDescriptors: [NSSortDescriptor] = [
             NSSortDescriptor(key: "isPinned", ascending: false),
+            NSSortDescriptor(key: "updatedAt", ascending: false),
             NSSortDescriptor(key: "createdAt", ascending: false)
         ]
         _records = FetchRequest(
             sortDescriptors: sortDescriptors,
             predicate: predicate,
-            animation: .default
+            animation: nil
         )
     }
 
@@ -153,7 +154,6 @@ struct ClipboardDashboardView: View {
     private var displayOrderedRecords: [ClipboardRecord] {
         records
             .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
-            .sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func copy(_ record: ClipboardRecord) {
@@ -571,4 +571,3 @@ struct ClipboardHeroDetailPanel: View {
         .buttonStyle(.plain)
     }
 }
-

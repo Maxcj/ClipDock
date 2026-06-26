@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import KeyboardShortcuts
 
 enum WindowLayout {
     static let defaultSize = CGSize(width: 1008, height: 717)
@@ -18,7 +19,7 @@ enum WindowLayout {
 struct ClipDockApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var clipboardMonitor: ClipboardMonitor
-    @StateObject private var hotkeyManager: GlobalHotkeyManager
+    @StateObject private var keyboardShortcutManager: KeyboardShortcutManager
     @StateObject private var loginItemManager: LoginItemManager
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
@@ -26,17 +27,17 @@ struct ClipDockApp: App {
         let context = PersistenceController.shared.container.viewContext
         _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: context))
         UserDefaults.standard.register(defaults: [
-            "clipboard.hotkeyEnabled": false,
-            "clipboard.hotkeyKeyCode": 49,
-            "clipboard.hotkeyModifiers": Int(HotKeyConfiguration.defaultModifiers),
-            "clipboard.hotkeyDisplay": HotKeyConfiguration.defaultDisplay,
             "clipboard.autoHideAfterCopy": false,
             "clipboard.keepImages": false,
             "clipboard.retentionEnabled": true,
             "clipboard.retentionValue": 7,
-            "clipboard.retentionUnit": RetentionUnit.day.rawValue
+            "clipboard.retentionUnit": RetentionUnit.day.rawValue,
+            ClipboardPrivacyRules.ignoreVerificationCodesStorageKey: false,
+            ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey: false,
+            ClipboardPrivacyRules.ignorePrivateKeysStorageKey: false,
+            ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey: false
         ])
-        _hotkeyManager = StateObject(wrappedValue: GlobalHotkeyManager())
+        _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
     }
 
@@ -49,7 +50,7 @@ struct ClipDockApp: App {
                 .environment(\.appLocalizer, localizer)
                 .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
                 .environmentObject(clipboardMonitor)
-                .environmentObject(hotkeyManager)
+                .environmentObject(keyboardShortcutManager)
                 .environmentObject(loginItemManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)

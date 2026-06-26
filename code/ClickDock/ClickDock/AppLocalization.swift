@@ -79,6 +79,7 @@ enum AppTextKey: String {
     case privacy
     case quickOpen
     case autoClean
+    case storage
     case about
     case launchAndBehavior
     case launchAndBehaviorSubtitle
@@ -102,6 +103,26 @@ enum AppTextKey: String {
     case clearAllHistory
     case clearAllHistorySubtitle
     case clear
+    case storageSectionTitle
+    case storageSectionSubtitle
+    case storageTextItems
+    case storageTextItemsSubtitle
+    case storageImages
+    case storageImagesSubtitle
+    case storageFilesCache
+    case storageFilesCacheSubtitle
+    case storageLinkMetadata
+    case storageLinkMetadataSubtitle
+    case contentFilters
+    case contentFiltersSubtitle
+    case ignoreVerificationCodes
+    case ignoreVerificationCodesSubtitle
+    case ignorePasswordsAndTokens
+    case ignorePasswordsAndTokensSubtitle
+    case ignorePrivateKeys
+    case ignorePrivateKeysSubtitle
+    case ignoreLongSensitiveText
+    case ignoreLongSensitiveTextSubtitle
     case noExcludedApps
     case noExcludedAppsSubtitle
     case remove
@@ -140,6 +161,7 @@ enum AppTextKey: String {
     case unknownSource
     case fileList
     case empty
+    case originalFileNoLongerExists
 }
 
 struct AppLocalizer {

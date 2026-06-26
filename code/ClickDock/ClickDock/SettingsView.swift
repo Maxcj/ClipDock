@@ -6,6 +6,7 @@
 import SwiftUI
 import CoreData
 import AppKit
+import KeyboardShortcuts
 
 struct SettingsView: View {
     @Environment(\.appLocalizer) private var localizer
@@ -15,17 +16,18 @@ struct SettingsView: View {
     @State private var activeTab: SettingsTab = .general
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
+    @StateObject private var storageSummaryLoader = StorageSummaryLoader()
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
     @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = true
     @AppStorage("clipboard.retentionValue") private var retentionValue = 7
     @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
-    @AppStorage("clipboard.hotkeyEnabled") private var hotkeyEnabled = true
-    @AppStorage("clipboard.hotkeyKeyCode") private var hotkeyKeyCode = HotKeyConfiguration.defaultKeyCode
-    @AppStorage("clipboard.hotkeyModifiers") private var hotkeyModifiers = Int(HotKeyConfiguration.defaultModifiers)
-    @AppStorage("clipboard.hotkeyDisplay") private var hotkeyDisplay = HotKeyConfiguration.defaultDisplay
     @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
     @AppStorage(ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey) private var excludedBundleIdentifiersStorage = ""
+    @AppStorage(ClipboardPrivacyRules.ignoreVerificationCodesStorageKey) private var ignoreVerificationCodes = false
+    @AppStorage(ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey) private var ignorePasswordsAndTokens = false
+    @AppStorage(ClipboardPrivacyRules.ignorePrivateKeysStorageKey) private var ignorePrivateKeys = false
+    @AppStorage(ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey) private var ignoreLongSensitiveText = false
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
     var body: some View {
@@ -114,6 +116,11 @@ struct SettingsView: View {
             guard newValue != loginItemManager.isEnabled else { return }
             loginItemManager.setEnabled(newValue)
             startAtLogin = loginItemManager.isEnabled
+        }
+        .onChange(of: activeTab) { newValue in
+            if newValue == .storage {
+                storageSummaryLoader.load(context: viewContext)
+            }
         }
     }
 
@@ -256,6 +263,42 @@ struct SettingsView: View {
             }
         case .privacy:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
+                settingsSection(title: localizer.text(.contentFilters), subtitle: localizer.text(.contentFiltersSubtitle)) {
+                    settingsToggleRow(
+                        iconName: "number",
+                        title: localizer.text(.ignoreVerificationCodes),
+                        subtitle: localizer.text(.ignoreVerificationCodesSubtitle),
+                        isOn: $ignoreVerificationCodes
+                    )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsToggleRow(
+                        iconName: "key.horizontal",
+                        title: localizer.text(.ignorePasswordsAndTokens),
+                        subtitle: localizer.text(.ignorePasswordsAndTokensSubtitle),
+                        isOn: $ignorePasswordsAndTokens
+                    )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsToggleRow(
+                        iconName: "lock.shield",
+                        title: localizer.text(.ignorePrivateKeys),
+                        subtitle: localizer.text(.ignorePrivateKeysSubtitle),
+                        isOn: $ignorePrivateKeys
+                    )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsToggleRow(
+                        iconName: "doc.text.magnifyingglass",
+                        title: localizer.text(.ignoreLongSensitiveText),
+                        subtitle: localizer.text(.ignoreLongSensitiveTextSubtitle),
+                        isOn: $ignoreLongSensitiveText
+                    )
+                }
+
                 settingsSection(title: localizer.text(.privacySection), subtitle: localizer.text(.privacySectionSubtitle)) {
                     if excludedBundleIdentifiers.isEmpty {
                         settingsPlaceholderRow(
@@ -276,8 +319,53 @@ struct SettingsView: View {
                     }
                 }
             }
-        case .autoClean:
+        case .storage:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
+                settingsSection(title: localizer.text(.storageSectionTitle), subtitle: localizer.text(.storageSectionSubtitle)) {
+                    if let storageSummary = storageSummaryLoader.summary {
+                        settingsStaticValueRow(
+                            iconName: "text.alignleft",
+                            title: localizer.text(.storageTextItems),
+                            subtitle: localizer.text(.storageTextItemsSubtitle),
+                            value: storageSummary.textItemsValue
+                        )
+
+                        Divider().padding(.leading, 52)
+
+                        settingsStaticValueRow(
+                            iconName: "photo.stack",
+                            title: localizer.text(.storageImages),
+                            subtitle: localizer.text(.storageImagesSubtitle),
+                            value: storageSummary.imagesValue
+                        )
+
+                        Divider().padding(.leading, 52)
+
+                        settingsStaticValueRow(
+                            iconName: "externaldrive",
+                            title: localizer.text(.storageFilesCache),
+                            subtitle: localizer.text(.storageFilesCacheSubtitle),
+                            value: storageSummary.filesCacheValue
+                        )
+
+                        Divider().padding(.leading, 52)
+
+                        settingsStaticValueRow(
+                            iconName: "globe.asia.australia",
+                            title: localizer.text(.storageLinkMetadata),
+                            subtitle: localizer.text(.storageLinkMetadataSubtitle),
+                            value: storageSummary.linkMetadataValue
+                        )
+                    } else {
+                        HStack {
+                            Spacer(minLength: 0)
+                            ProgressView()
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                    }
+                }
+
                 settingsSection(title: localizer.text(.autoCleanSection), subtitle: localizer.text(.autoCleanSectionSubtitle)) {
                     settingsToggleRow(
                         iconName: "clock.arrow.circlepath",
@@ -456,6 +544,21 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private func settingsStaticValueRow(
+        iconName: String,
+        title: String,
+        subtitle: String,
+        value: String
+    ) -> some View {
+        SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
+            Text(value)
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    @ViewBuilder
     private func settingsPlaceholderRow(iconName: String, title: String, subtitle: String) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
             Text("...")
@@ -493,27 +596,14 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func settingsShortcutRow() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SettingsPreferenceRow(
-                iconName: "command",
-                title: localizer.text(.shortcutRecordTitle),
-                subtitle: localizer.text(.shortcutChangeSubtitle)
-            ) {
-                ShortcutRecorderField(
-                    keyCode: $hotkeyKeyCode,
-                    modifiers: $hotkeyModifiers,
-                    displayText: $hotkeyDisplay,
-                    defaultKeyCode: HotKeyConfiguration.defaultKeyCode,
-                    defaultModifiers: Int(HotKeyConfiguration.defaultModifiers),
-                    defaultDisplay: HotKeyConfiguration.defaultDisplay
-                )
-            }
-
-            if let statusMessage = loginItemManager.statusMessage {
-                settingsInlineMessage(statusMessage)
-            }
+        SettingsPreferenceRow(
+            iconName: "command",
+            title: localizer.text(.shortcutRecordTitle),
+            subtitle: localizer.text(.shortcutChangeSubtitle)
+        ) {
+            KeyboardShortcuts.Recorder("", name: .toggleMainWindow)
+                .labelsHidden()
         }
-        .padding(.vertical, 4)
     }
 
     @ViewBuilder
@@ -554,6 +644,9 @@ struct SettingsView: View {
                 viewContext.delete($0)
             }
             try viewContext.save()
+            if activeTab == .storage {
+                storageSummaryLoader.load(context: viewContext)
+            }
         } catch {
             NSLog("Failed to clear clipboard history from settings: \(error.localizedDescription)")
         }
@@ -584,154 +677,6 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-    }
-
-    @ViewBuilder
-    private var tabContent: some View {
-        switch activeTab {
-        case .general:
-            SettingsTabCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Toggle("Launch at login", isOn: $startAtLogin)
-                    if let statusMessage = loginItemManager.statusMessage {
-                        Text(statusMessage)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Toggle("Keep images in history", isOn: $keepImages)
-                    Toggle("Auto-hide after copying from history", isOn: $autoHideAfterCopy)
-                    Text("Hide the main window after copying a clipboard item so you can paste immediately.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        case .about:
-            SettingsTabCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(appName)
-                            .font(.headline)
-                        Text("A lightweight clipboard manager for fast copy and paste workflows.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Divider()
-
-                    LabeledContent("Author:", value: appAuthor)
-                    LabeledContent("Version:", value: appVersion)
-                }
-            }
-        case .privacy:
-            SettingsTabCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Source App Exclusions")
-                            .font(.headline)
-                        Text("Items copied from excluded apps are not recorded in history. You can add apps from the item detail panel.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if excludedBundleIdentifiers.isEmpty {
-                        Text("No excluded apps yet.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        VStack(alignment: .leading, spacing: 10) {
-                            ForEach(excludedBundleIdentifiers, id: \.self) { bundleIdentifier in
-                                HStack(spacing: 12) {
-                                    privacyAppIcon(for: bundleIdentifier)
-                                        .frame(width: 30, height: 30)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(ClipboardPrivacyRules.displayName(for: bundleIdentifier))
-                                            .font(.subheadline.weight(.semibold))
-                                        Text(bundleIdentifier)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
-                                    }
-
-                                    Spacer(minLength: 0)
-
-                                    Button("Remove") {
-                                        removeExcludedBundleIdentifier(bundleIdentifier)
-                                    }
-                                    .buttonStyle(SettingsSecondaryButtonStyle())
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 12)
-                                .background(Color.white.opacity(0.48))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                                )
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 10) {
-                        Button("Clear All") {
-                            excludedBundleIdentifiersStorage = ""
-                        }
-                        .buttonStyle(SettingsSecondaryButtonStyle())
-
-                        Spacer(minLength: 0)
-                    }
-                }
-            }
-        case .quickOpen:
-            SettingsTabCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Toggle("Enable global hotkey", isOn: $hotkeyEnabled)
-
-                    ShortcutRecorderField(
-                        keyCode: $hotkeyKeyCode,
-                        modifiers: $hotkeyModifiers,
-                        displayText: $hotkeyDisplay,
-                        defaultKeyCode: HotKeyConfiguration.defaultKeyCode,
-                        defaultModifiers: Int(HotKeyConfiguration.defaultModifiers),
-                        defaultDisplay: HotKeyConfiguration.defaultDisplay
-                    )
-                }
-            }
-        case .autoClean:
-            SettingsTabCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Toggle("Enable auto cleanup", isOn: $retentionEnabled)
-
-                    HStack(spacing: 10) {
-                        Text("Delete unpinned items older than")
-                            .font(.subheadline)
-
-                        TextField("", value: $retentionValue, format: .number)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 76)
-                            .multilineTextAlignment(.trailing)
-
-                        Picker("", selection: $retentionUnit) {
-                            ForEach(RetentionUnit.allCases) { unit in
-                                Text(unit.title).tag(unit.rawValue)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 180)
-
-                        Spacer()
-                    }
-
-                    Text("Pinned items are never removed by auto cleanup.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
     }
 
     private var excludedBundleIdentifiers: [String] {
@@ -798,4 +743,28 @@ struct SettingsView: View {
         }
     }
 
+}
+
+final class StorageSummaryLoader: ObservableObject {
+    @Published private(set) var summary: ClipboardStorageSummary?
+    @Published private(set) var isLoading = false
+
+    private var requestToken = UUID()
+
+    func load(context: NSManagedObjectContext) {
+        let token = UUID()
+        requestToken = token
+        summary = nil
+        isLoading = true
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let computedSummary = ClipboardStorageCalculator.summary(context: context)
+
+            DispatchQueue.main.async {
+                guard let self, self.requestToken == token else { return }
+                self.summary = computedSummary
+                self.isLoading = false
+            }
+        }
+    }
 }

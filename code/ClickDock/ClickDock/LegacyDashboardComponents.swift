@@ -14,7 +14,7 @@ struct ClipboardCodePane: View {
             let lines = ClipboardCodeLineCache.shared.lines(for: record)
             ScrollView([.horizontal, .vertical], showsIndicators: true) {
                 HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .trailing, spacing: 6) {
+                    LazyVStack(alignment: .trailing, spacing: 6) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { index, _ in
                             Text("\(index + 1)")
                                 .font(.system(size: 12, design: .monospaced))
@@ -23,7 +23,7 @@ struct ClipboardCodePane: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    LazyVStack(alignment: .leading, spacing: 6) {
                         ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                             Text(line)
                                 .font(.system(size: 13, design: .monospaced))

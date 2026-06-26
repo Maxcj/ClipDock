@@ -106,7 +106,7 @@ struct FileDetailPreview: View {
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(3)
 
-                Text(localizer.text(.fileReady))
+                Text(record.fileStatusText)
                     .font(.system(size: subtitleFontSize))
                     .foregroundStyle(.secondary)
 

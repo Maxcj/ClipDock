@@ -7,12 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1342A91C68244D0A90A06209 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 92DF3A85009AC36F416DE2EA /* KeyboardShortcuts */; };
+		26CB2CCC0640640CD7C2D124 /* ClipboardFileSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */; };
+		57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */; };
+		7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */; };
 		C1E5F5E82FE950CD00571FED /* ClickDockApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */; };
 		C1E5F5EC2FE950D000571FED /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EB2FE950D000571FED /* Assets.xcassets */; };
 		C1E5F5EF2FE950D000571FED /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EE2FE950D000571FED /* Preview Assets.xcassets */; };
 		C1E5F5F12FE950D000571FED /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5F02FE950D000571FED /* Persistence.swift */; };
 		C1E5F5F42FE950D000571FED /* ClickDock.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */; };
 		C1E80E002FED78BC00C7373C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E92FE950CD00571FED /* ContentView.swift */; };
+		CDA7D2CD4E316E93F2B02B0E /* KeyboardShortcutsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */; };
+		D91B6F722FF0000100A1B2C3 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D91B6F742FF0000100A1B2C3 /* Localizable.strings */; };
 		D93A11012FF2000100A1B2C3 /* AppLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11002FF2000100A1B2C3 /* AppLocalization.swift */; };
 		D93A11032FF2000100A1B2C3 /* WindowSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11022FF2000100A1B2C3 /* WindowSupport.swift */; };
 		D93A11052FF2000100A1B2C3 /* ClipboardSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */; };
@@ -26,10 +32,10 @@
 		D93A11152FF2000100A1B2C3 /* LegacyDashboardComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */; };
 		D93A11172FF2000100A1B2C3 /* SettingsSupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */; };
 		D93A11192FF2000100A1B2C3 /* ClipboardPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */; };
-		D91B6F722FF0000100A1B2C3 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D91B6F742FF0000100A1B2C3 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClipboardPrivacyRules.swift; sourceTree = "<group>"; };
 		C1E5F5E42FE950CD00571FED /* ClipDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClipDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickDockApp.swift; sourceTree = "<group>"; };
 		C1E5F5E92FE950CD00571FED /* ContentView.swift */ = {isa = PBXFileReference; indentWidth = 5; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; tabWidth = 5; };
@@ -38,6 +44,9 @@
 		C1E5F5F02FE950D000571FED /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClickDock.xcdatamodel; sourceTree = "<group>"; };
 		C1E5F5F52FE950D000571FED /* ClickDock.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClickDock.entitlements; sourceTree = "<group>"; };
+		C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClipboardStorageSupport.swift; sourceTree = "<group>"; };
+		D91B6F752FF0000100A1B2C3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		D91B6F762FF0000100A1B2C3 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		D93A11002FF2000100A1B2C3 /* AppLocalization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLocalization.swift; sourceTree = "<group>"; };
 		D93A11022FF2000100A1B2C3 /* WindowSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSupport.swift; sourceTree = "<group>"; };
 		D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSupport.swift; sourceTree = "<group>"; };
@@ -51,8 +60,8 @@
 		D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDashboardComponents.swift; sourceTree = "<group>"; };
 		D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupportViews.swift; sourceTree = "<group>"; };
 		D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewSupport.swift; sourceTree = "<group>"; };
-		D91B6F752FF0000100A1B2C3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
-		D91B6F762FF0000100A1B2C3 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = KeyboardShortcutsSupport.swift; sourceTree = "<group>"; };
+		E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClipboardFileSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +69,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1342A91C68244D0A90A06209 /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,6 +116,10 @@
 				C1E5F5F52FE950D000571FED /* ClickDock.entitlements */,
 				C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */,
 				C1E5F5ED2FE950D000571FED /* Preview Content */,
+				DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */,
+				E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */,
+				9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */,
+				C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */,
 			);
 			path = ClickDock;
 			sourceTree = "<group>";
@@ -134,6 +148,9 @@
 			dependencies = (
 			);
 			name = ClickDock;
+			packageProductDependencies = (
+				92DF3A85009AC36F416DE2EA /* KeyboardShortcuts */,
+			);
 			productName = ClickDock;
 			productReference = C1E5F5E42FE950CD00571FED /* ClipDock.app */;
 			productType = "com.apple.product-type.application";
@@ -163,6 +180,9 @@
 				Base,
 			);
 			mainGroup = C1E5F5DB2FE950CD00571FED;
+			packageReferences = (
+				3CF05FE38382266EF83B22E1 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+			);
 			productRefGroup = C1E5F5E52FE950CD00571FED /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -207,6 +227,10 @@
 				C1E5F5F42FE950D000571FED /* ClickDock.xcdatamodeld in Sources */,
 				C1E80E002FED78BC00C7373C /* ContentView.swift in Sources */,
 				C1E5F5E82FE950CD00571FED /* ClickDockApp.swift in Sources */,
+				CDA7D2CD4E316E93F2B02B0E /* KeyboardShortcutsSupport.swift in Sources */,
+				26CB2CCC0640640CD7C2D124 /* ClipboardFileSupport.swift in Sources */,
+				7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */,
+				57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -361,7 +385,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -392,7 +416,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -422,6 +446,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		3CF05FE38382266EF83B22E1 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		92DF3A85009AC36F416DE2EA /* KeyboardShortcuts */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3CF05FE38382266EF83B22E1 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
+			productName = KeyboardShortcuts;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */ = {

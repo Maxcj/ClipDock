@@ -13,7 +13,6 @@ import Combine
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
-    @EnvironmentObject private var hotkeyManager: GlobalHotkeyManager
     @Environment(\.openWindow) private var openWindow
 
     @State private var searchText = ""
@@ -127,4 +126,3 @@ struct ContentView: View {
     }
 
 }
-
