@@ -30,11 +30,7 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
-.build-release/
-.build-check/
-.build-check-2/
-.build-check-3/
-.build-home/
+.build-*/
 .derived-data/
 .swift-module-cache/
 

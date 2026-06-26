@@ -6,43 +6,15 @@
         <description>ClipDock release feed for Sparkle automatic updates.</description>
         <language>en</language>
         <item>
-            <title>1.2.3</title>
+            <title>ClipDock 0.9.0</title>
             <pubDate>Fri, 26 Jun 2026 17:35:53 +0800</pubDate>
             <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.3.html</sparkle:fullReleaseNotesLink>
+            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.0.html</sparkle:fullReleaseNotesLink>
             <sparkle:version>5</sparkle:version>
-            <sparkle:shortVersionString>1.2.3</sparkle:shortVersionString>
+            <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.3.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.2.3/ClipDock-1.2.3-macOS-universal.zip" length="4858245" type="application/octet-stream" sparkle:edSignature="J2j18tpqHsDhg0OjQPyS8+kdbdU4GnPuKKD9d8cz/oQ/+Lpylqi2OlcvPLBwnf47lZR2WaRrxAQhBzlosiSxBA=="/>
-        </item>
-        <item>
-            <title>1.2.2</title>
-            <pubDate>Fri, 26 Jun 2026 16:50:42 +0800</pubDate>
-            <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.2.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.2.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.2.2/ClipDock-1.2.2-macOS-universal.zip" length="4851282" type="application/octet-stream" sparkle:edSignature="sjaJwHaqlSae2suqUDou6X0wU4WvV7Q++zWnN3uPkg34YZHlXkHqRjZmK15edlL20hPfGGcPVsjcIz6y/aYZAQ=="/>
-        </item>
-        <item>
-            <title>1.2.1</title>
-            <pubDate>Fri, 26 Jun 2026 15:28:19 +0800</pubDate>
-            <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.1.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>3</sparkle:version>
-            <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.1.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.2.1/ClipDock-1.2.1-macOS-universal.zip" length="3858973" type="application/octet-stream" sparkle:edSignature="Wt3+PkNg5cWeGi+8vU731GoL+jDhBJ4VjA7gP3gGSP3ih0KwPP4sa2d/MuUiU+pTAa+pRpEDgxjB1MvYulfzBA=="/>
-        </item>
-        <item>
-            <title>ClipDock __VERSION__</title>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/__VERSION__.html</sparkle:releaseNotesLink>
-            <pubDate>Mon, 01 Jan 2026 00:00:00 +0000</pubDate>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/__VERSION__/ClipDock.dmg" sparkle:version="__SPARKLE_VERSION__" sparkle:shortVersionString="__VERSION__" length="__DMG_SIZE__" type="application/octet-stream" sparkle:edSignature="__EDDSA_SIGNATURE__"/>
+            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.0.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v0.9.0/ClipDock-0.9.0-macOS-universal.zip" length="4858245" type="application/octet-stream" sparkle:edSignature="J2j18tpqHsDhg0OjQPyS8+kdbdU4GnPuKKD9d8cz/oQ/+Lpylqi2OlcvPLBwnf47lZR2WaRrxAQhBzlosiSxBA=="/>
         </item>
     </channel>
 </rss>
