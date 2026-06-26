@@ -76,27 +76,29 @@ text = appcast_path.read_text()
 match = re.search(r"(<item>.*?</item>)", text, re.S)
 if match:
     item = match.group(1)
-    item = re.sub(
+
+    def replace_first(pattern: str, replacement: str, source: str) -> str:
+        match = re.search(pattern, source, re.S)
+        if not match:
+            return source
+        return source[: match.start()] + replacement(match) + source[match.end() :]
+
+    item = replace_first(
         r"(<title>)(.*?)(</title>)",
-        rf"\1{version}\3",
+        lambda m: f"{m.group(1)}{version}{m.group(3)}",
         item,
-        count=1,
-        flags=re.S,
     )
-    item = re.sub(
+    item = replace_first(
         r"(<sparkle:fullReleaseNotesLink>)(.*?)(</sparkle:fullReleaseNotesLink>)",
-        rf"\1{release_notes_url}\3",
+        lambda m: f"{m.group(1)}{release_notes_url}{m.group(3)}",
         item,
-        count=1,
-        flags=re.S,
     )
-    item = re.sub(
+    item = replace_first(
         r"(<sparkle:releaseNotesLink>)(.*?)(</sparkle:releaseNotesLink>)",
-        rf"\1{release_notes_url}\3",
+        lambda m: f"{m.group(1)}{release_notes_url}{m.group(3)}",
         item,
-        count=1,
-        flags=re.S,
     )
+
     text = text[: match.start()] + item + text[match.end() :]
     appcast_path.write_text(text)
 PY
