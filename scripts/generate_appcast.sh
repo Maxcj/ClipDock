@@ -47,6 +47,7 @@ generate_appcast_args=(
   --download-url-prefix "https://github.com/maxcj/ClipDock/releases/download/${tag}/"
   --full-release-notes-url "https://maxcj.github.io/ClipDock/release-notes/${version}.html"
   --link "https://github.com/maxcj/ClipDock"
+  --maximum-versions 5
   -o "${repo_root}/docs/appcast.xml"
 )
 
