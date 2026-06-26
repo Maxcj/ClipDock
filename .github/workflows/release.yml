@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: macos-13
+    runs-on: macos-latest
 
     env:
       SKIP_CODE_SIGNING: "1"
@@ -27,6 +27,9 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           echo "VERSION=${version}" >> "$GITHUB_ENV"
+
+      - name: Print Xcode version
+        run: xcodebuild -version
 
       - name: Download Sparkle tools
         shell: bash
