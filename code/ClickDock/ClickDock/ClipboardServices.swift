@@ -226,7 +226,7 @@ final class ClipboardMonitor: ObservableObject {
                     sourceBundleId: bundleId,
                     hash: Self.hash(kind: kind, text: color.sourceText)
                 )
-            } else if isLikelyCode(trimmed) {
+            } else if isLikelyCode(trimmed) || ClipboardCodeLanguageDetector.detect(from: trimmed) != .plain {
                 kind = .code
             } else {
                 kind = .text

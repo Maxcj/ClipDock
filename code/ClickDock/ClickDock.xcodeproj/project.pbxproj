@@ -11,6 +11,7 @@
 		26CB2CCC0640640CD7C2D124 /* ClipboardFileSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */; };
 		A30000000000000000000001 /* ClipboardColorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000002 /* ClipboardColorSupport.swift */; };
 		A30000000000000000000003 /* ClipboardColorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000004 /* ClipboardColorModels.swift */; };
+		A30000000000000000000005 /* ClipboardCodeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000006 /* ClipboardCodeSupport.swift */; };
 		57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */; };
 		7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */; };
 		A20000000000000000000002 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A20000000000000000000003 /* Sparkle */; };
@@ -46,6 +47,7 @@
 		A10000000000000000000001 /* SparkleUpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdateManager.swift; sourceTree = "<group>"; };
 		A30000000000000000000004 /* ClipboardColorModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardColorModels.swift; sourceTree = "<group>"; };
 		A30000000000000000000002 /* ClipboardColorSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardColorSupport.swift; sourceTree = "<group>"; };
+		A30000000000000000000006 /* ClipboardCodeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCodeSupport.swift; sourceTree = "<group>"; };
 		C1E5F5E42FE950CD00571FED /* ClipDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClipDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickDockApp.swift; sourceTree = "<group>"; };
 		C1E5F5E92FE950CD00571FED /* ContentView.swift */ = {isa = PBXFileReference; indentWidth = 5; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; tabWidth = 5; };
@@ -114,6 +116,7 @@
 				D93A11062FF2000100A1B2C3 /* ClipboardServices.swift */,
 				A30000000000000000000004 /* ClipboardColorModels.swift */,
 				A30000000000000000000002 /* ClipboardColorSupport.swift */,
+				A30000000000000000000006 /* ClipboardCodeSupport.swift */,
 				D93A110A2FF2000100A1B2C3 /* MainWindowSupport.swift */,
 				D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */,
 				D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */,
@@ -250,6 +253,7 @@
 				57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */,
 				A30000000000000000000003 /* ClipboardColorModels.swift in Sources */,
 				A30000000000000000000001 /* ClipboardColorSupport.swift in Sources */,
+				A30000000000000000000005 /* ClipboardCodeSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

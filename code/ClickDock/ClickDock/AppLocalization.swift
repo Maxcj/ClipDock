@@ -66,6 +66,10 @@ enum AppTextKey: String {
     case chooseClipboardItem
     case copied
     case sourceApp
+    case source
+    case format
+    case opacity
+    case lines
     case path
     case imageFormat
     case resolution
@@ -194,6 +198,10 @@ enum AppTextKey: String {
     case day
     case unknownSource
     case fileList
+    case copyMarkdown
+    case prettyJSON
+    case minifyJSON
+    case copyOriginal
     case empty
     case originalFileNoLongerExists
 }

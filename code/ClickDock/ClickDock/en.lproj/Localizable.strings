@@ -20,6 +20,10 @@
 "chooseClipboardItem" = "Choose a clipboard item from the left to inspect it here.";
 "copied" = "Copied";
 "sourceApp" = "Source App";
+"source" = "Source";
+"format" = "Format";
+"opacity" = "Opacity";
+"lines" = "Lines";
 "path" = "Path";
 "imageFormat" = "Image Format";
 "resolution" = "Resolution";
@@ -148,5 +152,9 @@
 "day" = "Day";
 "unknownSource" = "Unknown source";
 "fileList" = "File list";
+"copyMarkdown" = "Copy Markdown";
+"prettyJSON" = "Pretty JSON";
+"minifyJSON" = "Minify JSON";
+"copyOriginal" = "Copy Original";
 "empty" = "Empty";
 "originalFileNoLongerExists" = "Original file no longer exists";

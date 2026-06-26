@@ -253,6 +253,9 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.imageFormat), record.imageFormatLabel))
             rows.append((localizer.text(.resolution), record.imageResolutionLabel))
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
+        case .code:
+            rows.append((localizer.text(.source), record.codeLanguage.title))
+            rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))
         default:
@@ -329,10 +332,10 @@ struct SimpleFilterChip: View {
         .frame(height: layout.chipHeight)
         .fixedSize(horizontal: true, vertical: false)
         .background(isSelected ? AnyShapeStyle(accentColor.opacity(0.10)) : AnyShapeStyle(Color.clear))
-        .clipShape(Capsule())
-        .contentShape(Capsule())
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
-            Capsule().stroke(isSelected ? accentColor.opacity(0.24) : Color.clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(isSelected ? accentColor.opacity(0.24) : Color.clear, lineWidth: 1)
         )
         .shadow(color: isSelected ? Color.black.opacity(0.04) : .clear, radius: 4, x: 0, y: 1)
     }

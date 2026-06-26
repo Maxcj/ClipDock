@@ -7,32 +7,78 @@ import SwiftUI
 import AppKit
 
 struct ClipboardCodePane: View {
+    @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
 
     var body: some View {
         let lines = ClipboardCodeLineCache.shared.lines(for: record)
+        let language = record.codeLanguage
 
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("\(index + 1)")
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.secondary.opacity(0.75))
-                            .frame(width: 34, alignment: .trailing)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text(language.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(language.badgeColor)
+                    Text("\(lines.count) lines")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(language.badgeColor.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                        Text(line.isEmpty ? " " : line)
-                            .font(.system(size: 13, design: .monospaced))
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
+                Spacer(minLength: 0)
+
+                Button(localizer.text(.copy)) {
+                    ClipboardCodeActions.copy(record.detailText)
+                }
+                .buttonStyle(.bordered)
+
+                Button(localizer.text(.copyMarkdown)) {
+                    ClipboardCodeActions.copy(ClipboardCodeActions.markdownCodeBlock(record.detailText, language: language))
+                }
+                .buttonStyle(.bordered)
+
+                if language == .json {
+                    Button(localizer.text(.prettyJSON)) {
+                        if let pretty = ClipboardCodeActions.prettyJSON(record.detailText) {
+                            ClipboardCodeActions.copy(pretty)
+                        }
                     }
+                    .buttonStyle(.bordered)
+
+                    Button(localizer.text(.minifyJSON)) {
+                        if let minified = ClipboardCodeActions.minifyJSON(record.detailText) {
+                            ClipboardCodeActions.copy(minified)
+                        }
+                    }
+                    .buttonStyle(.bordered)
                 }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            ScrollView(.vertical, showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(index + 1)")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.secondary.opacity(0.75))
+                                .frame(width: 34, alignment: .trailing)
+
+                            Text(ClipboardCodeHighlighter.attributedLine(line, language: language))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -262,7 +308,7 @@ struct DashboardLayout {
     var cardPanelPadding: CGFloat { s(14) }
     var cardPanelCornerRadius: CGFloat { s(18) }
     var sectionTitleSize: CGFloat { s(15) }
-    var categorySpacing: CGFloat { s(10) }
+    var categorySpacing: CGFloat { s(8) }
     var panelCornerRadius: CGFloat { s(18) }
     var detailCornerRadius: CGFloat { s(22) }
     var smallCornerRadius: CGFloat { s(12) }
@@ -274,8 +320,8 @@ struct DashboardLayout {
     var detailPadding: CGFloat { s(14) }
     var detailSpacing: CGFloat { s(14) }
     var detailSidePadding: CGFloat { s(12) }
-    var chipHorizontalPadding: CGFloat { s(14) }
-    var chipVerticalPadding: CGFloat { s(8) }
+    var chipHorizontalPadding: CGFloat { s(12) }
+    var chipVerticalPadding: CGFloat { s(6) }
     var footerSpacing: CGFloat { s(12) }
     var titleSize: CGFloat { s(19) }
     var subtitleSize: CGFloat { s(13) }
@@ -311,10 +357,10 @@ struct PrimaryActionButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: layout.footerFontSize, weight: .semibold))
             .padding(.horizontal, max(12, layout.chipHorizontalPadding))
-            .padding(.vertical, max(8, layout.chipVerticalPadding))
+            .padding(.vertical, max(6, layout.chipVerticalPadding))
             .foregroundStyle(.white)
             .background(Color.accentColor.opacity(configuration.isPressed ? 0.76 : 1.0))
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
@@ -325,9 +371,9 @@ struct DetailActionButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: layout.footerFontSize, weight: .semibold))
             .padding(.horizontal, max(12, layout.chipHorizontalPadding))
-            .padding(.vertical, max(8, layout.chipVerticalPadding))
+            .padding(.vertical, max(6, layout.chipVerticalPadding))
             .background(Color.white.opacity(configuration.isPressed ? 0.68 : 0.88))
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
@@ -338,9 +384,9 @@ private struct FooterButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: layout.footerFontSize, weight: .semibold))
             .padding(.horizontal, max(12, layout.chipHorizontalPadding))
-            .padding(.vertical, max(8, layout.chipVerticalPadding))
+            .padding(.vertical, max(6, layout.chipVerticalPadding))
             .background(Color.white.opacity(configuration.isPressed ? 0.58 : 0.82))
-            .clipShape(Capsule())
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
