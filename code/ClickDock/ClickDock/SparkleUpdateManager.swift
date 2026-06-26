@@ -16,7 +16,9 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         static let updateCheckInterval = "sparkle.updateCheckInterval"
     }
 
-    private let localizer = AppLocalizer.current
+    private var localizer: AppLocalizer {
+        AppLocalizer.current
+    }
 
     @Published private(set) var ignoredVersion: String?
     @Published private(set) var isConfigured: Bool = false
@@ -267,12 +269,56 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             }
 
             if let plainText = String(data: data, encoding: .utf8) {
-                return plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+                return preferredReleaseNotesText(from: plainText)
             }
         } catch {
             NSLog("Failed to load release notes from \(url.absoluteString): \(error.localizedDescription)")
         }
 
+        return nil
+    }
+
+    private func preferredReleaseNotesText(from text: String) -> String {
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+
+        switch localizer.language {
+        case .english:
+            return sectionText(
+                in: normalized,
+                startingAt: ["What’s New", "Highlights"],
+                endingBefore: ["本次更新"]
+            ) ?? normalized.trimmingCharacters(in: .whitespacesAndNewlines)
+        case .simplifiedChinese:
+            return sectionText(
+                in: normalized,
+                startingAt: ["本次更新"],
+                endingBefore: ["What’s New", "Highlights"]
+            ) ?? normalized.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    private func sectionText(
+        in text: String,
+        startingAt startHeadings: [String],
+        endingBefore endHeadings: [String]
+    ) -> String? {
+        guard let startMatch = firstRange(in: text, matchingAnyOf: startHeadings) else { return nil }
+
+        let tail = String(text[startMatch.lowerBound...])
+        if let endMatch = firstRange(in: tail, matchingAnyOf: endHeadings) {
+            let section = String(tail[..<endMatch.lowerBound])
+            return section.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return tail.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func firstRange(in text: String, matchingAnyOf candidates: [String]) -> Range<String.Index>? {
+        for candidate in candidates {
+            if let range = text.range(of: candidate) {
+                return range
+            }
+        }
         return nil
     }
 
