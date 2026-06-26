@@ -11,7 +11,7 @@ import ServiceManagement
 import KeyboardShortcuts
 
 enum WindowLayout {
-    static let defaultSize = CGSize(width: 1008, height: 717)
+    static let defaultSize = CGSize(width: 992, height: 704)
     static let minimumSize = CGSize(width: 868, height: 602)
 }
 
@@ -29,7 +29,8 @@ struct ClipDockApp: App {
         _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: context))
         UserDefaults.standard.register(defaults: [
             "clipboard.autoHideAfterCopy": false,
-            "clipboard.keepImages": false,
+            "clipboard.keepImages": true,
+            "clipboard.keepFiles": false,
             "clipboard.retentionEnabled": true,
             "clipboard.retentionValue": 7,
             "clipboard.retentionUnit": RetentionUnit.day.rawValue,
@@ -57,6 +58,7 @@ struct ClipDockApp: App {
                 .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
+        .windowResizability(.contentSize)
 
         Window("Settings", id: "settings") {
             SettingsView()
@@ -66,7 +68,8 @@ struct ClipDockApp: App {
                 .environmentObject(loginItemManager)
                 .environmentObject(sparkleUpdateManager)
         }
-        .defaultSize(width: 720, height: 500)
+        .defaultSize(width: 760, height: 520)
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             StatusBarMenuView()

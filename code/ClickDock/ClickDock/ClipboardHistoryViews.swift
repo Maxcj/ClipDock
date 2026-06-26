@@ -51,9 +51,9 @@ struct ClipboardHistorySidebar: View {
             }
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: layout.rowSpacing) {
+                LazyVStack(alignment: .leading, spacing: layout.rowSpacing) {
                     ForEach(sections) { section in
-                        VStack(alignment: .leading, spacing: layout.rowSpacing) {
+                        LazyVStack(alignment: .leading, spacing: layout.rowSpacing) {
                             HStack(spacing: 0) {
                                 Text(verbatim: section.title)
                                     .font(.system(size: layout.sectionLabelSize, weight: .medium))
@@ -66,7 +66,7 @@ struct ClipboardHistorySidebar: View {
                                 .padding(.top, section.topPadding)
                             .zIndex(1)
 
-                            VStack(spacing: layout.rowSpacing) {
+                            LazyVStack(spacing: layout.rowSpacing) {
                                 ForEach(section.records, id: \.objectID) { record in
                                     ClipboardHistoryRow(
                                         record: record,

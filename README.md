@@ -1,29 +1,84 @@
 # ClipDock
 
-ClipDock is a lightweight macOS clipboard manager built for fast capture and fast recall.
+ClipDock is a lightweight macOS clipboard manager built for fast capture, quick recall, and low-friction reuse.
 
-It lives in the menu bar, stays out of the Dock, and brings up the main window with a global hotkey whenever you need it. The app keeps a clean history of clipboard content, including:
+中文说明: [README.zh-CN.md](README.zh-CN.md)
 
-- Text
-- Links
-- Images
-- Files
-- Code snippets
+It lives in the menu bar, stays out of the Dock, and lets you bring up the main window instantly with a global hotkey.
 
-Highlights:
+## Screenshots
 
-- Menu bar first experience with optional global shortcut access
-- Quick copy, delete, pin, and double-click copy actions
-- Rich previews for images and files
-- Type-specific metadata for faster scanning
-- Lightweight, always-ready clipboard history workflow
+![ClipDock main window](images/ClipDock.png)
+
+![Settings - General](images/Setting_general.png)
+![Settings - Privacy](images/Setting_privacy.png)
+![Settings - Quick Open](images/Setting_quick_open.png)
+![Settings - Storage](images/Setting_storage.png)
+![Settings - Updates](images/Setting_update.png)
+![Settings - About](images/Setting_about.png)
+
+## Features
+
+- Menu bar first workflow
+- Global hotkey to show or hide the main window
+- Clipboard history for text, links, images, files, and code snippets
+- Rich previews for images, files, and code
+- Quick actions for copy, pin, delete, and exclude-source-app
+- Per-item metadata for faster scanning
+- Localized UI in English and Simplified Chinese
+
+## Clipboard History
+
+- Text, links, and code snippets are captured automatically
+- Image history can be enabled or disabled in Settings
+- File history can be enabled or disabled in Settings
+- Sensitive clipboard content can be filtered out in Settings
+- You can ignore a specific update version from the Updates tab
+
+## Updates
+
+ClipDock uses [Sparkle](https://sparkle-project.org/) for automatic updates.
+
+Update distribution is split across GitHub services:
+
+- GitHub Releases hosts the downloadable app archive
+- GitHub Pages hosts `appcast.xml`
+- Sparkle handles update detection, download, verification, and installation
+
+The update feed is:
+
+`https://maxcj.github.io/ClipDock/appcast.xml`
 
 ## Getting Started
 
-1. Open ClipDock from `/Applications`.
-2. Use `Control+Q` to show or hide the main window.
-3. Capture and manage clipboard entries from the history list.
+1. Download or build ClipDock.
+2. Launch the app and allow clipboard access if prompted by macOS.
+3. Use the menu bar icon or the global hotkey to open the main window.
+4. Open Settings to adjust history retention, content filters, and update preferences.
 
-## Release
+## Build
 
-Version `1.0` is the first stable public release of ClipDock.
+Requirements:
+
+- macOS 13.2 or later
+- Xcode 14.3 or later
+
+Open `code/ClickDock/ClickDock.xcodeproj` in Xcode and build the `ClickDock` scheme.
+
+## Release Notes
+
+Release notes for published versions live under:
+
+`docs/release-notes/`
+
+## Project Structure
+
+- `code/ClickDock/ClickDock/` application source
+- `docs/` GitHub Pages assets and appcast feed
+- `scripts/` helper scripts for release publishing
+- `icon/` app icon source assets
+- `ui/` screenshots and UI references
+
+## License
+
+See [LICENSE](LICENSE).

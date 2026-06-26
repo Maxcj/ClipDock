@@ -20,6 +20,7 @@
 "chooseClipboardItem" = "从左侧选择一个剪贴板项目以在此查看详情。";
 "copied" = "复制时间";
 "sourceApp" = "来源应用";
+"path" = "路径";
 "imageFormat" = "图片格式";
 "resolution" = "分辨率";
 "imageSize" = "图片大小";
@@ -60,6 +61,8 @@
 "clipboardSectionSubtitle" = "记录和保留策略";
 "keepImages" = "保留图片历史";
 "keepImagesSubtitle" = "将图片内容保留在历史记录中";
+"keepFiles" = "保留文件历史";
+"keepFilesSubtitle" = "将复制的文件保留在历史记录中";
 "dataManagement" = "数据管理";
 "dataManagementSubtitle" = "危险操作请谨慎使用";
 "clearAllHistory" = "清除所有历史记录";

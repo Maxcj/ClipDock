@@ -88,7 +88,8 @@ struct ContentView: View {
         window.title = ""
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable])
+        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable])
+        window.styleMask.remove(.resizable)
         window.isMovableByWindowBackground = true
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -96,7 +97,8 @@ struct ContentView: View {
         window.level = .normal
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.animationBehavior = .utilityWindow
-        window.minSize = WindowLayout.minimumSize
+        window.minSize = frame.size
+        window.maxSize = frame.size
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true

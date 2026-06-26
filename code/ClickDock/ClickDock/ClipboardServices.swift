@@ -139,19 +139,27 @@ final class ClipboardMonitor: ObservableObject {
                 return nil
             }
 
-            if isSingleImageFile, let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let assets = saveImageAssets(from: image) {
-                return ClipboardSnapshot(
-                    kind: .image,
-                    displayText: "Image",
-                    fullText: assets.original.path,
-                    imagePath: assets.original.path,
-                    assetPath: nil,
-                    thumbnailPath: assets.thumbnail.path,
-                    sourceAppName: appName,
-                    sourceBundleId: bundleId,
-                    hash: Self.hash(kind: .image, data: imageData)
-                )
+            if isSingleImageFile {
+                guard keepsImageHistory else { return nil }
+
+                if let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let assets = saveImageAssets(from: image) {
+                    return ClipboardSnapshot(
+                        kind: .image,
+                        displayText: "Image",
+                        fullText: assets.original.path,
+                        imagePath: assets.original.path,
+                        assetPath: nil,
+                        thumbnailPath: assets.thumbnail.path,
+                        sourceAppName: appName,
+                        sourceBundleId: bundleId,
+                        hash: Self.hash(kind: .image, data: imageData)
+                    )
+                }
+
+                return nil
             }
+
+            guard keepsFileHistory else { return nil }
 
             return ClipboardSnapshot(
                 kind: .files,
@@ -224,6 +232,14 @@ final class ClipboardMonitor: ObservableObject {
         }
 
         return nil
+    }
+
+    private var keepsImageHistory: Bool {
+        UserDefaults.standard.object(forKey: "clipboard.keepImages") as? Bool ?? true
+    }
+
+    private var keepsFileHistory: Bool {
+        UserDefaults.standard.object(forKey: "clipboard.keepFiles") as? Bool ?? false
     }
 
     private func insert(snapshot: ClipboardSnapshot) {

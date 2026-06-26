@@ -20,6 +20,7 @@ struct SettingsView: View {
     @StateObject private var storageSummaryLoader = StorageSummaryLoader()
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
+    @AppStorage("clipboard.keepFiles") private var keepFiles = false
     @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = true
     @AppStorage("clipboard.retentionValue") private var retentionValue = 7
     @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
@@ -95,7 +96,7 @@ struct SettingsView: View {
             }
             .ignoresSafeArea()
         }
-        .frame(minWidth: 720, minHeight: 500)
+        .frame(minWidth: 760, minHeight: 520)
         .background(
             WindowAccessor { window in
                 if windowRef !== window {
@@ -132,7 +133,8 @@ struct SettingsView: View {
         window.title = ""
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable])
+        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable])
+        window.styleMask.remove(.resizable)
         window.isMovableByWindowBackground = true
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -140,6 +142,10 @@ struct SettingsView: View {
         window.level = .normal
         window.collectionBehavior = [.fullScreenAuxiliary]
         window.animationBehavior = .utilityWindow
+        let fixedSize = NSSize(width: 760, height: 520)
+        window.setContentSize(fixedSize)
+        window.minSize = fixedSize
+        window.maxSize = fixedSize
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
@@ -246,6 +252,12 @@ struct SettingsView: View {
                         title: localizer.text(.keepImages),
                         subtitle: localizer.text(.keepImagesSubtitle),
                         isOn: $keepImages
+                    )
+                    settingsToggleRow(
+                        iconName: "doc.on.doc",
+                        title: localizer.text(.keepFiles),
+                        subtitle: localizer.text(.keepFilesSubtitle),
+                        isOn: $keepFiles
                     )
                 }
             }

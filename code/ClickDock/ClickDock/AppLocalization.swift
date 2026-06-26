@@ -66,10 +66,13 @@ enum AppTextKey: String {
     case chooseClipboardItem
     case copied
     case sourceApp
+    case path
     case imageFormat
     case resolution
     case imageSize
     case fileSize
+    case keepFiles
+    case keepFilesSubtitle
     case characters
     case type
     case excludeApp

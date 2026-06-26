@@ -59,6 +59,8 @@ struct ClipboardDetailInspector: View {
                 Text(record.previewSubtitle)
                     .font(.system(size: layout.detailLabelSize, weight: .medium))
                     .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(record.kind.title)
                     .font(.system(size: layout.footerFontSize))
                     .foregroundStyle(record.kind.accent)
@@ -316,4 +318,3 @@ struct SimpleFilterChip: View {
         .shadow(color: isSelected ? Color.black.opacity(0.04) : .clear, radius: 4, x: 0, y: 1)
     }
 }
-

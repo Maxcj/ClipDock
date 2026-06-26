@@ -20,6 +20,7 @@
 "chooseClipboardItem" = "Choose a clipboard item from the left to inspect it here.";
 "copied" = "Copied";
 "sourceApp" = "Source App";
+"path" = "Path";
 "imageFormat" = "Image Format";
 "resolution" = "Resolution";
 "imageSize" = "Image Size";
@@ -60,6 +61,8 @@
 "clipboardSectionSubtitle" = "Capture and retention behavior";
 "keepImages" = "Keep image history";
 "keepImagesSubtitle" = "Store copied images in clipboard history";
+"keepFiles" = "Keep file history";
+"keepFilesSubtitle" = "Store copied files in clipboard history";
 "dataManagement" = "Data Management";
 "dataManagementSubtitle" = "Use destructive actions carefully";
 "clearAllHistory" = "Clear all history";

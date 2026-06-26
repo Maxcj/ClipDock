@@ -12,6 +12,7 @@
 		57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */; };
 		7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */; };
 		A10000000000000000000002 /* External/Sparkle.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* External/Sparkle.xcframework */; };
+		A10000000000000000000006 /* External/Sparkle.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* External/Sparkle.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A10000000000000000000004 /* SparkleUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* SparkleUpdateManager.swift */; };
 		C1E5F5E82FE950CD00571FED /* ClickDockApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */; };
 		C1E5F5EC2FE950D000571FED /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EB2FE950D000571FED /* Assets.xcassets */; };
@@ -79,6 +80,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000005 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A10000000000000000000006 /* External/Sparkle.xcframework in Embed Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXGroup section */
 		C1E5F5DB2FE950CD00571FED = {
@@ -148,6 +162,7 @@
 			buildPhases = (
 				C1E5F5E02FE950CD00571FED /* Sources */,
 				C1E5F5E12FE950CD00571FED /* Frameworks */,
+				A10000000000000000000005 /* Embed Frameworks */,
 				C1E5F5E22FE950CD00571FED /* Resources */,
 			);
 			buildRules = (
@@ -378,7 +393,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -393,7 +408,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -409,7 +424,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -424,7 +439,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;

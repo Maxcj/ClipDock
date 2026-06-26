@@ -10,38 +10,28 @@ struct ClipboardCodePane: View {
     let record: ClipboardRecord
 
     var body: some View {
-        GeometryReader { proxy in
-            let lines = ClipboardCodeLineCache.shared.lines(for: record)
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                HStack(alignment: .top, spacing: 12) {
-                    LazyVStack(alignment: .trailing, spacing: 6) {
-                        ForEach(Array(lines.enumerated()), id: \.offset) { index, _ in
-                            Text("\(index + 1)")
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundStyle(.secondary.opacity(0.7))
-                                .frame(width: 28, height: 18, alignment: .topTrailing)
-                        }
-                    }
+        let lines = ClipboardCodeLineCache.shared.lines(for: record)
 
-                    LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
-                            Text(line)
-                                .font(.system(size: 13, design: .monospaced))
-                                .foregroundStyle(.primary)
-                                .frame(height: 18, alignment: .topLeading)
-                                .lineLimit(1)
-                                .fixedSize(horizontal: true, vertical: false)
-                                .textSelection(.enabled)
-                        }
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(index + 1)")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary.opacity(0.75))
+                            .frame(width: 34, alignment: .trailing)
+
+                        Text(line.isEmpty ? " " : line)
+                            .font(.system(size: 13, design: .monospaced))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
                     }
                 }
-                .padding(14)
-                .frame(
-                    minWidth: proxy.size.width,
-                    minHeight: proxy.size.height,
-                    alignment: .topLeading
-                )
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
