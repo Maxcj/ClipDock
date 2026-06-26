@@ -14,6 +14,8 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         static let ignoredVersion = "sparkle.ignoredVersion"
     }
 
+    private let localizer = AppLocalizer.current
+
     @Published private(set) var ignoredVersion: String?
     @Published private(set) var isConfigured: Bool = false
 
@@ -43,7 +45,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             return
         }
 
-        updaterController.checkForUpdates(nil)
+        updaterController.updater.checkForUpdateInformation()
     }
 
     func clearIgnoredVersion() {
@@ -64,7 +66,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             return
         }
 
-        updaterController.updater.automaticallyChecksForUpdates = true
+        updaterController.updater.automaticallyChecksForUpdates = false
         updaterController.updater.automaticallyDownloadsUpdates = false
         updaterController.updater.updateCheckInterval = 60 * 60 * 24
         updaterController.startUpdater()
@@ -110,7 +112,57 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         }
     }
 
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        let versionString = item.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let displayVersionString = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchesIgnoredVersion = versionString == ignoredVersion || displayVersionString == ignoredVersion
+
+        guard !matchesIgnoredVersion else { return }
+
+        presentDownloadPrompt(for: item)
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+        let nsError = error as NSError
+        guard nsError.domain == SUSparkleErrorDomain,
+              nsError.code == 1001 else {
+            return
+        }
+
+        presentNoUpdatePrompt()
+    }
+
     func updater(_ updater: SPUUpdater, userDidSkipThisVersion updateItem: SUAppcastItem) {
         setIgnoredVersion(updateItem.versionString)
+    }
+
+    private func presentDownloadPrompt(for item: SUAppcastItem) {
+        let version = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? item.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
+            : item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let downloadURL = item.fileURL ?? item.infoURL ?? URL(string: "https://github.com/maxcj/ClipDock/releases/latest")
+
+        let alert = NSAlert()
+        alert.messageText = localizer.text(.updateAvailableTitle, version)
+        alert.informativeText = localizer.text(.updateAvailableSubtitle)
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: localizer.text(.downloadUpdate))
+        alert.addButton(withTitle: localizer.text(.later))
+
+        let response = alert.runModal()
+        guard response == .alertFirstButtonReturn else { return }
+
+        if let downloadURL {
+            NSWorkspace.shared.open(downloadURL)
+        }
+    }
+
+    private func presentNoUpdatePrompt() {
+        let alert = NSAlert()
+        alert.messageText = localizer.text(.noUpdateTitle)
+        alert.informativeText = localizer.text(.noUpdateSubtitle)
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: localizer.text(.ok))
+        alert.runModal()
     }
 }

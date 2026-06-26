@@ -83,6 +83,12 @@ enum AppTextKey: String {
     case checkForUpdates
     case checkForUpdatesSubtitle
     case updatesFeedNotConfigured
+    case updateAvailableTitle
+    case updateAvailableSubtitle
+    case downloadUpdate
+    case ok
+    case noUpdateTitle
+    case noUpdateSubtitle
     case ignoredVersion
     case ignoredVersionSubtitle
     case clearIgnoredVersion
@@ -160,6 +166,7 @@ enum AppTextKey: String {
     case recording
     case change
     case reset
+    case later
     case noShortcutSet
     case text
     case link
