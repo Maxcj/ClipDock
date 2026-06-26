@@ -170,13 +170,27 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
     func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor error: Error?) {
         let nsError = error as NSError?
-        guard nsError?.domain == SUSparkleErrorDomain,
-              nsError?.code == 1001,
-              let userInfo = nsError?.userInfo,
-              (userInfo[SPUNoUpdateFoundUserInitiatedKey] as? Bool) == true else {
+        guard let nsError, nsError.domain == SUSparkleErrorDomain else {
             return
         }
 
+        if nsError.code != SUNoUpdateError {
+            shouldShowReleaseNotesForNextManualCheck = false
+            NSLog("Sparkle update cycle finished with error: \(nsError.localizedDescription)")
+        }
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        handleNoUpdateFound()
+    }
+
+    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
+        handleNoUpdateFound()
+    }
+
+    private func handleNoUpdateFound() {
+        guard shouldShowReleaseNotesForNextManualCheck else { return }
+        shouldShowReleaseNotesForNextManualCheck = false
         presentNoUpdatePrompt()
     }
 
