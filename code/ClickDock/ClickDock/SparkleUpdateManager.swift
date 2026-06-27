@@ -26,6 +26,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published private(set) var updateCheckInterval: TimeInterval
     @Published var releaseNotesPresentation: UpdateReleaseNotesPresentation?
     private var shouldShowReleaseNotesForNextManualCheck = false
+    private var shouldShowReleaseNotesForNextStartupCheck = false
     private var didPerformStartupUpdateCheck = false
 
     var canCheckForUpdates: Bool {
@@ -88,6 +89,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         didPerformStartupUpdateCheck = true
         guard canCheckForUpdates else { return }
 
+        shouldShowReleaseNotesForNextStartupCheck = true
         updaterController.updater.checkForUpdateInformation()
     }
 
@@ -158,8 +160,9 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         guard !matchesIgnoredVersion else { return }
 
-        if shouldShowReleaseNotesForNextManualCheck {
+        if shouldShowReleaseNotesForNextManualCheck || shouldShowReleaseNotesForNextStartupCheck {
             shouldShowReleaseNotesForNextManualCheck = false
+            shouldShowReleaseNotesForNextStartupCheck = false
             Task { await presentReleaseNotesPrompt(for: item) }
         } else {
             presentDownloadPrompt(for: item)
@@ -178,6 +181,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         if nsError.code != 1001 {
             shouldShowReleaseNotesForNextManualCheck = false
+            shouldShowReleaseNotesForNextStartupCheck = false
             NSLog("Sparkle update cycle finished with error: \(nsError.localizedDescription)")
         }
     }
@@ -204,9 +208,16 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     private func handleNoUpdateFound() {
-        guard shouldShowReleaseNotesForNextManualCheck else { return }
-        shouldShowReleaseNotesForNextManualCheck = false
-        presentNoUpdatePrompt()
+        if shouldShowReleaseNotesForNextManualCheck {
+            shouldShowReleaseNotesForNextManualCheck = false
+            shouldShowReleaseNotesForNextStartupCheck = false
+            presentNoUpdatePrompt()
+            return
+        }
+
+        if shouldShowReleaseNotesForNextStartupCheck {
+            shouldShowReleaseNotesForNextStartupCheck = false
+        }
     }
 
     private func presentDownloadPrompt(for item: SUAppcastItem) {
