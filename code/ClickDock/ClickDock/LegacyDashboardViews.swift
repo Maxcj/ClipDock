@@ -521,6 +521,7 @@ struct ClipboardHeroDetailPanel: View {
                     Text(record.previewSubtitle)
                         .font(.system(size: layout.detailBodyTitleSize + 6, weight: .semibold))
                         .lineLimit(3)
+                        .foregroundStyle(record.kind == .link ? .secondary : record.kind.accent)
 
                     if let host = record.linkHostLabel {
                         Text(host)

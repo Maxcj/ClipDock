@@ -8,6 +8,7 @@ import AppKit
 
 struct ClipboardDetailInspector: View {
     @Environment(\.appLocalizer) private var localizer
+    @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     let record: ClipboardRecord?
     let layout: SimpleClipboardLayout
     let onCopy: () -> Void
@@ -119,7 +120,14 @@ struct ClipboardDetailInspector: View {
                         .overlay(
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack(alignment: .center, spacing: 10) {
-                                    if let icon = record.sourceAppIcon {
+                                    if let icon = record.websiteIconImage {
+                                        Image(nsImage: icon)
+                                            .resizable()
+                                            .interpolation(.high)
+                                            .aspectRatio(contentMode: .fit)
+                                            .frame(width: 22, height: 22)
+                                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                                    } else if let icon = record.sourceAppIcon {
                                         Image(nsImage: icon)
                                             .resizable()
                                             .interpolation(.high)
@@ -208,8 +216,7 @@ struct ClipboardDetailInspector: View {
 
     private func copyColorValue(_ value: String) {
         guard !value.isEmpty else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(value, forType: .string)
+        clipboardMonitor.copyTextSilently(value)
     }
 
     private func imagePreview(_ image: NSImage) -> some View {
@@ -256,7 +263,7 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.resolution), record.imageResolutionLabel))
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
         case .code:
-            rows.append((localizer.text(.source), record.sourceAppName?.isEmpty == false ? record.sourceAppName! : localizer.text(.unknownSource)))
+            rows.append((localizer.text(.language), record.codeLanguage.title))
             rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))

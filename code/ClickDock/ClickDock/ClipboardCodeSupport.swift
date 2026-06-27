@@ -125,8 +125,26 @@ enum ClipboardCodeLanguageDetector {
 
     private static func isSQL(_ text: String) -> Bool {
         let upper = text.uppercased()
-        let keywords = ["SELECT ", "INSERT INTO ", "UPDATE ", "DELETE FROM ", "CREATE TABLE ", "ALTER TABLE ", "INNER JOIN ", "LEFT JOIN ", "ORDER BY ", "GROUP BY "]
-        return keywords.reduce(0) { $0 + (upper.contains($1) ? 1 : 0) } >= 2 || keywords.contains(where: { upper.contains($0) })
+        let trimmed = upper.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let sqlStarts = [
+            "SELECT ",
+            "INSERT INTO ",
+            "UPDATE ",
+            "DELETE FROM ",
+            "CREATE TABLE ",
+            "ALTER TABLE "
+        ]
+
+        let hasSqlStart = sqlStarts.contains { trimmed.hasPrefix($0) }
+        let hasSqlStructure =
+            upper.contains(" FROM ") ||
+            upper.contains(" WHERE ") ||
+            upper.contains(" JOIN ") ||
+            upper.contains(" SET ") ||
+            upper.contains(" VALUES ")
+
+        return hasSqlStart && hasSqlStructure
     }
 
     private static func isSwift(_ text: String) -> Bool {
@@ -185,16 +203,22 @@ enum ClipboardCodeLanguageDetector {
     }
 
     private static func isYAML(_ text: String) -> Bool {
-        text.contains(":") && (text.contains("- ") || text.contains("\n"))
+        let lines = text
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+
+        guard lines.count >= 2 else { return false }
+
+        let yamlLikeLineCount = lines.filter { line in
+            line.range(of: #"^[-\s]*[A-Za-z0-9_\-]+\s*:"#, options: .regularExpression) != nil
+        }.count
+
+        return yamlLikeLineCount >= 2
     }
 }
 
 enum ClipboardCodeActions {
-    static func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
     static func markdownCodeBlock(_ code: String, language: ClipboardCodeLanguage) -> String {
         let identifier = language.markdownIdentifier
         return """

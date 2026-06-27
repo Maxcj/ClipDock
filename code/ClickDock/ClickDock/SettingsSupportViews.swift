@@ -23,7 +23,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .quickOpen: return .quickOpen
         case .storage: return .storage
         case .categories: return .categories
-        case .about: return .about
+        case .about: return .aboutAndUpdates
         }
     }
 

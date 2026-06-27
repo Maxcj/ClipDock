@@ -113,6 +113,7 @@ enum AppTextKey: String {
     case storage
     case categories
     case about
+    case aboutAndUpdates
     case launchAndBehavior
     case launchAndBehaviorSubtitle
     case launchAtLogin
@@ -151,6 +152,7 @@ enum AppTextKey: String {
     case clearCacheSubtitle
     case systemCategories
     case systemCategoriesSubtitle
+    case systemDefaultBadge
     case customCategories
     case customCategoriesSubtitle
     case addCategory
@@ -176,6 +178,7 @@ enum AppTextKey: String {
     case manageCategories
     case newCategory
     case categoryLimitReached
+    case categoryLimitHint
     case contentFilters
     case contentFiltersSubtitle
     case ignoreVerificationCodes

@@ -75,6 +75,51 @@ private struct SettingsActionButtonStyle: ButtonStyle {
     }
 }
 
+private struct CategoryInlineActionButtonStyle: ButtonStyle {
+    enum Kind {
+        case accent
+        case destructive
+    }
+
+    let kind: Kind
+
+    func makeBody(configuration: Configuration) -> some View {
+        let background: Color = {
+            switch kind {
+            case .accent:
+                return Color.accentColor.opacity(configuration.isPressed ? 0.92 : 0.12)
+            case .destructive:
+                return Color(red: 0.96, green: 0.27, blue: 0.22).opacity(configuration.isPressed ? 0.90 : 0.12)
+            }
+        }()
+
+        let foreground: Color = {
+            switch kind {
+            case .accent:
+                return configuration.isPressed ? .white : .accentColor
+            case .destructive:
+                return configuration.isPressed ? .white : Color(red: 0.96, green: 0.27, blue: 0.22)
+            }
+        }()
+
+        configuration.label
+            .frame(width: 24, height: 24)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(background)
+            )
+            .foregroundStyle(foreground)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        (kind == .accent ? Color.accentColor : Color(red: 0.96, green: 0.27, blue: 0.22))
+                            .opacity(configuration.isPressed ? 0.0 : 0.12),
+                        lineWidth: 1
+                    )
+            )
+    }
+}
+
 struct ClipboardCategorySettingsView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.appLocalizer) private var localizer
@@ -92,6 +137,7 @@ struct ClipboardCategorySettingsView: View {
     @State private var deleteCategory: ClipboardCategory?
     @State private var showResetAlert = false
     @State private var draggedCategoryID: UUID?
+    @State private var orderedCategories: [ClipboardCategory] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -100,6 +146,10 @@ struct ClipboardCategorySettingsView: View {
         }
         .onAppear {
             ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
+            syncOrderedCategories()
+        }
+        .onChange(of: categoryOrderingSignature) { _ in
+            syncOrderedCategories()
         }
         .sheet(isPresented: $showingCreateSheet) {
             ClipboardCategoryEditorView(category: nil)
@@ -145,15 +195,32 @@ struct ClipboardCategorySettingsView: View {
 
     @ViewBuilder
     private var categoryRows: some View {
-        if categories.isEmpty {
+        if orderedCategories.isEmpty {
             ClipboardCategoryEmptyRow(
                 title: localizer.text(.noCustomCategories),
                 subtitle: localizer.text(.noCustomCategoriesSubtitle)
             )
         } else {
-            ForEach(categories, id: \.objectID) { category in
+            ForEach(orderedCategories, id: \.objectID) { category in
                 categoryRow(category)
             }
+        }
+    }
+
+    private var categoryOrderingSignature: String {
+        categories
+            .map { category in
+                "\(category.objectID.uriRepresentation().absoluteString):\(category.sortOrder):\(category.typeRaw ?? "")"
+            }
+            .joined(separator: "|")
+    }
+
+    private func syncOrderedCategories() {
+        orderedCategories = Array(categories).sorted {
+            if $0.sortOrder != $1.sortOrder {
+                return $0.sortOrder < $1.sortOrder
+            }
+            return ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast)
         }
     }
 
@@ -190,7 +257,7 @@ struct ClipboardCategorySettingsView: View {
             of: [UTType.text.identifier],
             delegate: ClipboardCategoryReorderDropDelegate(
                 target: category,
-                categories: Array(categories),
+                categories: $orderedCategories,
                 draggedCategoryID: $draggedCategoryID,
                 context: viewContext
             )
@@ -537,7 +604,7 @@ struct ClipboardCategoryAssignmentView: View {
                 Spacer(minLength: 0)
             }
 
-            Text(localizer.text(.categoryLimitReached, ClipboardCategoryManager.maxCustomCategoriesPerRecord))
+            Text(localizer.text(.categoryLimitHint, ClipboardCategoryManager.maxCustomCategoriesPerRecord))
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
         }
@@ -639,38 +706,48 @@ private struct ClipboardCategoryRow: View {
             .frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(category.resolvedName)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 6) {
+                    Text(category.resolvedName)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if category.categoryType == .system {
+                        Text(localizerText(.systemDefaultBadge))
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .foregroundStyle(Color.secondary)
+                            .background(Color.secondary.opacity(0.10))
+                            .clipShape(Capsule())
+                            .accessibilityHidden(true)
+                    }
+                }
             }
 
             Spacer(minLength: 0)
 
             if canEdit || canDelete {
-                Menu {
+                HStack(spacing: 6) {
                     if canEdit {
-                        Button(localizerText(.edit)) {
-                            onEdit()
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12, weight: .semibold))
                         }
+                        .buttonStyle(CategoryInlineActionButtonStyle(kind: .accent))
+                        .accessibilityLabel(localizerText(.edit))
                     }
 
                     if canDelete {
-                        Button(localizerText(.delete), role: .destructive) {
-                            onDelete()
+                        Button(role: .destructive, action: onDelete) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12, weight: .semibold))
                         }
+                        .buttonStyle(CategoryInlineActionButtonStyle(kind: .destructive))
+                        .accessibilityLabel(localizerText(.delete))
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(nsColor: .labelColor))
-                        .symbolRenderingMode(.monochrome)
-                        .frame(width: 24, height: 24)
                 }
-                .menuStyle(.borderlessButton)
-                .buttonStyle(.plain)
-                .foregroundStyle(Color(nsColor: .labelColor))
             }
 
             Toggle("", isOn: Binding(
@@ -768,7 +845,7 @@ private struct ClipboardCategoryRowDragPreview: View {
 
 private struct ClipboardCategoryReorderDropDelegate: DropDelegate {
     let target: ClipboardCategory
-    let categories: [ClipboardCategory]
+    @Binding var categories: [ClipboardCategory]
     @Binding var draggedCategoryID: UUID?
     let context: NSManagedObjectContext
 
@@ -776,17 +853,27 @@ private struct ClipboardCategoryReorderDropDelegate: DropDelegate {
         guard
             let draggedCategoryID,
             draggedCategoryID != target.id,
-            let draggedCategory = categories.first(where: { $0.id == draggedCategoryID }),
-            draggedCategory.systemCategoryKey != .all,
-            target.systemCategoryKey != .all
+            let draggedIndex = categories.firstIndex(where: { $0.id == draggedCategoryID }),
+            let targetIndex = categories.firstIndex(where: { $0.id == target.id }),
+            categories[draggedIndex].systemCategoryKey != .all,
+            categories[targetIndex].systemCategoryKey != .all
         else {
             return
         }
 
-        _ = ClipboardCategoryManager.move(draggedCategory, before: target, context: context)
+        var updated = categories
+        let item = updated.remove(at: draggedIndex)
+        var insertIndex = targetIndex
+        if draggedIndex < targetIndex {
+            insertIndex -= 1
+        }
+        insertIndex = max(0, min(updated.count, insertIndex))
+        updated.insert(item, at: insertIndex)
+        categories = updated
     }
 
     func performDrop(info: DropInfo) -> Bool {
+        ClipboardCategoryManager.saveOrderedCategories(categories, startingAt: 0, context: context)
         draggedCategoryID = nil
         return true
     }

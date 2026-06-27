@@ -66,6 +66,7 @@
 "storage" = "Storage";
 "categories" = "Categories";
 "about" = "About";
+"aboutAndUpdates" = "About & Updates";
 "launchAndBehavior" = "Launch & Behavior";
 "launchAndBehaviorSubtitle" = "Startup and window behavior";
 "launchAtLogin" = "Launch at login";
@@ -106,6 +107,7 @@
 "clearCacheSubtitle" = "Remove rebuildable metadata and legacy cache files";
 "systemCategories" = "System Categories";
 "systemCategoriesSubtitle" = "Built-in clipboard filters that can be shown, hidden, and reordered";
+"systemDefaultBadge" = "System";
 "customCategories" = "Custom Categories";
 "customCategoriesSubtitle" = "Create your own categories for projects, workflows, and quick access";
 "addCategory" = "Add Category";
@@ -131,6 +133,7 @@
 "manageCategories" = "Manage Categories";
 "newCategory" = "New Category...";
 "categoryLimitReached" = "Each card can have up to %d categories.";
+"categoryLimitHint" = "Each item can belong to up to %d custom categories.";
 "contentFilters" = "Content Filters";
 "contentFiltersSubtitle" = "Skip recording sensitive clipboard content";
 "ignoreVerificationCodes" = "Ignore verification codes";

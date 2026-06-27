@@ -30,7 +30,7 @@ enum SystemClipboardCategoryKey: String, CaseIterable, Identifiable {
 
 struct SystemClipboardCategoryDefinition: Identifiable {
     let key: SystemClipboardCategoryKey
-    let defaultName: String
+    let titleKey: AppTextKey
     let iconName: String
     let colorHex: String
     let defaultVisible: Bool
@@ -38,15 +38,19 @@ struct SystemClipboardCategoryDefinition: Identifiable {
 
     var id: String { key.rawValue }
 
+    var localizedName: String {
+        AppLocalizer.current.text(titleKey)
+    }
+
     static let all: [SystemClipboardCategoryDefinition] = [
-        .init(key: .all, defaultName: "All", iconName: "circle.fill", colorHex: "#F43F5E", defaultVisible: true, sortOrder: 0),
-        .init(key: .text, defaultName: "Text", iconName: "text.quote", colorHex: "#F97316", defaultVisible: true, sortOrder: 10),
-        .init(key: .links, defaultName: "Links", iconName: "link", colorHex: "#10B981", defaultVisible: true, sortOrder: 20),
-        .init(key: .images, defaultName: "Images", iconName: "photo", colorHex: "#3B82F6", defaultVisible: true, sortOrder: 30),
-        .init(key: .code, defaultName: "Code", iconName: "chevron.left.forwardslash.chevron.right", colorHex: "#8B5CF6", defaultVisible: true, sortOrder: 40),
-        .init(key: .files, defaultName: "Files", iconName: "doc", colorHex: "#F59E0B", defaultVisible: false, sortOrder: 50),
-        .init(key: .colors, defaultName: "Colors", iconName: "paintpalette", colorHex: "#FB923C", defaultVisible: true, sortOrder: 60),
-        .init(key: .other, defaultName: "Other", iconName: "ellipsis", colorHex: "#64748B", defaultVisible: false, sortOrder: 70)
+        .init(key: .all, titleKey: .all, iconName: "circle.fill", colorHex: "#F43F5E", defaultVisible: true, sortOrder: 0),
+        .init(key: .text, titleKey: .text, iconName: "text.quote", colorHex: "#F97316", defaultVisible: true, sortOrder: 10),
+        .init(key: .links, titleKey: .links, iconName: "link", colorHex: "#10B981", defaultVisible: true, sortOrder: 20),
+        .init(key: .images, titleKey: .images, iconName: "photo", colorHex: "#3B82F6", defaultVisible: true, sortOrder: 30),
+        .init(key: .code, titleKey: .code, iconName: "chevron.left.forwardslash.chevron.right", colorHex: "#8B5CF6", defaultVisible: true, sortOrder: 40),
+        .init(key: .files, titleKey: .files, iconName: "doc", colorHex: "#F59E0B", defaultVisible: false, sortOrder: 50),
+        .init(key: .colors, titleKey: .colors, iconName: "paintpalette", colorHex: "#FB923C", defaultVisible: true, sortOrder: 60),
+        .init(key: .other, titleKey: .other, iconName: "ellipsis", colorHex: "#64748B", defaultVisible: false, sortOrder: 70)
     ]
 
     static func definition(for key: SystemClipboardCategoryKey) -> SystemClipboardCategoryDefinition? {
@@ -112,14 +116,14 @@ extension ClipboardCategory {
     }
 
     var resolvedName: String {
+        if let systemCategoryKey,
+           let definition = SystemClipboardCategoryDefinition.definition(for: systemCategoryKey) {
+            return definition.localizedName
+        }
+
         let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !trimmed.isEmpty {
             return trimmed
-        }
-
-        if let systemCategoryKey,
-           let definition = SystemClipboardCategoryDefinition.definition(for: systemCategoryKey) {
-            return definition.defaultName
         }
 
         return AppLocalizer.current.text(.categories)
@@ -259,6 +263,7 @@ extension Color {
 
 final class ClipboardCategoryManager {
     static let maxCustomCategoriesPerRecord = 3
+    private static let customSortOrderBase: Int32 = 1000
 
     static func bootstrapSystemCategories(context: NSManagedObjectContext) {
         context.performAndWait {
@@ -274,7 +279,7 @@ final class ClipboardCategoryManager {
                         category.id = UUID()
                         category.createdAt = Date()
                     }
-                    category.name = category.name?.isEmpty == false ? category.name : definition.defaultName
+                    category.name = category.name?.isEmpty == false ? category.name : definition.localizedName
                     category.iconName = category.iconName?.isEmpty == false ? category.iconName : definition.iconName
                     category.colorHex = category.colorHex?.isEmpty == false ? category.colorHex : definition.colorHex
                     category.typeRaw = ClipboardCategoryType.system.rawValue
@@ -286,6 +291,7 @@ final class ClipboardCategoryManager {
                     category.updatedAt = Date()
                 }
 
+                normalizeCustomCategorySortOrders(context: context)
                 try context.save()
             } catch {
                 NSLog("Failed to bootstrap clipboard categories: \(error.localizedDescription)")
@@ -302,7 +308,7 @@ final class ClipboardCategoryManager {
                     request.predicate = NSPredicate(format: "systemKey == %@", definition.key.rawValue)
 
                     guard let category = try context.fetch(request).first else { continue }
-                    category.name = definition.defaultName
+                    category.name = definition.localizedName
                     category.iconName = definition.iconName
                     category.colorHex = definition.colorHex
                     category.isVisible = definition.defaultVisible
@@ -577,8 +583,10 @@ final class ClipboardCategoryManager {
     private static func nextCustomSortOrder(context: NSManagedObjectContext) -> Int32 {
         let request = NSFetchRequest<ClipboardCategory>(entityName: "ClipboardCategory")
 
+        request.predicate = NSPredicate(format: "typeRaw == %@", ClipboardCategoryType.custom.rawValue)
+
         let values = (try? context.fetch(request)) ?? []
-        let maxValue = values.map(\.sortOrder).max() ?? -10
+        let maxValue = max(values.map(\.sortOrder).max() ?? (customSortOrderBase - 10), customSortOrderBase - 10)
         return maxValue + 10
     }
 
@@ -593,6 +601,49 @@ final class ClipboardCategoryManager {
         } catch {
             NSLog("Failed to normalize clipboard category sort order: \(error.localizedDescription)")
         }
+    }
+
+    static func saveOrderedCategories(
+        _ categories: [ClipboardCategory],
+        startingAt sortOrder: Int32,
+        context: NSManagedObjectContext
+    ) {
+        context.performAndWait {
+            for (index, category) in categories.enumerated() {
+                category.sortOrder = sortOrder + Int32(index * 10)
+                category.updatedAt = Date()
+            }
+
+            do {
+                try context.save()
+            } catch {
+                NSLog("Failed to save ordered clipboard categories: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private static func normalizeCustomCategorySortOrders(context: NSManagedObjectContext) {
+        let request = NSFetchRequest<ClipboardCategory>(entityName: "ClipboardCategory")
+        request.predicate = NSPredicate(format: "typeRaw == %@", ClipboardCategoryType.custom.rawValue)
+        request.sortDescriptors = [
+            NSSortDescriptor(key: "sortOrder", ascending: true),
+            NSSortDescriptor(key: "createdAt", ascending: true)
+        ]
+
+        let categories = (try? context.fetch(request)) ?? []
+        guard !categories.isEmpty else { return }
+
+        var needsNormalization = false
+        for (index, category) in categories.enumerated() {
+            let expected = customSortOrderBase + Int32(index * 10)
+            if category.sortOrder != expected {
+                category.sortOrder = expected
+                category.updatedAt = Date()
+                needsNormalization = true
+            }
+        }
+
+        guard needsNormalization else { return }
     }
 
     private static func customCategoryCount(for record: ClipboardRecord) -> Int {

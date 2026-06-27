@@ -66,6 +66,7 @@
 "storage" = "存储";
 "categories" = "分类";
 "about" = "关于";
+"aboutAndUpdates" = "更新 & 关于";
 "launchAndBehavior" = "启动与行为";
 "launchAndBehaviorSubtitle" = "应用启动和窗口行为";
 "launchAtLogin" = "开机时自动启动";
@@ -106,6 +107,7 @@
 "clearCacheSubtitle" = "移除可重建的元数据和旧缓存文件";
 "systemCategories" = "系统分类";
 "systemCategoriesSubtitle" = "内置的剪贴板筛选项，可显示、隐藏和重新排序";
+"systemDefaultBadge" = "系统";
 "customCategories" = "自定义分类";
 "customCategoriesSubtitle" = "为项目、工作流和快速访问创建自己的分类";
 "addCategory" = "新增分类";
@@ -131,6 +133,7 @@
 "manageCategories" = "管理分类";
 "newCategory" = "新建分类...";
 "categoryLimitReached" = "单个卡片最多可加入 %d 个分类。";
+"categoryLimitHint" = "每条记录最多可以加入 %d 个自定义分类。";
 "contentFilters" = "内容过滤";
 "contentFiltersSubtitle" = "跳过记录敏感剪贴板内容";
 "ignoreVerificationCodes" = "忽略验证码";

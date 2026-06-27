@@ -32,6 +32,7 @@ struct ClipboardColorDetailView: View {
     let onCopyHex: () -> Void
     let onCopyRGB: () -> Void
     let onCopyRGBA: () -> Void
+    @State private var copiedValueKey: String?
 
     var body: some View {
         let color = record.clipboardColorValue
@@ -96,14 +97,17 @@ struct ClipboardColorDetailView: View {
 
     private func colorValues(_ color: ClipboardColorValue) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            colorValueRow(title: "HEX", value: color.normalizedHexString, action: onCopyHex)
-            colorValueRow(title: "RGB", value: color.rgbString, action: onCopyRGB)
-            colorValueRow(title: "RGBA", value: color.rgbaString, action: onCopyRGBA)
+            colorValueRow(title: "HEX", value: color.normalizedHexString, key: "hex", action: onCopyHex)
+            colorValueRow(title: "RGB", value: color.rgbString, key: "rgb", action: onCopyRGB)
+            colorValueRow(title: "RGBA", value: color.rgbaString, key: "rgba", action: onCopyRGBA)
         }
     }
 
-    private func colorValueRow(title: String, value: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func colorValueRow(title: String, value: String, key: String, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            triggerCopiedFeedback(key: key)
+        } label: {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(title)
                     .font(.system(size: layout.footerFontSize, weight: .semibold))
@@ -114,16 +118,24 @@ struct ClipboardColorDetailView: View {
                     .foregroundStyle(.primary)
                     .textSelection(.enabled)
                 Spacer(minLength: 0)
-                Image(systemName: "doc.on.doc")
+                Image(systemName: copiedValueKey == key ? "checkmark.circle.fill" : "doc.on.doc")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(copiedValueKey == key ? Color.green : .secondary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.white.opacity(0.20))
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(copiedValueKey == key ? Color.green.opacity(0.12) : Color.white.opacity(0.20))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(copiedValueKey == key ? Color.green.opacity(0.32) : Color.black.opacity(0.08), lineWidth: 1)
+            )
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.16), value: copiedValueKey == key)
     }
 
     private func infoPill(text: String) -> some View {
@@ -155,5 +167,18 @@ struct ClipboardColorDetailView: View {
 
     private func opacityLabel(for color: ClipboardColorValue) -> String {
         color.alpha >= 0.999 ? "Opaque" : String(format: "%.0f%%", color.alpha * 100)
+    }
+
+    private func triggerCopiedFeedback(key: String) {
+        withAnimation(.easeInOut(duration: 0.16)) {
+            copiedValueKey = key
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard copiedValueKey == key else { return }
+            withAnimation(.easeInOut(duration: 0.16)) {
+                copiedValueKey = nil
+            }
+        }
     }
 }

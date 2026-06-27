@@ -88,6 +88,15 @@ final class ClipboardMonitor: ObservableObject {
         markSuppression(changeCount: pasteboard.changeCount)
     }
 
+    func copyTextSilently(_ text: String) {
+        guard !text.isEmpty else { return }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        markSuppression(changeCount: pasteboard.changeCount)
+    }
+
     private func poll() {
         guard !isProcessingSnapshot else { return }
         let pasteboard = NSPasteboard.general
@@ -185,18 +194,24 @@ final class ClipboardMonitor: ObservableObject {
             ))
         }
 
-        if let image = NSImage(pasteboard: pasteboard), let assets = saveImageAssets(from: image) {
-            return .snapshot(ClipboardSnapshot(
-                kind: .image,
-                displayText: "Image",
-                fullText: assets.original.path,
-                imagePath: assets.original.path,
-                assetPath: nil,
-                thumbnailPath: assets.thumbnail.path,
-                sourceAppName: appName,
-                sourceBundleId: bundleId,
-                hash: Self.hash(kind: .image, data: assets.originalData)
-            ))
+        if let image = NSImage(pasteboard: pasteboard) {
+            guard keepsImageHistory else { return .dropped(reason: "image history disabled") }
+
+            if let assets = saveImageAssets(from: image) {
+                return .snapshot(ClipboardSnapshot(
+                    kind: .image,
+                    displayText: "Image",
+                    fullText: assets.original.path,
+                    imagePath: assets.original.path,
+                    assetPath: nil,
+                    thumbnailPath: assets.thumbnail.path,
+                    sourceAppName: appName,
+                    sourceBundleId: bundleId,
+                    hash: Self.hash(kind: .image, data: assets.originalData)
+                ))
+            }
+
+            return .dropped(reason: "failed to save image assets")
         }
 
         let urlType = NSPasteboard.PasteboardType(UTType.url.identifier)

@@ -8,8 +8,10 @@ import AppKit
 
 struct ClipboardCodePane: View {
     @Environment(\.appLocalizer) private var localizer
+    @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     let record: ClipboardRecord
     private let scrollAnchorID = "clipboard.code.pane.scroll.top"
+    @State private var copiedActionKey: String?
 
     var body: some View {
         let lines = ClipboardCodeLineCache.shared.lines(for: record)
@@ -33,30 +35,18 @@ struct ClipboardCodePane: View {
                 Spacer(minLength: 0)
 
                 Button {
-                    ClipboardCodeActions.copy(ClipboardCodeActions.markdownCodeBlock(record.detailText, language: language))
+                    clipboardMonitor.copyTextSilently(
+                        ClipboardCodeActions.markdownCodeBlock(record.detailText, language: language)
+                    )
+                    triggerCopiedFeedback(key: "markdown")
                 } label: {
-                    Image(systemName: "chevron.left.forwardslash.chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 28, height: 28)
+                    copyActionLabel(
+                        title: localizer.text(.copyMarkdown),
+                        systemImage: copiedActionKey == "markdown" ? "checkmark.circle.fill" : "chevron.left.forwardslash.chevron.right"
+                    )
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
                 .help(localizer.text(.copyMarkdown))
-
-                if language == .json {
-                    Button(localizer.text(.prettyJSON)) {
-                        if let pretty = ClipboardCodeActions.prettyJSON(record.detailText) {
-                            ClipboardCodeActions.copy(pretty)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(localizer.text(.minifyJSON)) {
-                        if let minified = ClipboardCodeActions.minifyJSON(record.detailText) {
-                            ClipboardCodeActions.copy(minified)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                }
             }
             ScrollViewReader { proxy in
                 ScrollView([.vertical, .horizontal], showsIndicators: true) {
@@ -110,6 +100,41 @@ struct ClipboardCodePane: View {
         DispatchQueue.main.async {
             proxy.scrollTo(scrollAnchorID, anchor: .topLeading)
         }
+    }
+
+    private func triggerCopiedFeedback(key: String) {
+        withAnimation(.easeInOut(duration: 0.16)) {
+            copiedActionKey = key
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard copiedActionKey == key else { return }
+            withAnimation(.easeInOut(duration: 0.16)) {
+                copiedActionKey = nil
+            }
+        }
+    }
+
+    private func copyActionLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .foregroundStyle(.primary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.78))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.black.opacity(0.10), lineWidth: 1)
+        )
     }
 }
 
