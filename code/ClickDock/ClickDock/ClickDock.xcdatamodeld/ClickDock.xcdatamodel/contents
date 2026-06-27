@@ -21,8 +21,30 @@
         <attribute name="sourceBundleId" optional="YES" attributeType="String"/>
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="usageCount" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="categoryLinks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardRecordCategory" inverseName="record" inverseEntity="ClipboardRecordCategory"/>
+    </entity>
+    <entity name="ClipboardCategory" representedClassName="ClipboardCategory" syncable="YES" codeGenerationType="class">
+        <attribute name="colorHex" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="iconName" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isVisible" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="YES"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="systemKey" optional="YES" attributeType="String"/>
+        <attribute name="typeRaw" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="recordLinks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardRecordCategory" inverseName="category" inverseEntity="ClipboardRecordCategory"/>
+    </entity>
+    <entity name="ClipboardRecordCategory" representedClassName="ClipboardRecordCategory" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ClipboardCategory" inverseName="recordLinks" inverseEntity="ClipboardCategory"/>
+        <relationship name="record" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ClipboardRecord" inverseName="categoryLinks" inverseEntity="ClipboardRecord"/>
     </entity>
     <elements>
         <element name="ClipboardRecord" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="ClipboardCategory" positionX="140" positionY="-18" width="128" height="44"/>
+        <element name="ClipboardRecordCategory" positionX="345" positionY="-18" width="128" height="44"/>
     </elements>
 </model>

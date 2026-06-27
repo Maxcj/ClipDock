@@ -111,6 +111,7 @@ enum AppTextKey: String {
     case quickOpen
     case autoClean
     case storage
+    case categories
     case about
     case launchAndBehavior
     case launchAndBehaviorSubtitle
@@ -148,6 +149,33 @@ enum AppTextKey: String {
     case storageLinkMetadataSubtitle
     case clearCache
     case clearCacheSubtitle
+    case systemCategories
+    case systemCategoriesSubtitle
+    case customCategories
+    case customCategoriesSubtitle
+    case addCategory
+    case addCategorySubtitle
+    case editCategory
+    case categoryNamePlaceholder
+    case visible
+    case hidden
+    case icon
+    case color
+    case save
+    case cancel
+    case done
+    case edit
+    case resetSystemCategories
+    case resetSystemCategoriesMessage
+    case deleteCategoryTitle
+    case deleteCategoryMessage
+    case noCustomCategories
+    case noCustomCategoriesSubtitle
+    case assignToCategory
+    case addToCategory
+    case manageCategories
+    case newCategory
+    case categoryLimitReached
     case contentFilters
     case contentFiltersSubtitle
     case ignoreVerificationCodes

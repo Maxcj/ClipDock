@@ -136,6 +136,7 @@ struct ActionRow: View {
 }
 
 struct ClipboardPreviewCard: View {
+    @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
     let isSelected: Bool
     let layout: DashboardLayout
@@ -143,6 +144,7 @@ struct ClipboardPreviewCard: View {
     let onCopy: () -> Void
     let onDelete: () -> Void
     let onTogglePin: () -> Void
+    let onManageCategories: () -> Void
 
     var body: some View {
         Button(action: onTap) {
@@ -208,6 +210,10 @@ struct ClipboardPreviewCard: View {
                         .foregroundStyle(.primary)
                 }
 
+                if !record.customCategories.isEmpty {
+                    ClipboardCategoryBadgeStrip(categories: record.customCategories)
+                }
+
                 HStack(spacing: 6) {
                     if let icon = record.sourceAppIcon {
                         Image(nsImage: icon)
@@ -271,7 +277,7 @@ struct ClipboardPreviewCard: View {
             Button {
                 onCopy()
             } label: {
-                Label("Copy", systemImage: "doc.on.doc")
+                Label(localizer.text(.copy), systemImage: "doc.on.doc")
             }
 
             Button {
@@ -283,8 +289,12 @@ struct ClipboardPreviewCard: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(localizer.text(.delete), systemImage: "trash")
             }
+
+            Divider()
+
+            ClipboardCategoryRecordMenu(record: record, onManageCategories: onManageCategories)
         }
     }
 
@@ -303,6 +313,7 @@ struct ClipboardPreviewCard: View {
 struct FilterChip: View {
     let title: String
     let symbolName: String
+    let accentColor: Color
     let isSelected: Bool
     let layout: DashboardLayout
 
@@ -313,10 +324,10 @@ struct FilterChip: View {
             Text(title)
         }
         .font(.system(size: layout.footerFontSize, weight: .medium))
-        .foregroundStyle(isSelected ? .white : .primary.opacity(0.82))
+        .foregroundStyle(isSelected ? .white : accentColor)
         .padding(.horizontal, layout.chipHorizontalPadding)
         .padding(.vertical, layout.chipVerticalPadding)
-        .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.white.opacity(0.78)))
+        .background(isSelected ? AnyShapeStyle(accentColor) : AnyShapeStyle(Color.white.opacity(0.78)))
         .clipShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
         .overlay(
             Group {
@@ -401,7 +412,7 @@ struct DashboardLayout {
     var heroBodySize: CGFloat { s(14) }
     var cardMinWidth: CGFloat { s(200) }
     var cardMaxWidth: CGFloat { s(236) }
-    var cardHeight: CGFloat { s(300) }
+    var cardHeight: CGFloat { s(336) }
     var cardShadowRadius: CGFloat { s(8) }
 }
 

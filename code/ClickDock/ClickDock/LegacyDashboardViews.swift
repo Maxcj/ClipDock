@@ -12,20 +12,26 @@ struct ClipboardDashboardView: View {
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
 
     @FetchRequest private var records: FetchedResults<ClipboardRecord>
+    @FetchRequest(
+        sortDescriptors: [
+            NSSortDescriptor(key: "sortOrder", ascending: true),
+            NSSortDescriptor(key: "createdAt", ascending: true)
+        ]
+    )
+    private var categories: FetchedResults<ClipboardCategory>
 
-    @Binding private var filterSelection: ClipboardFilter
+    @Binding private var categorySelection: ClipboardCategorySelection
     @Binding private var selectedRecordID: NSManagedObjectID?
     @State private var lastSelectedImageCachePaths: [String] = []
-    let activeFilter: ClipboardFilter
+    @State private var isShowingCategoryAssignment = false
     let containerSize: CGSize
     private var layout: DashboardLayout { DashboardLayout(containerSize: containerSize) }
 
-    init(searchText: String, filter: ClipboardFilter, filterSelection: Binding<ClipboardFilter>, selectedRecordID: Binding<NSManagedObjectID?>, containerSize: CGSize) {
+    init(searchText: String, categorySelection: ClipboardCategorySelection, categorySelectionBinding: Binding<ClipboardCategorySelection>, selectedRecordID: Binding<NSManagedObjectID?>, containerSize: CGSize) {
         self.containerSize = containerSize
-        self._filterSelection = filterSelection
+        self._categorySelection = categorySelectionBinding
         self._selectedRecordID = selectedRecordID
-        self.activeFilter = filter
-        let predicate = ClipboardRecord.fetchPredicate(searchText: searchText, filter: filter)
+        let predicate = ClipboardRecord.fetchPredicate(searchText: searchText, categorySelection: categorySelection)
         let sortDescriptors: [NSSortDescriptor] = [
             NSSortDescriptor(key: "isPinned", ascending: false),
             NSSortDescriptor(key: "updatedAt", ascending: false),
@@ -59,6 +65,9 @@ struct ClipboardDashboardView: View {
                             onTogglePin: { togglePin(record) },
                             onShare: { copy(record) },
                             onDelete: { delete(record) },
+                            onManageCategories: {
+                                isShowingCategoryAssignment = true
+                            },
                             onExcludeSourceApp: {
                                 excludeSourceApp(from: record)
                             }
@@ -76,10 +85,25 @@ struct ClipboardDashboardView: View {
             }
         }
         .onAppear {
+            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
+            syncSelectedImageCachePaths()
+        }
+        .onChange(of: categorySelection) { _ in
             syncSelectedImageCachePaths()
         }
         .onChange(of: selectedRecordID) { _ in
             syncSelectedImageCachePaths()
+        }
+        .onChange(of: categorySelection) { _ in
+            if let selectedRecordID,
+               records.first(where: { $0.objectID == selectedRecordID }) == nil {
+                self.selectedRecordID = nil
+            }
+        }
+        .sheet(isPresented: $isShowingCategoryAssignment) {
+            if let record = selectedRecord {
+                ClipboardCategoryAssignmentView(record: record)
+            }
         }
     }
 
@@ -87,14 +111,15 @@ struct ClipboardDashboardView: View {
     private var categoryRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: layout.categorySpacing) {
-                ForEach(ClipboardFilter.allCases) { option in
+                ForEach(visibleCategoryEntries) { option in
                     Button {
-                        filterSelection = option
+                        categorySelection = option.selection
                     } label: {
                         FilterChip(
                             title: option.title,
                             symbolName: option.symbolName,
-                            isSelected: option == activeFilter,
+                            accentColor: option.accentColor,
+                            isSelected: option.selection == categorySelection,
                             layout: layout
                         )
                     }
@@ -104,6 +129,20 @@ struct ClipboardDashboardView: View {
                 Spacer(minLength: 0)
             }
         }
+    }
+
+    private var visibleCategoryEntries: [CategoryChipEntry] {
+        categories
+            .filter { $0.isVisible || $0.systemCategoryKey == .all }
+            .compactMap { category -> CategoryChipEntry? in
+                guard let selection = category.selection else { return nil }
+                return CategoryChipEntry(
+                    selection: selection,
+                    title: category.resolvedName,
+                    symbolName: category.resolvedIconName,
+                    accentColor: category.swiftUIColor
+                )
+            }
     }
 
     private var cardsPanel: some View {
@@ -126,6 +165,10 @@ struct ClipboardDashboardView: View {
                             },
                             onTogglePin: {
                                 togglePin(record)
+                            },
+                            onManageCategories: {
+                                selectedRecordID = record.objectID
+                                isShowingCategoryAssignment = true
                             }
                         )
                         .frame(width: layout.cardMinWidth, height: layout.cardHeight)
@@ -236,6 +279,15 @@ struct ClipboardDashboardView: View {
         } catch {
             NSLog("Failed to save clipboard context: \(error.localizedDescription)")
         }
+    }
+
+    private struct CategoryChipEntry: Identifiable {
+        let selection: ClipboardCategorySelection
+        let title: String
+        let symbolName: String
+        let accentColor: Color
+
+        var id: String { selection.id }
     }
 }
 
@@ -398,6 +450,7 @@ struct ClipboardHeroDetailPanel: View {
     let onTogglePin: () -> Void
     let onShare: () -> Void
     let onDelete: () -> Void
+    let onManageCategories: () -> Void
     let onExcludeSourceApp: () -> Void
 
     var body: some View {
@@ -565,6 +618,10 @@ struct ClipboardHeroDetailPanel: View {
                 .font(.system(size: layout.heroBodySize))
                 .foregroundStyle(.secondary.opacity(0.95))
                 .lineLimit(3)
+
+            if !record.customCategories.isEmpty {
+                ClipboardCategoryBadgeStrip(categories: record.customCategories)
+            }
         }
     }
 
@@ -574,6 +631,7 @@ struct ClipboardHeroDetailPanel: View {
             actionButton(title: "Paste", icon: "clipboard", action: onPaste)
             actionButton(title: record.isPinned ? "Pinned" : "Pin", icon: "pin", action: onTogglePin)
             actionButton(title: "Share", icon: "square.and.arrow.up", action: onShare)
+            actionButton(title: "Categories", icon: "folder.badge.gearshape", action: onManageCategories)
             if record.sourceBundleId?.isEmpty == false {
                 actionButton(title: "Exclude App", icon: "hand.raised", action: onExcludeSourceApp)
             }

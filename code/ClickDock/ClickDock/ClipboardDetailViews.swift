@@ -14,6 +14,7 @@ struct ClipboardDetailInspector: View {
     let onTogglePin: () -> Void
     let onDelete: () -> Void
     let onExcludeSourceApp: () -> Void
+    let onManageCategories: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.detailSpacing) {
@@ -27,9 +28,14 @@ struct ClipboardDetailInspector: View {
 
                 metadata(for: record)
 
+                if !record.customCategories.isEmpty {
+                    ClipboardCategoryBadgeStrip(categories: record.customCategories)
+                }
+
                 HStack(spacing: layout.detailButtonGap) {
                     detailButton(title: localizer.text(.copy), icon: "doc.on.doc", action: onCopy)
                     detailButton(title: localizer.text(.pin), icon: record.isPinned ? "pin.fill" : "pin", action: onTogglePin)
+                    detailButton(title: localizer.text(.categories), icon: "folder.badge.gearshape", action: onManageCategories)
                     if record.sourceBundleId?.isEmpty == false {
                         detailButton(title: localizer.text(.excludeApp), icon: "hand.raised", action: onExcludeSourceApp)
                     }

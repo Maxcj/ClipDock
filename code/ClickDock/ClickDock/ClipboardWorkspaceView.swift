@@ -13,36 +13,41 @@ struct SimpleClipboardWorkspaceView: View {
     @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
 
     @FetchRequest private var records: FetchedResults<ClipboardRecord>
+    @FetchRequest(
+        sortDescriptors: [
+            NSSortDescriptor(key: "sortOrder", ascending: true),
+            NSSortDescriptor(key: "createdAt", ascending: true)
+        ]
+    )
+    private var categories: FetchedResults<ClipboardCategory>
 
     @Binding private var searchText: String
-    @Binding private var filterSelection: ClipboardFilter
+    @Binding private var categorySelection: ClipboardCategorySelection
     @Binding private var selectedRecordID: NSManagedObjectID?
-    private let activeFilter: ClipboardFilter
     private let containerSize: CGSize
     private let onOpenSettings: () -> Void
     @State private var sidebarWidth: CGFloat = 520
     @State private var isSearchFieldFocused: Bool = false
     @State private var lastSelectedImageCachePaths: [String] = []
+    @State private var isShowingCategoryAssignment = false
     private static let fetchBatchSize = 40
 
     private var layout: SimpleClipboardLayout { SimpleClipboardLayout(containerSize: containerSize) }
 
     init(
         searchText: Binding<String>,
-        filter: ClipboardFilter,
-        filterSelection: Binding<ClipboardFilter>,
+        categorySelection: Binding<ClipboardCategorySelection>,
         selectedRecordID: Binding<NSManagedObjectID?>,
         containerSize: CGSize,
         onOpenSettings: @escaping () -> Void
     ) {
         self._searchText = searchText
-        self.activeFilter = filter
-        self._filterSelection = filterSelection
+        self._categorySelection = categorySelection
         self._selectedRecordID = selectedRecordID
         self.containerSize = containerSize
         self.onOpenSettings = onOpenSettings
 
-        let predicate = ClipboardRecord.fetchPredicate(searchText: searchText.wrappedValue, filter: filter)
+        let predicate = ClipboardRecord.fetchPredicate(searchText: searchText.wrappedValue, categorySelection: categorySelection.wrappedValue)
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
         request.sortDescriptors = [
             NSSortDescriptor(key: "isPinned", ascending: false),
@@ -60,8 +65,8 @@ struct SimpleClipboardWorkspaceView: View {
         HStack(alignment: .top, spacing: layout.panelGap) {
             ClipboardHistorySidebar(
                 searchText: $searchText,
-                filterSelection: $filterSelection,
-                activeFilter: activeFilter,
+                categorySelection: $categorySelection,
+                activeSelection: categorySelection,
                 records: records,
                 selectedRecordID: $selectedRecordID,
                 searchFieldFocused: $isSearchFieldFocused,
@@ -91,6 +96,11 @@ struct SimpleClipboardWorkspaceView: View {
                 },
                 onExcludeSourceApp: {
                     if let selectedRecord { excludeSourceApp(from: selectedRecord) }
+                },
+                onManageCategories: {
+                    if selectedRecord != nil {
+                        isShowingCategoryAssignment = true
+                    }
                 }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -122,8 +132,12 @@ struct SimpleClipboardWorkspaceView: View {
                 )
         )
         .onAppear {
+            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
             syncSelection()
             syncSelectedImageCachePaths()
+        }
+        .onChange(of: categorySelection) { _ in
+            syncSelection()
         }
         .onChange(of: records.count) { _ in
             syncSelection()
@@ -133,6 +147,11 @@ struct SimpleClipboardWorkspaceView: View {
         }
         .onChange(of: selectedRecordID) { _ in
             syncSelectedImageCachePaths()
+        }
+        .sheet(isPresented: $isShowingCategoryAssignment) {
+            if let selectedRecord = currentSelectedRecord {
+                ClipboardCategoryAssignmentView(record: selectedRecord)
+            }
         }
     }
 
@@ -170,8 +189,10 @@ struct SimpleClipboardWorkspaceView: View {
         lastSelectedImageCachePaths = currentSelectedRecord?.cachedImagePaths ?? []
     }
 
-    private var navigationFilters: [ClipboardFilter] {
-        [.all, .text, .links, .images, .code, .files, .colors]
+    private var navigationSelections: [ClipboardCategorySelection] {
+        categories
+            .filter { $0.isVisible || $0.systemCategoryKey == .all }
+            .compactMap(\.selection)
     }
 
     private func moveRecordSelection(by offset: Int) {
@@ -183,13 +204,13 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     private func moveFilterSelection(by offset: Int) {
-        guard let currentIndex = navigationFilters.firstIndex(of: filterSelection) else { return }
+        guard let currentIndex = navigationSelections.firstIndex(of: categorySelection) else { return }
 
         let nextIndex = min(
-            max(currentIndex + offset, navigationFilters.startIndex),
-            navigationFilters.index(before: navigationFilters.endIndex)
+            max(currentIndex + offset, navigationSelections.startIndex),
+            navigationSelections.index(before: navigationSelections.endIndex)
         )
-        filterSelection = navigationFilters[nextIndex]
+        categorySelection = navigationSelections[nextIndex]
     }
 
     private func copy(_ record: ClipboardRecord) {

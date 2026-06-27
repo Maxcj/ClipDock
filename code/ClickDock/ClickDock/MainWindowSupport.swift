@@ -108,7 +108,7 @@ struct SimpleClipboardLayout {
     var chipCornerRadius: CGFloat { s(8.5) }
     var sectionLabelSize: CGFloat { s(13) }
     var rowSpacing: CGFloat { s(10) }
-    var rowHeight: CGFloat { s(122) }
+    var rowHeight: CGFloat { s(136) }
     var rowCornerRadius: CGFloat { s(18) }
     var rowPaddingX: CGFloat { s(12) }
     var rowPaddingY: CGFloat { s(10) }
@@ -180,7 +180,7 @@ struct SimpleClipboardLayout {
     var cardPanelCornerRadius: CGFloat { s(18) }
     var cardSpacing: CGFloat { s(14) }
     var cardMinWidth: CGFloat { s(200) }
-    var cardHeight: CGFloat { s(300) }
+    var cardHeight: CGFloat { s(336) }
     var cardShadowRadius: CGFloat { s(8) }
     var cardSpacingInner: CGFloat { s(12) }
     var cardPadding: CGFloat { s(14) }

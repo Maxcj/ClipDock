@@ -9,9 +9,10 @@ import AppKit
 
 struct ClipboardHistorySidebar: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.managedObjectContext) private var viewContext
     @Binding var searchText: String
-    @Binding var filterSelection: ClipboardFilter
-    let activeFilter: ClipboardFilter
+    @Binding var categorySelection: ClipboardCategorySelection
+    let activeSelection: ClipboardCategorySelection
     let records: FetchedResults<ClipboardRecord>
     @Binding var selectedRecordID: NSManagedObjectID?
     @Binding var searchFieldFocused: Bool
@@ -21,8 +22,14 @@ struct ClipboardHistorySidebar: View {
     let onTogglePin: (ClipboardRecord) -> Void
     let onOpenSettings: () -> Void
     @FocusState private var isSearchFieldFocused: Bool
-
-    private let visibleFilters: [ClipboardFilter] = [.all, .text, .links, .images, .code, .files, .colors]
+    @State private var categoryAssignmentTarget: CategoryAssignmentTarget?
+    @FetchRequest(
+        sortDescriptors: [
+            NSSortDescriptor(key: "sortOrder", ascending: true),
+            NSSortDescriptor(key: "createdAt", ascending: true)
+        ]
+    )
+    private var categories: FetchedResults<ClipboardCategory>
 
     var body: some View {
         let sections = groupedSections
@@ -35,15 +42,15 @@ struct ClipboardHistorySidebar: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: layout.chipSpacing) {
-                    ForEach(visibleFilters) { option in
+                    ForEach(visibleCategoryEntries) { option in
                         Button {
-                            filterSelection = option
+                            categorySelection = option.selection
                         } label: {
                             SimpleFilterChip(
                                 title: option.title,
                                 symbolName: option.symbolName,
                                 accentColor: option.accentColor,
-                                isSelected: option == activeFilter,
+                                isSelected: option.selection == activeSelection,
                                 layout: layout
                             )
                         }
@@ -86,6 +93,9 @@ struct ClipboardHistorySidebar: View {
                                         },
                                         onTogglePin: {
                                             onTogglePin(record)
+                                        },
+                                        onManageCategories: {
+                                            categoryAssignmentTarget = CategoryAssignmentTarget(objectID: record.objectID)
                                         }
                                     )
                                 }
@@ -109,6 +119,42 @@ struct ClipboardHistorySidebar: View {
             .padding(.top, 2)
         }
         .padding(layout.sidebarPadding)
+        .onAppear {
+            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
+        }
+        .sheet(item: $categoryAssignmentTarget) { target in
+            if let record = viewContext.object(with: target.objectID) as? ClipboardRecord {
+                ClipboardCategoryAssignmentView(record: record)
+            }
+        }
+    }
+
+    private var visibleCategoryEntries: [CategoryChipEntry] {
+        let visibleSystem = categories
+            .filter { $0.categoryType == .system && ($0.isVisible || $0.systemCategoryKey == .all) }
+            .compactMap { category -> CategoryChipEntry? in
+                guard let selection = category.selection else { return nil }
+                return CategoryChipEntry(
+                    selection: selection,
+                    title: category.resolvedName,
+                    symbolName: category.resolvedIconName,
+                    accentColor: category.swiftUIColor
+                )
+            }
+
+        let visibleCustom = categories
+            .filter { $0.categoryType == .custom && $0.isVisible }
+            .compactMap { category -> CategoryChipEntry? in
+                guard let selection = category.selection else { return nil }
+                return CategoryChipEntry(
+                    selection: selection,
+                    title: category.resolvedName,
+                    symbolName: category.resolvedIconName,
+                    accentColor: category.swiftUIColor
+                )
+            }
+
+        return visibleSystem + visibleCustom
     }
 
     private var groupedSections: [ClipboardHistorySection] {
@@ -229,6 +275,20 @@ struct ClipboardHistorySidebar: View {
         let topPadding: CGFloat
     }
 
+    private struct CategoryChipEntry: Identifiable {
+        let selection: ClipboardCategorySelection
+        let title: String
+        let symbolName: String
+        let accentColor: Color
+
+        var id: String { selection.id }
+    }
+
+    private struct CategoryAssignmentTarget: Identifiable {
+        let objectID: NSManagedObjectID
+        var id: NSManagedObjectID { objectID }
+    }
+
     private static let sectionDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -248,6 +308,7 @@ struct ClipboardHistoryRow: View {
     let onCopy: () -> Void
     let onDelete: () -> Void
     let onTogglePin: () -> Void
+    let onManageCategories: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -282,6 +343,10 @@ struct ClipboardHistoryRow: View {
                 } label: {
                     Label(localizer.text(.delete), systemImage: "trash")
                 }
+
+                Divider()
+
+                ClipboardCategoryRecordMenu(record: record, onManageCategories: onManageCategories)
             }
 
             Button(action: onTogglePin) {
@@ -340,7 +405,10 @@ struct ClipboardHistoryRow: View {
                     .foregroundStyle(record.kind == .link ? record.kind.accent : .secondary)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !record.customCategories.isEmpty {
+                ClipboardCategoryBadgeStrip(categories: record.customCategories)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -17,7 +17,7 @@ struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
 
     @State private var searchText = ""
-    @State private var filter: ClipboardFilter = .all
+    @State private var categorySelection: ClipboardCategorySelection = .system(.all)
     @State private var selectedRecordID: NSManagedObjectID?
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
@@ -29,8 +29,7 @@ struct ContentView: View {
             ZStack(alignment: .topLeading) {
                 SimpleClipboardWorkspaceView(
                     searchText: $searchText,
-                    filter: filter,
-                    filterSelection: $filter,
+                    categorySelection: $categorySelection,
                     selectedRecordID: $selectedRecordID,
                     containerSize: proxy.size,
                     onOpenSettings: {

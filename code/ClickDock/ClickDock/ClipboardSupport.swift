@@ -522,6 +522,10 @@ extension ClipboardRecord {
     }()
 
     static func fetchPredicate(searchText: String, filter: ClipboardFilter) -> NSPredicate? {
+        fetchPredicate(searchText: searchText, categorySelection: filter.categorySelection)
+    }
+
+    static func fetchPredicate(searchText: String, categorySelection: ClipboardCategorySelection) -> NSPredicate? {
         var predicates: [NSPredicate] = [
             NSPredicate(format: "isIgnored == NO")
         ]
@@ -537,26 +541,37 @@ extension ClipboardRecord {
             )
         }
 
-        switch filter {
-        case .all:
-            break
-        case .text:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.text.rawValue))
-        case .links:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.link.rawValue))
-        case .images:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.image.rawValue))
-        case .code:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.code.rawValue))
-        case .files:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.files.rawValue))
-        case .colors:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.colors.rawValue))
-        case .other:
-            predicates.append(NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.unknown.rawValue))
+        switch categorySelection {
+        case .system(let key):
+            if let predicate = systemPredicate(for: key) {
+                predicates.append(predicate)
+            }
+        case .custom(let categoryID):
+            predicates.append(NSPredicate(format: "ANY categoryLinks.category.id == %@", categoryID as CVarArg))
         }
 
         return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+    }
+
+    private static func systemPredicate(for key: SystemClipboardCategoryKey) -> NSPredicate? {
+        switch key {
+        case .all:
+            return nil
+        case .text:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.text.rawValue)
+        case .links:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.link.rawValue)
+        case .images:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.image.rawValue)
+        case .code:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.code.rawValue)
+        case .files:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.files.rawValue)
+        case .colors:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.colors.rawValue)
+        case .other:
+            return NSPredicate(format: "contentTypeRaw == %@", ClipboardContentKind.unknown.rawValue)
+        }
     }
 }
 
