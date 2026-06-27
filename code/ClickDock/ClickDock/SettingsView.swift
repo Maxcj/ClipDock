@@ -131,6 +131,7 @@ struct SettingsView: View {
             if retentionValue <= 0 {
                 retentionValue = 7
             }
+            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
         }
         .onChange(of: startAtLogin) { newValue in
             guard newValue != loginItemManager.isEnabled else { return }
@@ -469,7 +470,9 @@ struct SettingsView: View {
                     )
                 }
             }
-        case .updates:
+        case .categories:
+            ClipboardCategorySettingsView()
+        case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
                     settingsToggleRow(
@@ -540,9 +543,7 @@ struct SettingsView: View {
                         settingsInlineMessage(localizer.text(.updatesFeedNotConfigured))
                     }
                 }
-            }
-        case .about:
-            VStack(alignment: .leading, spacing: layout.sectionSpacing) {
+
                 settingsSection(title: localizer.text(.about), subtitle: localizer.text(.appInfo)) {
                     settingsAboutRow()
                 }

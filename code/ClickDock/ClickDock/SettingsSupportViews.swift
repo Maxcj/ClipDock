@@ -11,7 +11,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case privacy
     case quickOpen
     case storage
-    case updates
+    case categories
     case about
 
     var id: String { rawValue }
@@ -22,7 +22,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .privacy: return .privacy
         case .quickOpen: return .quickOpen
         case .storage: return .storage
-        case .updates: return .updates
+        case .categories: return .categories
         case .about: return .about
         }
     }
@@ -37,7 +37,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .privacy: return "hand.raised.fill"
         case .quickOpen: return "keyboard"
         case .storage: return "internaldrive.fill"
-        case .updates: return "arrow.triangle.2.circlepath"
+        case .categories: return "folder.badge.gearshape"
         case .about: return "info.circle"
         }
     }
@@ -48,7 +48,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .privacy: return Color(red: 0.56, green: 0.36, blue: 0.83)
         case .quickOpen: return Color(red: 0.16, green: 0.68, blue: 0.34)
         case .storage: return Color(red: 0.21, green: 0.64, blue: 0.88)
-        case .updates: return Color(red: 0.86, green: 0.48, blue: 0.16)
+        case .categories: return Color(red: 0.91, green: 0.46, blue: 0.18)
         case .about: return Color(red: 0.61, green: 0.39, blue: 0.95)
         }
     }
