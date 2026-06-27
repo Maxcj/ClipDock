@@ -93,117 +93,8 @@ struct ClipboardCategorySettingsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            settingsSection(
-                title: localizer.text(.systemCategories),
-                subtitle: localizer.text(.systemCategoriesSubtitle)
-            ) {
-                VStack(spacing: 0) {
-                    ForEach(systemCategories) { category in
-                        ClipboardCategoryRow(
-                            category: category,
-                            isSystemFixed: category.systemCategoryKey == .all,
-                            canEdit: false,
-                            canDelete: false,
-                            onMoveUp: {
-                                ClipboardCategoryManager.move(category, by: -1, context: viewContext)
-                            },
-                            onMoveDown: {
-                                ClipboardCategoryManager.move(category, by: 1, context: viewContext)
-                            },
-                            onToggleVisibility: {
-                                ClipboardCategoryManager.toggleVisibility(category, context: viewContext)
-                            },
-                            onEdit: {},
-                            onDelete: {}
-                        )
-                        if category != systemCategories.last {
-                            Divider().padding(.leading, 56)
-                        }
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-
-            settingsSection(
-                title: localizer.text(.customCategories),
-                subtitle: localizer.text(.customCategoriesSubtitle)
-            ) {
-                VStack(spacing: 0) {
-                    if customCategories.isEmpty {
-                        ClipboardCategoryEmptyRow(
-                            title: localizer.text(.noCustomCategories),
-                            subtitle: localizer.text(.noCustomCategoriesSubtitle)
-                        )
-                    } else {
-                        ForEach(customCategories) { category in
-                            ClipboardCategoryRow(
-                                category: category,
-                                isSystemFixed: false,
-                                canEdit: true,
-                                canDelete: true,
-                                onMoveUp: {
-                                    ClipboardCategoryManager.move(category, by: -1, context: viewContext)
-                                },
-                                onMoveDown: {
-                                    ClipboardCategoryManager.move(category, by: 1, context: viewContext)
-                                },
-                                onToggleVisibility: {
-                                    ClipboardCategoryManager.toggleVisibility(category, context: viewContext)
-                                },
-                                onEdit: {
-                                    editingCategory = category
-                                },
-                                onDelete: {
-                                    deleteCategory = category
-                                }
-                            )
-
-                            if category != customCategories.last {
-                                Divider().padding(.leading, 56)
-                            }
-                        }
-                    }
-
-                    Divider().padding(.leading, 56)
-
-                    Button {
-                        showingCreateSheet = true
-                    } label: {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.black.opacity(0.04))
-                                Image(systemName: "plus")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(width: 28, height: 28)
-
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(localizer.text(.addCategory))
-                                    .font(.system(size: 13, weight: .regular))
-                                Text(localizer.text(.addCategorySubtitle))
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            HStack(spacing: 10) {
-                Button(localizer.text(.resetSystemCategories)) {
-                    showResetAlert = true
-                }
-                .buttonStyle(SettingsSecondaryButtonStyle())
-
-                Spacer(minLength: 0)
-            }
+            categoriesSection
+            resetButtonRow
         }
         .onAppear {
             ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
@@ -240,13 +131,101 @@ struct ClipboardCategorySettingsView: View {
         }
     }
 
-    private var systemCategories: [ClipboardCategory] {
-        categories.filter { $0.categoryType == .system }
+    private var categoriesSection: some View {
+        settingsSection(title: localizer.text(.categories)) {
+            VStack(spacing: 0) {
+                categoryRows
+                Divider().padding(.leading, 56)
+                addCategoryButton
+            }
+        }
     }
 
-    private var customCategories: [ClipboardCategory] {
-        categories.filter { $0.categoryType == .custom }
+    @ViewBuilder
+    private var categoryRows: some View {
+        if categories.isEmpty {
+            ClipboardCategoryEmptyRow(
+                title: localizer.text(.noCustomCategories),
+                subtitle: localizer.text(.noCustomCategoriesSubtitle)
+            )
+        } else {
+            ForEach(Array(categories.enumerated()), id: \.element.objectID) { index, category in
+                categoryRow(category, index: index)
+            }
+        }
     }
+
+    private func categoryRow(_ category: ClipboardCategory, index: Int) -> some View {
+        ClipboardCategoryRow(
+            category: category,
+            canMoveUp: index > 1,
+            canMoveDown: index < categories.count - 1 && category.systemCategoryKey != .all,
+            canEdit: category.categoryType == .custom,
+            canDelete: category.categoryType == .custom,
+            onMoveUp: {
+                ClipboardCategoryManager.move(category, by: -1, context: viewContext)
+            },
+            onMoveDown: {
+                ClipboardCategoryManager.move(category, by: 1, context: viewContext)
+            },
+            onToggleVisibility: {
+                ClipboardCategoryManager.toggleVisibility(category, context: viewContext)
+            },
+            onEdit: {
+                editingCategory = category
+            },
+            onDelete: {
+                deleteCategory = category
+            }
+        )
+        .overlay(alignment: .bottom) {
+            if index < categories.count - 1 {
+                Divider().padding(.leading, 56)
+            }
+        }
+    }
+
+    private var addCategoryButton: some View {
+        Button {
+            showingCreateSheet = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.black.opacity(0.04))
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 28, height: 28)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(localizer.text(.addCategory))
+                        .font(.system(size: 13, weight: .regular))
+                    Text(localizer.text(.addCategorySubtitle))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var resetButtonRow: some View {
+        HStack(spacing: 10) {
+            Button(localizer.text(.resetSystemCategories)) {
+                showResetAlert = true
+            }
+            .buttonStyle(SettingsSecondaryButtonStyle())
+
+            Spacer(minLength: 0)
+        }
+    }
+
 }
 
 struct ClipboardCategoryEditorView: View {
@@ -372,15 +351,20 @@ struct ClipboardCategoryEditorView: View {
         }
         .sheet(isPresented: $showingCustomColorSheet) {
             ClipboardCategoryCustomColorSheetView(
-                initialColor: selectedColor
-            ) { newColor in
-                selectedColor = newColor
-                if let hex = newColor.hexString {
-                    colorHex = hex
+                initialColor: selectedColor,
+                onSave: { newColor in
+                    selectedColor = newColor
+                    if let hex = newColor.hexString {
+                        colorHex = hex
+                    }
+                    showingCustomColorSheet = false
+                },
+                onCancel: {
+                    showingCustomColorSheet = false
                 }
+            )
             }
         }
-    }
 
     private func saveCategory() {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -431,15 +415,15 @@ struct ClipboardCategoryEditorView: View {
 }
 
 private struct ClipboardCategoryCustomColorSheetView: View {
-    @Environment(\.dismiss) private var dismiss
-
     let initialColor: Color
     let onSave: (Color) -> Void
+    let onCancel: () -> Void
     @State private var draftColor: Color
 
-    init(initialColor: Color, onSave: @escaping (Color) -> Void) {
+    init(initialColor: Color, onSave: @escaping (Color) -> Void, onCancel: @escaping () -> Void) {
         self.initialColor = initialColor
         self.onSave = onSave
+        self.onCancel = onCancel
         _draftColor = State(initialValue: initialColor)
     }
 
@@ -456,14 +440,13 @@ private struct ClipboardCategoryCustomColorSheetView: View {
                 Spacer(minLength: 0)
 
                 Button(AppLocalizer.current.text(.cancel)) {
-                    dismiss()
+                    onCancel()
                 }
                 .buttonStyle(SettingsActionButtonStyle(kind: .neutral))
                 .frame(minWidth: 72)
 
                 Button(AppLocalizer.current.text(.save)) {
                     onSave(draftColor)
-                    dismiss()
                 }
                 .buttonStyle(SettingsActionButtonStyle(kind: .accent))
                 .frame(minWidth: 72)
@@ -624,7 +607,8 @@ struct ClipboardCategoryBadgeStrip: View {
 
 private struct ClipboardCategoryRow: View {
     let category: ClipboardCategory
-    let isSystemFixed: Bool
+    let canMoveUp: Bool
+    let canMoveDown: Bool
     let canEdit: Bool
     let canDelete: Bool
     let onMoveUp: () -> Void
@@ -653,17 +637,19 @@ private struct ClipboardCategoryRow: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                Button(action: onMoveUp) {
-                    Image(systemName: "chevron.up")
+                if canMoveUp {
+                    Button(action: onMoveUp) {
+                        Image(systemName: "chevron.up")
+                    }
+                    .buttonStyle(SettingsSecondaryButtonStyle())
                 }
-                .buttonStyle(SettingsSecondaryButtonStyle())
-                .disabled(isSystemFixed)
 
-                Button(action: onMoveDown) {
-                    Image(systemName: "chevron.down")
+                if canMoveDown {
+                    Button(action: onMoveDown) {
+                        Image(systemName: "chevron.down")
+                    }
+                    .buttonStyle(SettingsSecondaryButtonStyle())
                 }
-                .buttonStyle(SettingsSecondaryButtonStyle())
-                .disabled(isSystemFixed)
 
                 Toggle("", isOn: Binding(
                     get: { category.isVisible },
@@ -671,7 +657,7 @@ private struct ClipboardCategoryRow: View {
                 ))
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .disabled(isSystemFixed)
+                .disabled(category.systemCategoryKey == .all)
 
                 if canEdit {
                     Button(localizerText(.edit)) {
