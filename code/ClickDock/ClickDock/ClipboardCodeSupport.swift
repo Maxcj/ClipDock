@@ -251,16 +251,36 @@ enum ClipboardCodeActions {
 
 extension ClipboardRecord {
     var codeLanguage: ClipboardCodeLanguage {
-        ClipboardCodeLanguageDetector.detect(from: fullText ?? displayText ?? "")
+        if let persisted = persistedCodeLanguageRaw,
+           let language = ClipboardCodeLanguage(rawValue: persisted) {
+            return language
+        }
+
+        return ClipboardCodeLanguageDetector.detect(from: fullText ?? displayText ?? "")
     }
 
     var codeLineCount: Int {
-        ClipboardCodeLineCache.shared.lines(for: self).count
+        if let persisted = persistedCodeLineCount {
+            return persisted
+        }
+
+        return ClipboardCodeLineCache.shared.lines(for: self).count
     }
 
     var codeDisplayTitle: String {
         let title = (displayText ?? fullText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         return title.isEmpty ? codeLanguage.title : title
+    }
+
+    var persistedCodeLanguageRaw: String? {
+        value(forKey: "codeLanguageRaw") as? String
+    }
+
+    var persistedCodeLineCount: Int? {
+        if let value = value(forKey: "codeLineCountValue") as? NSNumber {
+            return value.intValue
+        }
+        return nil
     }
 }
 

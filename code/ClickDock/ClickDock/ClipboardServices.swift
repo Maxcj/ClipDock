@@ -428,6 +428,33 @@ final class ClipboardMonitor: ObservableObject {
         record.sourceBundleId = snapshot.sourceBundleId
         record.contentHash = snapshot.hash
 
+        if snapshot.kind == .code {
+            let codeText = snapshot.fullText ?? snapshot.displayText ?? ""
+            let language = ClipboardCodeLanguageDetector.detect(from: codeText)
+            record.setValue(language.rawValue, forKey: "codeLanguageRaw")
+            record.setValue(Int32(codeText.split(whereSeparator: \.isNewline).count), forKey: "codeLineCountValue")
+        } else {
+            record.setValue(nil, forKey: "codeLanguageRaw")
+            record.setValue(0, forKey: "codeLineCountValue")
+        }
+
+        if snapshot.kind == .colors,
+           let color = ClipboardColorDetector.detect(from: snapshot.fullText ?? snapshot.displayText ?? "") {
+            record.setValue(color.normalizedHexString, forKey: "colorHex")
+            record.setValue(color.red, forKey: "colorRed")
+            record.setValue(color.green, forKey: "colorGreen")
+            record.setValue(color.blue, forKey: "colorBlue")
+            record.setValue(color.alpha, forKey: "colorAlpha")
+            record.setValue(color.sourceFormat.rawValue, forKey: "colorSourceFormat")
+        } else {
+            record.setValue(nil, forKey: "colorHex")
+            record.setValue(0.0, forKey: "colorRed")
+            record.setValue(0.0, forKey: "colorGreen")
+            record.setValue(0.0, forKey: "colorBlue")
+            record.setValue(0.0, forKey: "colorAlpha")
+            record.setValue(nil, forKey: "colorSourceFormat")
+        }
+
         if snapshot.kind == .link,
            let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
             record.linkHostValue = url.host?.trimmingCharacters(in: .whitespacesAndNewlines)

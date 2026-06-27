@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
+    <entity name="ClipboardRecord" representedClassName="ClipboardRecord" syncable="YES" codeGenerationType="class">
+        <attribute name="contentHash" optional="YES" attributeType="String"/>
+        <attribute name="contentTypeRaw" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="displayText" optional="YES" attributeType="String"/>
+        <attribute name="fullText" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="imagePath" optional="YES" attributeType="String"/>
+        <attribute name="assetPath" optional="YES" attributeType="String"/>
+        <attribute name="linkHost" optional="YES" attributeType="String"/>
+        <attribute name="linkIconData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="linkMetadataCheckedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="linkTitle" optional="YES" attributeType="String"/>
+        <attribute name="thumbnailPath" optional="YES" attributeType="String"/>
+        <attribute name="isIgnored" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="lastUsedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="pinnedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="codeLanguageRaw" optional="YES" attributeType="String"/>
+        <attribute name="codeLineCountValue" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="colorHex" optional="YES" attributeType="String"/>
+        <attribute name="colorRed" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="colorGreen" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="colorBlue" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="colorAlpha" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="colorSourceFormat" optional="YES" attributeType="String"/>
+        <attribute name="sourceAppName" optional="YES" attributeType="String"/>
+        <attribute name="sourceBundleId" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="usageCount" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="categoryLinks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardRecordCategory" inverseName="record" inverseEntity="ClipboardRecordCategory"/>
+    </entity>
+    <entity name="ClipboardCategory" representedClassName="ClipboardCategory" syncable="YES" codeGenerationType="class">
+        <attribute name="colorHex" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="iconName" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isVisible" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="YES"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="systemKey" optional="YES" attributeType="String"/>
+        <attribute name="typeRaw" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="rules" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardCategoryRule" inverseName="category" inverseEntity="ClipboardCategoryRule"/>
+        <relationship name="recordLinks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardRecordCategory" inverseName="category" inverseEntity="ClipboardRecordCategory"/>
+    </entity>
+    <entity name="ClipboardRecordCategory" representedClassName="ClipboardRecordCategory" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ClipboardCategory" inverseName="recordLinks" inverseEntity="ClipboardCategory"/>
+        <relationship name="record" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ClipboardRecord" inverseName="categoryLinks" inverseEntity="ClipboardRecord"/>
+    </entity>
+    <entity name="ClipboardCategoryRule" representedClassName="ClipboardCategoryRule" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isEnabled" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="YES"/>
+        <attribute name="matchModeRaw" optional="YES" attributeType="String"/>
+        <attribute name="matchValue" optional="YES" attributeType="String"/>
+        <attribute name="ruleTypeRaw" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ClipboardCategory" inverseName="rules" inverseEntity="ClipboardCategory"/>
+    </entity>
+    <elements>
+        <element name="ClipboardRecord" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="ClipboardCategory" positionX="140" positionY="-18" width="128" height="44"/>
+        <element name="ClipboardRecordCategory" positionX="345" positionY="-18" width="128" height="44"/>
+        <element name="ClipboardCategoryRule" positionX="553" positionY="-18" width="128" height="44"/>
+    </elements>
+</model>

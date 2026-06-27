@@ -9,6 +9,10 @@ import AppKit
 extension ClipboardRecord {
     var clipboardColorValue: ClipboardColorValue? {
         guard kind == .colors else { return nil }
+        if let persisted = persistedClipboardColorValue {
+            return persisted
+        }
+
         return ClipboardColorDetector.detect(from: fullText ?? displayText ?? "")
     }
 
@@ -22,6 +26,36 @@ extension ClipboardRecord {
 
     var colorDetailValue: String {
         clipboardColorValue?.sourceText ?? detailText
+    }
+
+    var persistedClipboardColorValue: ClipboardColorValue? {
+        guard
+            let red = value(forKey: "colorRed") as? Double,
+            let green = value(forKey: "colorGreen") as? Double,
+            let blue = value(forKey: "colorBlue") as? Double,
+            let alpha = value(forKey: "colorAlpha") as? Double
+        else {
+            return nil
+        }
+
+        let hasStoredComponents = red != 0 || green != 0 || blue != 0 || alpha != 0
+        let hasFormat = (value(forKey: "colorSourceFormat") as? String)?.isEmpty == false
+        let hasHex = (value(forKey: "colorHex") as? String)?.isEmpty == false
+        guard hasStoredComponents || hasFormat || hasHex else { return nil }
+
+        let fallbackSourceText = value(forKey: "colorHex") as? String ?? ""
+        let sourceText = (fullText ?? displayText ?? fallbackSourceText).trimmingCharacters(in: .whitespacesAndNewlines)
+        let formatRaw = (value(forKey: "colorSourceFormat") as? String) ?? ClipboardColorFormat.hex.rawValue
+        let sourceFormat = ClipboardColorFormat(rawValue: formatRaw) ?? .hex
+
+        return ClipboardColorValue(
+            red: red,
+            green: green,
+            blue: blue,
+            alpha: alpha,
+            sourceText: sourceText.isEmpty ? fallbackSourceText : sourceText,
+            sourceFormat: sourceFormat
+        )
     }
 }
 
