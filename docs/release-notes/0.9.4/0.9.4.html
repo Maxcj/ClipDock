@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClipDock 0.9.4 Release Notes</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f5ef;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --border: #e5e7eb;
+      }
+      body {
+        margin: 0;
+        background: linear-gradient(180deg, var(--bg), #ffffff);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 40px 24px 56px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+        padding: 28px 30px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 2rem;
+        letter-spacing: -0.03em;
+      }
+      p {
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      li + li {
+        margin-top: 10px;
+      }
+      .tag {
+        display: inline-block;
+        margin-bottom: 14px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.08);
+        color: var(--accent);
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="card">
+        <div class="tag">Release Notes</div>
+        <h1>ClipDock 0.9.4</h1>
+        <p>Category management gets a usability pass in this release.</p>
+        <ul>
+          <li>Left category cards are taller for better readability.</li>
+          <li>Categories can now show up to 3 items per card.</li>
+          <li>Custom category edit and delete buttons use a consistent size.</li>
+          <li>Add category cancel and save buttons now match in size.</li>
+          <li>Custom categories support custom colors.</li>
+          <li>System categories and custom categories can be reordered together.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
