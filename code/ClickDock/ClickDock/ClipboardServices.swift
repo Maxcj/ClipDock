@@ -282,45 +282,44 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private func capturedPlainText(from pasteboard: NSPasteboard) -> String? {
-        let candidateTypes: [NSPasteboard.PasteboardType] = [
+        let plainTextTypes: [NSPasteboard.PasteboardType] = [
             .string,
             NSPasteboard.PasteboardType(UTType.utf8PlainText.identifier),
-            NSPasteboard.PasteboardType(UTType.plainText.identifier),
-            NSPasteboard.PasteboardType(UTType.rtf.identifier),
-            NSPasteboard.PasteboardType(UTType.html.identifier)
+            NSPasteboard.PasteboardType(UTType.plainText.identifier)
         ]
 
-        for type in candidateTypes {
+        for type in plainTextTypes {
             if let text = pasteboard.string(forType: type),
                !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return text
             }
         }
 
-        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType(UTType.rtf.identifier)),
-           let attributed = try? NSAttributedString(
-               data: data,
-               options: [.documentType: NSAttributedString.DocumentType.rtf],
-               documentAttributes: nil
-           ) {
-            let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                return attributed.string
-            }
+        if let rtfText = attributedPlainText(
+            from: pasteboard,
+            type: NSPasteboard.PasteboardType(UTType.rtf.identifier),
+            documentType: .rtf
+        ) {
+            return rtfText
         }
 
-        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType(UTType.html.identifier)),
-           let attributed = try? NSAttributedString(
-               data: data,
-               options: [
-                   .documentType: NSAttributedString.DocumentType.html,
-                   .characterEncoding: String.Encoding.utf8.rawValue
-               ],
-               documentAttributes: nil
-           ) {
-            let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                return attributed.string
+        if let htmlText = attributedPlainText(
+            from: pasteboard,
+            type: NSPasteboard.PasteboardType(UTType.html.identifier),
+            documentType: .html
+        ) {
+            return htmlText
+        }
+
+        let fallbackTypes: [NSPasteboard.PasteboardType] = [
+            NSPasteboard.PasteboardType(UTType.html.identifier),
+            NSPasteboard.PasteboardType(UTType.rtf.identifier)
+        ]
+
+        for type in fallbackTypes {
+            if let text = pasteboard.string(forType: type),
+               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return text
             }
         }
 
@@ -546,45 +545,124 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private func isLikelyCode(_ text: String) -> Bool {
-        let lines = text.split(whereSeparator: \.isNewline)
-        guard !lines.isEmpty else { return false }
-
-        let codeKeywords = [
-            "func ", "class ", "struct ", "enum ", "protocol ", "extension ",
-            "import ", "let ", "var ", "const ", "public ", "private ",
-            "if ", "for ", "while ", "switch ", "case ", "return ",
-            "def ", "from ", "export ", "interface ", "typealias "
-        ]
-        let codeSymbols = ["{", "}", ";", "=>", "->", "==", "!=", "&&", "||", "<-", ":</", "</", "</", "(", ")", "[", "]"]
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
 
-        if lines.count >= 2 {
-            if lines.contains(where: { $0.hasPrefix("    ") || $0.hasPrefix("\t") }) {
-                return true
-            }
-
-            if lines.contains(where: { $0.contains("{") || $0.contains("}") || $0.contains(";") }) {
-                return true
-            }
+        if trimmed.count > 8_000 {
+            return false
         }
 
+        let lines = trimmed.split(whereSeparator: \.isNewline)
         let lowercased = trimmed.lowercased()
-        if codeKeywords.contains(where: { lowercased.contains($0) }) {
-            return true
-        }
 
+        let strongCodeMarkers = [
+            "func ",
+            "class ",
+            "struct ",
+            "enum ",
+            "protocol ",
+            "extension ",
+            "import ",
+            "public class ",
+            "public static void main",
+            "def ",
+            "const ",
+            "let ",
+            "var ",
+            "interface ",
+            "type "
+        ]
+
+        let weakCodeKeywords = [
+            "if ",
+            "for ",
+            "while ",
+            "switch ",
+            "case ",
+            "return "
+        ]
+
+        let codeSymbols = [
+            "{",
+            "}",
+            ";",
+            "=>",
+            "->",
+            "==",
+            "!=",
+            "&&",
+            "||",
+            "</",
+            "/>",
+            "[",
+            "]"
+        ]
+
+        let strongMarkerHits = strongCodeMarkers.reduce(0) { count, marker in
+            count + (lowercased.contains(marker) ? 1 : 0)
+        }
+        let weakKeywordHits = weakCodeKeywords.reduce(0) { count, keyword in
+            count + (lowercased.contains(keyword) ? 1 : 0)
+        }
         let symbolHits = codeSymbols.reduce(0) { count, symbol in
             count + (trimmed.contains(symbol) ? 1 : 0)
         }
-        if symbolHits >= 2 {
+        let hasIndentedBlock = lines.count >= 2 && lines.contains {
+            $0.hasPrefix("    ") || $0.hasPrefix("\t")
+        }
+        let hasMultiLineCodeShape = lines.count >= 2 && symbolHits >= 2
+
+        if trimmed.contains("```") {
             return true
         }
 
-        if trimmed.contains("```") || trimmed.contains("    ") {
+        if strongMarkerHits >= 1 && (symbolHits >= 1 || hasIndentedBlock || lines.count >= 2) {
+            return true
+        }
+
+        if hasMultiLineCodeShape && weakKeywordHits >= 1 {
+            return true
+        }
+
+        if hasIndentedBlock && (strongMarkerHits >= 1 || weakKeywordHits >= 2 || symbolHits >= 1) {
             return true
         }
 
         return false
+    }
+
+    private func attributedPlainText(
+        from pasteboard: NSPasteboard,
+        type: NSPasteboard.PasteboardType,
+        documentType: NSAttributedString.DocumentType
+    ) -> String? {
+        guard let data = pasteboard.data(forType: type) else {
+            return nil
+        }
+
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any]
+
+        if documentType == .html {
+            options = [
+                .documentType: documentType,
+                .characterEncoding: String.Encoding.utf8.rawValue
+            ]
+        } else {
+            options = [
+                .documentType: documentType
+            ]
+        }
+
+        guard let attributed = try? NSAttributedString(
+            data: data,
+            options: options,
+            documentAttributes: nil
+        ) else {
+            return nil
+        }
+
+        let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : attributed.string
     }
 
     private func previewText(from text: String) -> String {
