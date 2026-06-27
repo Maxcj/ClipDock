@@ -350,7 +350,7 @@ struct ClipboardHistoryRow: View {
             HStack(spacing: 8) {
                 sourceAppIcon(size: layout.rowActionSize)
 
-                Text(record.previewSubtitle)
+                Text(record.sourceAppDisplayName)
                     .font(.system(size: layout.rowMetaSize + 1, weight: .medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -389,11 +389,39 @@ struct ClipboardHistoryRow: View {
     private var rowPreview: some View {
         if record.kind == .image, let preview = record.previewImage {
             imageThumbnail(preview)
+        } else if record.kind == .link, let icon = record.websiteIconImage {
+            websiteThumbnail(icon)
+        } else if record.kind == .code {
+            RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
+                .fill(Color.white.opacity(0.18))
+                .overlay(
+                    Image(systemName: "curlybraces")
+                        .font(.system(size: layout.rowFileIconSize + 4, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                )
+                .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
         } else if record.kind == .files {
             fileThumbnail
         } else if record.kind == .colors, let color = record.clipboardColorValue {
             colorThumbnail(color)
         }
+    }
+
+    private func websiteThumbnail(_ icon: NSImage) -> some View {
+        RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
+            .fill(Color.white.opacity(0.18))
+            .overlay(
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .padding(layout.rowImagePreviewWidth * 0.18)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+            )
+            .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
     }
 
     private func colorThumbnail(_ color: ClipboardColorValue) -> some View {

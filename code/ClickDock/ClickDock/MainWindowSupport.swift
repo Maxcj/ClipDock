@@ -100,11 +100,12 @@ struct SimpleClipboardLayout {
     var searchIconSize: CGFloat { s(15) }
     var searchTextSize: CGFloat { s(14) }
     var searchHintSize: CGFloat { s(12) }
-    var chipSpacing: CGFloat { s(6) }
-    var chipHeight: CGFloat { s(30) }
-    var chipPaddingX: CGFloat { s(12) }
-    var chipIconSize: CGFloat { s(12) }
-    var chipTextSize: CGFloat { s(12) }
+    var chipSpacing: CGFloat { s(5) }
+    var chipPaddingX: CGFloat { s(10.5) }
+    var chipVerticalPadding: CGFloat { s(5.5) }
+    var chipIconSize: CGFloat { s(11) }
+    var chipTextSize: CGFloat { s(11.5) }
+    var chipCornerRadius: CGFloat { s(8.5) }
     var sectionLabelSize: CGFloat { s(13) }
     var rowSpacing: CGFloat { s(10) }
     var rowHeight: CGFloat { s(122) }
@@ -187,8 +188,7 @@ struct SimpleClipboardLayout {
     var sectionTitleSize: CGFloat { s(15) }
     var filterIconSize: CGFloat { s(11) }
     var footerFontSize: CGFloat { s(13) }
-    var chipHorizontalPadding: CGFloat { s(14) }
-    var chipVerticalPadding: CGFloat { s(8) }
+    var chipHorizontalPadding: CGFloat { s(11.5) }
     var detailCornerRadius: CGFloat { s(22) }
     var smallCornerRadius: CGFloat { s(12) }
     var mediumCornerRadius: CGFloat { s(14) }

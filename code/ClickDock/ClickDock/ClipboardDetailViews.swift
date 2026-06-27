@@ -56,7 +56,7 @@ struct ClipboardDetailInspector: View {
             sourceAppIcon(for: record, size: 42)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(record.previewSubtitle)
+                Text(record.sourceAppDisplayName)
                     .font(.system(size: layout.detailLabelSize, weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
@@ -179,11 +179,9 @@ struct ClipboardDetailInspector: View {
                 ClipboardColorDetailView(
                     record: record,
                     layout: layout,
-                    onCopyOriginal: onCopy,
                     onCopyHex: { copyColorValue(record.clipboardColorValue?.normalizedHexString ?? record.fullText ?? record.displayText ?? "") },
                     onCopyRGB: { copyColorValue(record.clipboardColorValue?.rgbString ?? "") },
-                    onCopyRGBA: { copyColorValue(record.clipboardColorValue?.rgbaString ?? "") },
-                    onCopySwiftUI: { copyColorValue(record.clipboardColorValue?.swiftUIColorString ?? "") }
+                    onCopyRGBA: { copyColorValue(record.clipboardColorValue?.rgbaString ?? "") }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             )
@@ -254,7 +252,7 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.resolution), record.imageResolutionLabel))
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
         case .code:
-            rows.append((localizer.text(.source), record.codeLanguage.title))
+            rows.append((localizer.text(.source), record.sourceAppName?.isEmpty == false ? record.sourceAppName! : localizer.text(.unknownSource)))
             rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))
@@ -319,7 +317,7 @@ struct SimpleFilterChip: View {
     let layout: SimpleClipboardLayout
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             Image(systemName: symbolName)
                 .font(.system(size: layout.chipIconSize, weight: .semibold))
             Text(title)
@@ -329,14 +327,19 @@ struct SimpleFilterChip: View {
         .font(.system(size: layout.chipTextSize, weight: isSelected ? .semibold : .medium))
         .foregroundStyle(accentColor)
         .padding(.horizontal, layout.chipPaddingX)
-        .frame(height: layout.chipHeight)
+        .padding(.vertical, layout.chipVerticalPadding)
         .fixedSize(horizontal: true, vertical: false)
         .background(isSelected ? AnyShapeStyle(accentColor.opacity(0.10)) : AnyShapeStyle(Color.clear))
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(isSelected ? accentColor.opacity(0.24) : Color.clear, lineWidth: 1)
+            Group {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous)
+                        .stroke(accentColor.opacity(0.26), lineWidth: 1)
+                }
+            }
         )
-        .shadow(color: isSelected ? Color.black.opacity(0.04) : .clear, radius: 4, x: 0, y: 1)
+        .shadow(color: isSelected ? Color.black.opacity(0.03) : .clear, radius: 2, x: 0, y: 1)
     }
 }

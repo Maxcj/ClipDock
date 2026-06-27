@@ -153,6 +153,14 @@ enum ClipboardContentKind: String {
 }
 
 extension ClipboardRecord {
+    var sourceAppDisplayName: String {
+        if let sourceAppName = sourceAppName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !sourceAppName.isEmpty {
+            return sourceAppName
+        }
+        return AppLocalizer.current.text(.unknownSource)
+    }
+
     var kind: ClipboardContentKind {
         ClipboardContentKind(rawValue: contentTypeRaw ?? "") ?? .unknown
     }
@@ -176,6 +184,10 @@ extension ClipboardRecord {
     }
 
     var previewTitle: String {
+        if kind == .colors {
+            return clipboardColorValue?.sourceText ?? AppLocalizer.current.text(.colors)
+        }
+
         if let displayText, !displayText.isEmpty {
             return displayText
         }
@@ -188,28 +200,28 @@ extension ClipboardRecord {
             return AppLocalizer.current.text(.fileList)
         }
 
-        if kind == .colors {
-            return clipboardColorValue?.displayText ?? AppLocalizer.current.text(.colors)
-        }
-
         return AppLocalizer.current.text(.empty)
     }
 
     var previewSubtitle: String {
         if kind == .link {
-            return linkTitleLabel ?? linkHostLabel ?? AppLocalizer.current.text(.link)
+            return sourceAppDisplayName
         }
 
-        let appName = sourceAppName?.isEmpty == false ? sourceAppName! : AppLocalizer.current.text(.unknownSource)
-        return appName
+        if kind == .code {
+            return codeLanguage.title
+        }
+
+        return sourceAppDisplayName
     }
 
     var sourceAppIcon: NSImage? {
-        if kind == .link {
-            return linkIconImage
-        }
-
         return ClipboardAppIconCache.shared.icon(bundleId: sourceBundleId)
+    }
+
+    var websiteIconImage: NSImage? {
+        guard kind == .link else { return nil }
+        return linkIconImage
     }
 
     var linkURL: URL? {
@@ -249,7 +261,11 @@ extension ClipboardRecord {
 
     var rowSubtitle: String {
         if kind == .link {
-            return linkHostLabel ?? linkTitleLabel ?? previewTitle
+            return linkTitleLabel ?? linkHostLabel ?? previewTitle
+        }
+
+        if kind == .code {
+            return codeLanguage.title
         }
 
         if kind == .files {
@@ -257,7 +273,7 @@ extension ClipboardRecord {
         }
 
         if kind == .colors {
-            return colorFormatLabel
+            return clipboardColorValue?.sourceFormat.title ?? colorFormatLabel
         }
 
         return detailText
@@ -327,7 +343,7 @@ extension ClipboardRecord {
         }
 
         if kind == .colors {
-            return clipboardColorValue?.displayText ?? previewTitle
+            return clipboardColorValue?.sourceText ?? previewTitle
         }
 
         if kind == .image {

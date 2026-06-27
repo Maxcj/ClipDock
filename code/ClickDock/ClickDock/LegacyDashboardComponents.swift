@@ -9,6 +9,7 @@ import AppKit
 struct ClipboardCodePane: View {
     @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
+    private let scrollAnchorID = "clipboard.code.pane.scroll.top"
 
     var body: some View {
         let lines = ClipboardCodeLineCache.shared.lines(for: record)
@@ -31,15 +32,15 @@ struct ClipboardCodePane: View {
 
                 Spacer(minLength: 0)
 
-                Button(localizer.text(.copy)) {
-                    ClipboardCodeActions.copy(record.detailText)
-                }
-                .buttonStyle(.bordered)
-
-                Button(localizer.text(.copyMarkdown)) {
+                Button {
                     ClipboardCodeActions.copy(ClipboardCodeActions.markdownCodeBlock(record.detailText, language: language))
+                } label: {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.bordered)
+                .help(localizer.text(.copyMarkdown))
 
                 if language == .json {
                     Button(localizer.text(.prettyJSON)) {
@@ -57,26 +58,41 @@ struct ClipboardCodePane: View {
                     .buttonStyle(.bordered)
                 }
             }
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                        HStack(alignment: .top, spacing: 12) {
-                            Text("\(index + 1)")
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundStyle(.secondary.opacity(0.75))
-                                .frame(width: 34, alignment: .trailing)
+            ScrollViewReader { proxy in
+                ScrollView([.vertical, .horizontal], showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Color.clear
+                            .frame(width: 0, height: 0)
+                            .id(scrollAnchorID)
 
-                            Text(ClipboardCodeHighlighter.attributedLine(line, language: language))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .textSelection(.enabled)
+                        ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                            HStack(alignment: .top, spacing: 12) {
+                                Text("\(index + 1)")
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(.secondary.opacity(0.75))
+                                    .frame(width: 34, alignment: .trailing)
+
+                                Text(ClipboardCodeHighlighter.attributedLine(line, language: language))
+                                    .lineLimit(1)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .id(record.objectID)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .onAppear {
+                    scrollToTop(proxy)
+                }
+                .onChange(of: record.objectID) { _ in
+                    scrollToTop(proxy)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -88,6 +104,12 @@ struct ClipboardCodePane: View {
                         .stroke(Color.gray.opacity(0.12), lineWidth: 1)
                 )
         )
+    }
+
+    private func scrollToTop(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            proxy.scrollTo(scrollAnchorID, anchor: .topLeading)
+        }
     }
 }
 
@@ -127,7 +149,11 @@ struct ClipboardPreviewCard: View {
             VStack(alignment: .leading, spacing: layout.cardSpacingInner) {
                 HStack(spacing: 8) {
                     HStack(spacing: 6) {
-                        if let icon = record.sourceAppIcon, record.kind == .link {
+                        if record.kind == .code {
+                            Image(systemName: record.kind.symbolName)
+                                .font(.system(size: layout.iconSizeSmall, weight: .semibold))
+                                .foregroundStyle(record.kind.accent)
+                        } else if let icon = record.sourceAppIcon, record.kind == .link {
                             Image(nsImage: icon)
                                 .resizable()
                                 .interpolation(.high)
@@ -165,6 +191,15 @@ struct ClipboardPreviewCard: View {
                     RoundedRectangle(cornerRadius: layout.mediumCornerRadius, style: .continuous)
                         .fill(color.color)
                         .frame(height: layout.cardImageHeight)
+                } else if record.kind == .code {
+                    RoundedRectangle(cornerRadius: layout.mediumCornerRadius, style: .continuous)
+                        .fill(Color.white.opacity(0.18))
+                        .overlay(
+                            Image(systemName: "curlybraces")
+                                .font(.system(size: layout.cardTitleSize + 12, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        )
+                        .frame(height: layout.cardImageHeight)
                 } else {
                     Text(record.previewTitle)
                         .font(.system(size: layout.cardTitleSize, weight: .semibold))
@@ -173,10 +208,25 @@ struct ClipboardPreviewCard: View {
                         .foregroundStyle(.primary)
                 }
 
-                Text(record.previewSubtitle)
-                    .font(.system(size: layout.footerFontSize))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                HStack(spacing: 6) {
+                    if let icon = record.sourceAppIcon {
+                        Image(nsImage: icon)
+                            .resizable()
+                            .interpolation(.high)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14, height: 14)
+                            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                    } else {
+                        Image(systemName: "app.dashed")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(record.sourceAppDisplayName)
+                        .font(.system(size: layout.footerFontSize))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
 
                 HStack {
                     Text(record.kind.title)
@@ -257,7 +307,7 @@ struct FilterChip: View {
     let layout: DashboardLayout
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Image(systemName: symbolName)
                 .font(.system(size: layout.filterIconSize, weight: .semibold))
             Text(title)
@@ -267,10 +317,14 @@ struct FilterChip: View {
         .padding(.horizontal, layout.chipHorizontalPadding)
         .padding(.vertical, layout.chipVerticalPadding)
         .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.white.opacity(0.78)))
-        .clipShape(Capsule())
+        .clipShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
         .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(isSelected ? 0.0 : 0.16), lineWidth: 1)
+            Group {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous)
+                        .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                }
+            }
         )
     }
 }
@@ -320,8 +374,9 @@ struct DashboardLayout {
     var detailPadding: CGFloat { s(14) }
     var detailSpacing: CGFloat { s(14) }
     var detailSidePadding: CGFloat { s(12) }
-    var chipHorizontalPadding: CGFloat { s(12) }
-    var chipVerticalPadding: CGFloat { s(6) }
+    var chipHorizontalPadding: CGFloat { s(11.5) }
+    var chipVerticalPadding: CGFloat { s(6.5) }
+    var chipCornerRadius: CGFloat { s(9.5) }
     var footerSpacing: CGFloat { s(12) }
     var titleSize: CGFloat { s(19) }
     var subtitleSize: CGFloat { s(13) }

@@ -7,6 +7,24 @@ import AppKit
 import Foundation
 
 enum ClipboardPrivacyRules {
+    enum IgnoreReason: CustomStringConvertible {
+        case verificationCode
+        case passwordsOrTokens
+        case privateKey
+        case longSensitiveText
+        case privateKeyFile
+
+        var description: String {
+            switch self {
+            case .verificationCode: return "verification code"
+            case .passwordsOrTokens: return "password/token"
+            case .privateKey: return "private key"
+            case .longSensitiveText: return "long sensitive text"
+            case .privateKeyFile: return "private key file"
+            }
+        }
+    }
+
     static let excludedBundleIdentifiersStorageKey = "clipboard.excludedSourceBundleIdentifiers"
     static let ignoreVerificationCodesStorageKey = "clipboard.ignoreVerificationCodes"
     static let ignorePasswordsAndTokensStorageKey = "clipboard.ignorePasswordsAndTokens"
@@ -48,52 +66,65 @@ enum ClipboardPrivacyRules {
         return bundleIdentifier
     }
 
-    static func shouldIgnoreCapturedText(_ text: String, defaults: UserDefaults = .standard) -> Bool {
+    static func shouldIgnoreCapturedText(
+        _ text: String,
+        contentKind: ClipboardContentKind? = nil,
+        defaults: UserDefaults = .standard
+    ) -> IgnoreReason? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
+        guard !trimmed.isEmpty else { return nil }
 
-        for candidate in inspectionCandidates(for: trimmed) {
-            if defaults.bool(forKey: ignoreVerificationCodesStorageKey),
-               matchesVerificationCode(candidate) {
-                return true
-            }
+        switch contentKind {
+        case .code:
+            return ignoreReasonForCodeContent(trimmed, defaults: defaults)
+        case .colors:
+            return nil
+        case .image, .files:
+            return ignoreReasonForFileLikeContent(trimmed, defaults: defaults)
+        case .link, .text, .unknown, nil:
+            for candidate in inspectionCandidates(for: trimmed) {
+                if defaults.bool(forKey: ignoreVerificationCodesStorageKey),
+                   matchesVerificationCode(candidate) {
+                    return .verificationCode
+                }
 
-            if defaults.bool(forKey: ignorePasswordsAndTokensStorageKey),
-               matchesPasswordsOrTokens(candidate) {
-                return true
-            }
+                if defaults.bool(forKey: ignorePasswordsAndTokensStorageKey),
+                   matchesPasswordsOrTokens(candidate) {
+                    return .passwordsOrTokens
+                }
 
-            if defaults.bool(forKey: ignorePrivateKeysStorageKey),
-               matchesPrivateKeys(candidate) {
-                return true
-            }
+                if defaults.bool(forKey: ignorePrivateKeysStorageKey),
+                   matchesPrivateKeys(candidate) {
+                    return .privateKey
+                }
 
-            if defaults.bool(forKey: ignoreLongSensitiveTextStorageKey),
-               matchesLongSensitiveText(candidate, includePrivateKeys: defaults.bool(forKey: ignorePrivateKeysStorageKey)) {
-                return true
+                if defaults.bool(forKey: ignoreLongSensitiveTextStorageKey),
+                   matchesLongSensitiveText(candidate, includePrivateKeys: defaults.bool(forKey: ignorePrivateKeysStorageKey)) {
+                    return .longSensitiveText
+                }
             }
         }
 
-        return false
+        return nil
     }
 
-    static func shouldIgnoreCapturedFileURLs(_ fileURLs: [URL], defaults: UserDefaults = .standard) -> Bool {
-        guard !fileURLs.isEmpty else { return false }
+    static func shouldIgnoreCapturedFileURLs(_ fileURLs: [URL], defaults: UserDefaults = .standard) -> IgnoreReason? {
+        guard !fileURLs.isEmpty else { return nil }
 
         if defaults.bool(forKey: ignorePrivateKeysStorageKey) {
             for url in fileURLs where isLikelyPrivateKeyFile(url) {
-                return true
+                return .privateKeyFile
             }
         }
 
         for url in fileURLs {
             guard let text = textContent(from: url) else { continue }
-            if shouldIgnoreCapturedText(text, defaults: defaults) {
-                return true
+            if let reason = shouldIgnoreCapturedText(text, contentKind: .files, defaults: defaults) {
+                return reason
             }
         }
 
-        return false
+        return nil
     }
 
     private static func inspectionCandidates(for text: String) -> [String] {
@@ -128,27 +159,68 @@ enum ClipboardPrivacyRules {
     }
 
     static func matchesPasswordsOrTokens(_ text: String) -> Bool {
-        let lowercased = text.lowercased()
-        let keywordMatches = [
-            "password",
-            "secret",
-            "api_key",
-            "access_token",
-            "refresh_token",
-            "authorization: bearer",
-            "jwt token",
-            "bearer "
-        ]
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
 
-        if keywordMatches.contains(where: lowercased.contains) {
+        if isLikelyJWT(trimmed) || containsPaymentCardNumber(trimmed) {
             return true
         }
 
-        if isLikelyJWT(text) || containsSensitiveEnvContent(text) || containsPaymentCardNumber(text) {
+        if containsSensitiveCredentialAssignment(trimmed) {
+            return true
+        }
+
+        if containsSensitiveEnvContent(trimmed) {
             return true
         }
 
         return false
+    }
+
+    private static func ignoreReasonForCodeContent(_ text: String, defaults: UserDefaults) -> IgnoreReason? {
+        if defaults.bool(forKey: ignorePrivateKeysStorageKey), matchesPrivateKeys(text) {
+            return .privateKey
+        }
+
+        if defaults.bool(forKey: ignorePasswordsAndTokensStorageKey),
+           containsSensitiveCredentialAssignment(text) {
+            return .passwordsOrTokens
+        }
+
+        if defaults.bool(forKey: ignoreVerificationCodesStorageKey),
+           matchesVerificationCode(text) {
+            return .verificationCode
+        }
+
+        if defaults.bool(forKey: ignorePasswordsAndTokensStorageKey),
+           matchesPaymentOrJWT(text, includeEnvContent: false) {
+            return .passwordsOrTokens
+        }
+
+        return nil
+    }
+
+    private static func ignoreReasonForFileLikeContent(_ text: String, defaults: UserDefaults) -> IgnoreReason? {
+        if defaults.bool(forKey: ignorePrivateKeysStorageKey), matchesPrivateKeys(text) {
+            return .privateKey
+        }
+
+        if defaults.bool(forKey: ignorePasswordsAndTokensStorageKey),
+           matchesPasswordsOrTokens(text) {
+            return .passwordsOrTokens
+        }
+
+        if defaults.bool(forKey: ignoreVerificationCodesStorageKey),
+           matchesVerificationCode(text) {
+            return .verificationCode
+        }
+
+        if defaults.bool(forKey: ignoreLongSensitiveTextStorageKey),
+           matchesLongSensitiveText(text, includePrivateKeys: defaults.bool(forKey: ignorePrivateKeysStorageKey)) {
+            return .longSensitiveText
+        }
+
+        return nil
     }
 
     static func matchesPrivateKeys(_ text: String) -> Bool {
@@ -199,7 +271,6 @@ enum ClipboardPrivacyRules {
         let sensitiveSignals = [
             "password",
             "secret",
-            "token",
             "authorization",
             "api_key",
             "access_token",
@@ -217,36 +288,132 @@ enum ClipboardPrivacyRules {
         return signalCount >= 2
     }
 
+    private static func matchesPaymentOrJWT(_ text: String, includeEnvContent: Bool) -> Bool {
+        if isLikelyJWT(text) || containsPaymentCardNumber(text) {
+            return true
+        }
+
+        if containsSensitiveCredentialAssignment(text) {
+            return true
+        }
+
+        if includeEnvContent, containsSensitiveEnvContent(text) {
+            return true
+        }
+
+        return false
+    }
+
     private static func containsSensitiveEnvContent(_ text: String) -> Bool {
         let lines = text.split(whereSeparator: \.isNewline)
         guard !lines.isEmpty else { return false }
 
-        let envKeys = [
-            "password",
-            "secret",
-            "token",
-            "api_key",
-            "access_token",
-            "refresh_token",
-            "private_key",
-            "jwt"
-        ]
-
         var assignmentCount = 0
+        var sensitiveAssignmentCount = 0
         for rawLine in lines {
             let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !line.isEmpty, !line.hasPrefix("#"), let separatorIndex = line.firstIndex(of: "=") else {
+            guard !line.isEmpty, !line.hasPrefix("#"), let assignment = parseAssignment(in: line) else {
                 continue
             }
 
             assignmentCount += 1
-            let key = line[..<separatorIndex].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            if envKeys.contains(where: key.contains) {
+            if isSensitiveCredentialKey(assignment.key), isLikelySecretValue(assignment.value) {
+                sensitiveAssignmentCount += 1
+            }
+        }
+
+        if sensitiveAssignmentCount >= 1 && assignmentCount >= 3 {
+            return true
+        }
+
+        return sensitiveAssignmentCount >= 2
+    }
+
+    private static func containsSensitiveCredentialAssignment(_ text: String) -> Bool {
+        let lines = text.split(whereSeparator: \.isNewline)
+        guard !lines.isEmpty else { return false }
+
+        for rawLine in lines {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty, !line.hasPrefix("#"), let assignment = parseAssignment(in: line) else {
+                continue
+            }
+
+            if isSensitiveCredentialKey(assignment.key), isLikelySecretValue(assignment.value) {
                 return true
             }
         }
 
-        return assignmentCount >= 3
+        return false
+    }
+
+    private static func parseAssignment(in line: String) -> (key: String, value: String)? {
+        let separators: [Character] = ["=", ":"]
+        guard let separator = line.firstIndex(where: { separators.contains($0) }) else {
+            return nil
+        }
+
+        let key = line[..<separator].trimmingCharacters(in: .whitespacesAndNewlines)
+        let valueStart = line.index(after: separator)
+        let value = line[valueStart...].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty, !value.isEmpty else { return nil }
+        return (key: key, value: value)
+    }
+
+    private static func isSensitiveCredentialKey(_ key: String) -> Bool {
+        let normalized = key
+            .lowercased()
+            .replacingOccurrences(of: "-", with: "_")
+            .replacingOccurrences(of: " ", with: "_")
+
+        let directMatches = [
+            "password",
+            "secret",
+            "api_key",
+            "access_token",
+            "refresh_token",
+            "id_token",
+            "auth_token",
+            "client_secret",
+            "private_key",
+            "bearer"
+        ]
+
+        if directMatches.contains(where: { normalized == $0 || normalized.contains("\($0)_") || normalized.hasSuffix("_\($0)") }) {
+            return true
+        }
+
+        return normalized.contains("password") || normalized.contains("secret") || normalized.contains("private_key")
+    }
+
+    private static func isLikelySecretValue(_ value: String) -> Bool {
+        let trimmed = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'`;,"))
+
+        guard !trimmed.isEmpty else { return false }
+
+        if trimmed.lowercased().hasPrefix("bearer ") {
+            let token = trimmed.dropFirst("bearer ".count).trimmingCharacters(in: .whitespacesAndNewlines)
+            return token.count >= 16 && token.range(of: #"^[A-Za-z0-9._\-+/=]+$"#, options: .regularExpression) != nil
+        }
+
+        if trimmed.range(of: #"[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"#, options: .regularExpression) != nil {
+            return true
+        }
+
+        if trimmed.count >= 20,
+           trimmed.range(of: #"^[A-Za-z0-9._\-+/=]+$"#, options: .regularExpression) != nil {
+            return true
+        }
+
+        if trimmed.count >= 24,
+           trimmed.contains(where: { $0.isNumber }),
+           trimmed.contains(where: { $0.isLetter }) {
+            return true
+        }
+
+        return false
     }
 
     private static func isLikelyJWT(_ text: String) -> Bool {

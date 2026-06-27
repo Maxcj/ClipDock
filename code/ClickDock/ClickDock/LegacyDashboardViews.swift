@@ -165,7 +165,6 @@ struct ClipboardDashboardView: View {
 
     private func togglePin(_ record: ClipboardRecord) {
         record.isPinned.toggle()
-        record.updatedAt = Date()
         saveContext()
     }
 
@@ -342,7 +341,7 @@ struct ClipboardDetailPanel: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: layout.smallCornerRadius, style: .continuous)
                         .fill(record.kind.accent.opacity(0.14))
-                    if let icon = record.sourceAppIcon, record.kind == .link {
+                    if let icon = record.sourceAppIcon {
                         Image(nsImage: icon)
                             .resizable()
                             .interpolation(.high)
@@ -360,7 +359,7 @@ struct ClipboardDetailPanel: View {
                     Text(record.previewTitle)
                         .font(.system(size: layout.detailBodyTitleSize, weight: .semibold))
                         .lineLimit(2)
-                    Text(record.previewSubtitle)
+                    Text(record.sourceAppDisplayName)
                         .font(.system(size: layout.footerFontSize))
                         .foregroundStyle(.secondary)
                 }
@@ -528,7 +527,11 @@ struct ClipboardHeroDetailPanel: View {
     private var metadata: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 10) {
-                if let icon = record.sourceAppIcon, record.kind == .link {
+                if record.kind == .code {
+                    Image(systemName: record.codeLanguage.iconSymbolName)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(record.codeLanguage.badgeColor)
+                } else if let icon = record.sourceAppIcon, record.kind == .link {
                     Image(nsImage: icon)
                         .resizable()
                         .interpolation(.high)
@@ -540,7 +543,7 @@ struct ClipboardHeroDetailPanel: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(record.kind.accent)
                 }
-                Text(record.kind == .link ? (record.previewSubtitle) : record.kind.title)
+                Text(record.kind == .link ? record.previewSubtitle : record.kind == .code ? record.codeLanguage.title : record.kind.title)
                     .font(.system(size: layout.footerFontSize, weight: .semibold))
                     .foregroundStyle(record.kind.accent)
                 Text(record.timeLabelShort)

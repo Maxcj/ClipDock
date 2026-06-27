@@ -17,7 +17,7 @@ extension ClipboardRecord {
     }
 
     var colorDisplayText: String {
-        clipboardColorValue?.displayText ?? previewTitle
+        clipboardColorValue?.sourceText ?? previewTitle
     }
 
     var colorDetailValue: String {
@@ -29,11 +29,9 @@ struct ClipboardColorDetailView: View {
     @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
     let layout: SimpleClipboardLayout
-    let onCopyOriginal: () -> Void
     let onCopyHex: () -> Void
     let onCopyRGB: () -> Void
     let onCopyRGBA: () -> Void
-    let onCopySwiftUI: () -> Void
 
     var body: some View {
         let color = record.clipboardColorValue
@@ -43,7 +41,6 @@ struct ClipboardColorDetailView: View {
                 if let color {
                     colorPreview(color)
                     colorValues(color)
-                    actionButtons
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(record.previewTitle)
@@ -83,7 +80,7 @@ struct ClipboardColorDetailView: View {
                 }
 
             HStack(spacing: 10) {
-                Text(record.previewTitle)
+                Text(record.colorDetailValue)
                     .font(.system(size: 24, weight: .semibold, design: .monospaced))
                     .textSelection(.enabled)
                 Spacer()
@@ -102,7 +99,6 @@ struct ClipboardColorDetailView: View {
             colorValueRow(title: "HEX", value: color.normalizedHexString, action: onCopyHex)
             colorValueRow(title: "RGB", value: color.rgbString, action: onCopyRGB)
             colorValueRow(title: "RGBA", value: color.rgbaString, action: onCopyRGBA)
-            colorValueRow(title: "SwiftUI", value: color.swiftUIColorString, action: onCopySwiftUI)
         }
     }
 
@@ -128,20 +124,6 @@ struct ClipboardColorDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 10) {
-            actionButton(title: "Copy HEX", action: onCopyHex)
-            actionButton(title: "Copy RGB", action: onCopyRGB)
-            actionButton(title: "Copy SwiftUI", action: onCopySwiftUI)
-            actionButton(title: localizer.text(.copyOriginal), action: onCopyOriginal)
-        }
-    }
-
-    private func actionButton(title: String, action: @escaping () -> Void) -> some View {
-        Button(title, action: action)
-            .buttonStyle(.bordered)
     }
 
     private func infoPill(text: String) -> some View {

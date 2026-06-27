@@ -11,6 +11,11 @@ import ImageIO
 import UniformTypeIdentifiers
 
 final class ClipboardMonitor: ObservableObject {
+    private enum CaptureOutcome {
+        case snapshot(ClipboardSnapshot)
+        case dropped(reason: String)
+    }
+
     private let context: NSManagedObjectContext
     private let linkMetadataManager: LinkMetadataManager
     private let processingQueue = DispatchQueue(label: "cn.maxcj.ClipDock.clipboard.processing", qos: .userInitiated)
@@ -93,37 +98,43 @@ final class ClipboardMonitor: ObservableObject {
         processingQueue.async { [weak self] in
             guard let self else { return }
             autoreleasepool {
-                let snapshot = self.captureSnapshot(from: pasteboard)
+                let outcome = self.captureSnapshot(from: pasteboard)
 
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     defer { self.isProcessingSnapshot = false }
 
-                    guard let snapshot else { return }
-
-                    if let suppressionChangeCount,
-                       pasteboard.changeCount == suppressionChangeCount {
-                        self.suppressionChangeCount = nil
+                    switch outcome {
+                    case .dropped(let reason):
+                        self.logClipboardDrop(reason)
                         return
-                    }
+                    case .snapshot(let snapshot):
+                        if let suppressionChangeCount,
+                           pasteboard.changeCount == suppressionChangeCount {
+                            self.suppressionChangeCount = nil
+                            self.logClipboardDrop("suppressed self-copy")
+                            return
+                        }
 
-                    if snapshot.hash == lastRecordedHash {
-                        return
-                    }
+                        if snapshot.hash == lastRecordedHash {
+                            self.logClipboardDrop("duplicate content")
+                            return
+                        }
 
-                    self.insert(snapshot: snapshot)
-                    self.lastRecordedHash = snapshot.hash
+                        self.insert(snapshot: snapshot)
+                        self.lastRecordedHash = snapshot.hash
+                    }
                 }
             }
         }
     }
 
-    private func captureSnapshot(from pasteboard: NSPasteboard) -> ClipboardSnapshot? {
+    private func captureSnapshot(from pasteboard: NSPasteboard) -> CaptureOutcome {
         let appName = currentFrontmostApplicationName()
         let bundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
 
         if ClipboardPrivacyRules.isExcluded(bundleIdentifier: bundleId) {
-            return nil
+            return .dropped(reason: "excluded app \(bundleId ?? "-")")
         }
 
         if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty {
@@ -131,19 +142,19 @@ final class ClipboardMonitor: ObservableObject {
             let fullText = fileURLs.map(\.path).joined(separator: "\n")
             let isSingleImageFile = fileURLs.count == 1 && Self.imageFileExtensions.contains(fileURLs[0].pathExtension.lowercased())
 
-            if ClipboardPrivacyRules.shouldIgnoreCapturedFileURLs(fileURLs) {
-                return nil
+            if let reason = ClipboardPrivacyRules.shouldIgnoreCapturedFileURLs(fileURLs) {
+                return .dropped(reason: "ignored file URLs: \(reason.description)")
             }
 
-            if ClipboardPrivacyRules.shouldIgnoreCapturedText(fullText) {
-                return nil
+            if let reason = ClipboardPrivacyRules.shouldIgnoreCapturedText(fullText, contentKind: .files) {
+                return .dropped(reason: "ignored file text: \(reason.description)")
             }
 
             if isSingleImageFile {
-                guard keepsImageHistory else { return nil }
+                guard keepsImageHistory else { return .dropped(reason: "image history disabled") }
 
                 if let imageData = try? Data(contentsOf: fileURLs[0]), let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]), let assets = saveImageAssets(from: image) {
-                    return ClipboardSnapshot(
+                    return .snapshot(ClipboardSnapshot(
                         kind: .image,
                         displayText: "Image",
                         fullText: assets.original.path,
@@ -153,15 +164,15 @@ final class ClipboardMonitor: ObservableObject {
                         sourceAppName: appName,
                         sourceBundleId: bundleId,
                         hash: Self.hash(kind: .image, data: imageData)
-                    )
+                    ))
                 }
 
-                return nil
+                return .dropped(reason: "failed to save image assets")
             }
 
-            guard keepsFileHistory else { return nil }
+            guard keepsFileHistory else { return .dropped(reason: "file history disabled") }
 
-            return ClipboardSnapshot(
+            return .snapshot(ClipboardSnapshot(
                 kind: .files,
                 displayText: names.joined(separator: ", "),
                 fullText: fullText,
@@ -171,11 +182,11 @@ final class ClipboardMonitor: ObservableObject {
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .files, text: fullText)
-            )
+            ))
         }
 
         if let image = NSImage(pasteboard: pasteboard), let assets = saveImageAssets(from: image) {
-            return ClipboardSnapshot(
+            return .snapshot(ClipboardSnapshot(
                 kind: .image,
                 displayText: "Image",
                 fullText: assets.original.path,
@@ -185,14 +196,16 @@ final class ClipboardMonitor: ObservableObject {
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .image, data: assets.originalData)
-            )
+            ))
         }
 
         let urlType = NSPasteboard.PasteboardType(UTType.url.identifier)
         if let urlText = pasteboard.string(forType: urlType),
-           !ClipboardPrivacyRules.shouldIgnoreCapturedText(urlText),
            ClipboardRecord.webURL(from: urlText) != nil {
-            return ClipboardSnapshot(
+            if let reason = ClipboardPrivacyRules.shouldIgnoreCapturedText(urlText, contentKind: .link) {
+                return .dropped(reason: "ignored url text: \(reason.description)")
+            }
+            return .snapshot(ClipboardSnapshot(
                 kind: .link,
                 displayText: urlText,
                 fullText: urlText,
@@ -202,20 +215,29 @@ final class ClipboardMonitor: ObservableObject {
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .link, text: urlText)
-            )
+            ))
         }
 
-        if let text = pasteboard.string(forType: .string), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if let text = capturedPlainText(from: pasteboard), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if ClipboardPrivacyRules.shouldIgnoreCapturedText(trimmed) {
-                return nil
-            }
+            let detectedColor = ClipboardColorDetector.detect(from: trimmed)
             let kind: ClipboardContentKind
             if ClipboardRecord.webURL(from: trimmed) != nil {
                 kind = .link
-            } else if let color = ClipboardColorDetector.detect(from: trimmed) {
+            } else if detectedColor != nil {
                 kind = .colors
-                return ClipboardSnapshot(
+            } else if isLikelyCode(trimmed) || ClipboardCodeLanguageDetector.detect(from: trimmed) != .plain {
+                kind = .code
+            } else {
+                kind = .text
+            }
+
+            if let reason = ClipboardPrivacyRules.shouldIgnoreCapturedText(trimmed, contentKind: kind) {
+                return .dropped(reason: "ignored captured text: \(reason.description)")
+            }
+
+            if kind == .colors, let color = detectedColor {
+                return .snapshot(ClipboardSnapshot(
                     kind: kind,
                     displayText: color.displayText,
                     fullText: color.sourceText,
@@ -225,13 +247,10 @@ final class ClipboardMonitor: ObservableObject {
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
                     hash: Self.hash(kind: kind, text: color.sourceText)
-                )
-            } else if isLikelyCode(trimmed) || ClipboardCodeLanguageDetector.detect(from: trimmed) != .plain {
-                kind = .code
-            } else {
-                kind = .text
+                ))
             }
-            return ClipboardSnapshot(
+
+            return .snapshot(ClipboardSnapshot(
                 kind: kind,
                 displayText: previewText(from: trimmed),
                 fullText: trimmed,
@@ -241,7 +260,53 @@ final class ClipboardMonitor: ObservableObject {
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: kind, text: trimmed)
-            )
+            ))
+        }
+
+        return .dropped(reason: "no supported clipboard content")
+    }
+
+    private func capturedPlainText(from pasteboard: NSPasteboard) -> String? {
+        let candidateTypes: [NSPasteboard.PasteboardType] = [
+            .string,
+            NSPasteboard.PasteboardType(UTType.utf8PlainText.identifier),
+            NSPasteboard.PasteboardType(UTType.plainText.identifier),
+            NSPasteboard.PasteboardType(UTType.rtf.identifier),
+            NSPasteboard.PasteboardType(UTType.html.identifier)
+        ]
+
+        for type in candidateTypes {
+            if let text = pasteboard.string(forType: type),
+               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return text
+            }
+        }
+
+        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType(UTType.rtf.identifier)),
+           let attributed = try? NSAttributedString(
+               data: data,
+               options: [.documentType: NSAttributedString.DocumentType.rtf],
+               documentAttributes: nil
+           ) {
+            let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                return attributed.string
+            }
+        }
+
+        if let data = pasteboard.data(forType: NSPasteboard.PasteboardType(UTType.html.identifier)),
+           let attributed = try? NSAttributedString(
+               data: data,
+               options: [
+                   .documentType: NSAttributedString.DocumentType.html,
+                   .characterEncoding: String.Encoding.utf8.rawValue
+               ],
+               documentAttributes: nil
+           ) {
+            let text = attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                return attributed.string
+            }
         }
 
         return nil
@@ -257,42 +322,111 @@ final class ClipboardMonitor: ObservableObject {
 
     private func insert(snapshot: ClipboardSnapshot) {
         context.perform {
-            let record = ClipboardRecord(context: self.context)
-            record.id = UUID()
-            record.createdAt = Date()
-            record.updatedAt = Date()
-            record.lastUsedAt = nil
-            record.contentTypeRaw = snapshot.kind.rawValue
-            record.displayText = snapshot.displayText
-            record.fullText = snapshot.fullText
-            record.imagePath = snapshot.imagePath
-            record.setValue(snapshot.assetPath, forKey: "assetPath")
-            record.setValue(snapshot.thumbnailPath, forKey: "thumbnailPath")
-            record.sourceAppName = snapshot.sourceAppName
-            record.sourceBundleId = snapshot.sourceBundleId
-            record.contentHash = snapshot.hash
-            record.isPinned = false
-            record.isIgnored = false
-            record.usageCount = 0
-
-            if snapshot.kind == .link,
-               let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
-                record.linkHostValue = url.host?.trimmingCharacters(in: .whitespacesAndNewlines)
-                record.linkTitleValue = nil
-                record.linkIconDataValue = nil
-                record.linkMetadataCheckedAtValue = nil
-            }
-
             do {
+                let existingRecords = try self.fetchMatchingRecords(for: snapshot)
+                let record: ClipboardRecord
+
+                if let canonicalRecord = existingRecords.sorted(by: Self.preferredDuplicateOrder).first {
+                    record = canonicalRecord
+                    self.update(record, with: snapshot)
+
+                    for duplicate in existingRecords where duplicate.objectID != canonicalRecord.objectID {
+                        removeCachedAssets(for: duplicate)
+                        self.context.delete(duplicate)
+                    }
+                } else {
+                    record = ClipboardRecord(context: self.context)
+                    record.id = UUID()
+                    record.createdAt = Date()
+                    record.lastUsedAt = nil
+                    record.isPinned = false
+                    record.isIgnored = false
+                    record.usageCount = 0
+                    self.update(record, with: snapshot)
+                }
+
                 try self.context.save()
                 self.pruneExpiredRecordsLocked()
                 if snapshot.kind == .link,
-                   let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
+                   let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText),
+                   record.linkMetadataCheckedAtValue == nil {
                     self.linkMetadataManager.scheduleMetadataFetch(for: record.objectID, url: url)
                 }
             } catch {
                 NSLog("Failed to save clipboard record: \(error.localizedDescription)")
             }
+        }
+    }
+
+    private func logClipboardDrop(_ reason: String) {
+        let appName = currentFrontmostApplicationName() ?? "-"
+        let bundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "-"
+        NSLog("Clipboard not recorded: \(reason) | app=\(appName) | bundle=\(bundleId)")
+    }
+
+    private func fetchMatchingRecords(for snapshot: ClipboardSnapshot) throws -> [ClipboardRecord] {
+        let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+
+        switch snapshot.kind {
+        case .image, .files:
+            request.predicate = NSPredicate(format: "contentHash == %@", snapshot.hash)
+        case .text, .link, .code, .colors, .unknown:
+            let predicates: [NSPredicate] = [
+                NSPredicate(format: "fullText == %@", snapshot.fullText ?? snapshot.displayText),
+                NSPredicate(format: "contentHash == %@", snapshot.hash)
+            ]
+            request.predicate = NSCompoundPredicate(orPredicateWithSubpredicates: predicates)
+        }
+
+        request.fetchBatchSize = 32
+        return try context.fetch(request)
+    }
+
+    private static func preferredDuplicateOrder(_ lhs: ClipboardRecord, _ rhs: ClipboardRecord) -> Bool {
+        if lhs.isPinned != rhs.isPinned {
+            return lhs.isPinned && !rhs.isPinned
+        }
+
+        let lhsDate = lhs.createdAt ?? lhs.updatedAt ?? .distantPast
+        let rhsDate = rhs.createdAt ?? rhs.updatedAt ?? .distantPast
+        if lhsDate != rhsDate {
+            return lhsDate < rhsDate
+        }
+
+        return lhs.objectID.uriRepresentation().absoluteString < rhs.objectID.uriRepresentation().absoluteString
+    }
+
+    private func update(_ record: ClipboardRecord, with snapshot: ClipboardSnapshot) {
+        let previousKind = record.kind
+
+        record.updatedAt = Date()
+        record.contentTypeRaw = snapshot.kind.rawValue
+        record.displayText = snapshot.displayText
+        record.fullText = snapshot.fullText
+        record.imagePath = snapshot.imagePath
+        if let assetPath = snapshot.assetPath {
+            record.setValue(assetPath, forKey: "assetPath")
+        }
+        if let thumbnailPath = snapshot.thumbnailPath {
+            record.setValue(thumbnailPath, forKey: "thumbnailPath")
+        }
+        record.sourceAppName = snapshot.sourceAppName
+        record.sourceBundleId = snapshot.sourceBundleId
+        record.contentHash = snapshot.hash
+
+        if snapshot.kind == .link,
+           let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText) {
+            record.linkHostValue = url.host?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if previousKind != .link {
+                record.linkTitleValue = nil
+                record.linkIconDataValue = nil
+                record.linkMetadataCheckedAtValue = nil
+            }
+        } else {
+            record.linkHostValue = nil
+            record.linkTitleValue = nil
+            record.linkIconDataValue = nil
+            record.linkMetadataCheckedAtValue = nil
         }
     }
 
@@ -369,7 +503,12 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private static func hash(kind: ClipboardContentKind, text: String) -> String {
-        hash(kind: kind, data: Data(text.utf8))
+        switch kind {
+        case .image, .files:
+            return hash(kind: kind, data: Data(text.utf8))
+        case .text, .link, .code, .colors, .unknown:
+            return text
+        }
     }
 
     private static func thumbnailData(from imageData: Data, maxPixelSize: CGFloat) -> Data? {

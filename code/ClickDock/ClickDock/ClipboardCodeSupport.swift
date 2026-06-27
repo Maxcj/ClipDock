@@ -11,6 +11,7 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
     case plain
     case json
     case swift
+    case java
     case javascript
     case typescript
     case sql
@@ -28,6 +29,7 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
         case .plain: return "Plain Text"
         case .json: return "JSON"
         case .swift: return "Swift"
+        case .java: return "Java"
         case .javascript: return "JavaScript"
         case .typescript: return "TypeScript"
         case .sql: return "SQL"
@@ -55,6 +57,7 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
         case .plain: return Color.secondary
         case .json: return Color(red: 0.14, green: 0.58, blue: 0.86)
         case .swift: return Color(red: 0.95, green: 0.49, blue: 0.16)
+        case .java: return Color(red: 0.87, green: 0.35, blue: 0.16)
         case .javascript: return Color(red: 0.85, green: 0.64, blue: 0.14)
         case .typescript: return Color(red: 0.12, green: 0.47, blue: 0.78)
         case .sql: return Color(red: 0.53, green: 0.35, blue: 0.91)
@@ -66,18 +69,37 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
         case .yaml: return Color(red: 0.62, green: 0.40, blue: 0.87)
         }
     }
+
+    var iconSymbolName: String {
+        switch self {
+        case .plain: return "doc.plaintext"
+        case .json: return "curlybraces"
+        case .swift: return "swift"
+        case .java: return "mug.fill"
+        case .javascript: return "curlybraces"
+        case .typescript: return "curlybraces"
+        case .sql: return "tablecells"
+        case .shell: return "terminal"
+        case .html: return "chevron.left.forwardslash.chevron.right"
+        case .css: return "curlybraces"
+        case .python: return "doc.text"
+        case .xml: return "chevron.left.forwardslash.chevron.right"
+        case .yaml: return "doc.text"
+        }
+    }
 }
 
 enum ClipboardCodeLanguageDetector {
     static func detect(from text: String) -> ClipboardCodeLanguage {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.count <= 2000 else { return .plain }
+        guard !trimmed.isEmpty else { return .plain }
 
         if isJSON(trimmed) { return .json }
         if isXML(trimmed) { return .xml }
         if isHTML(trimmed) { return .html }
         if isSQL(trimmed) { return .sql }
         if isSwift(trimmed) { return .swift }
+        if isJava(trimmed) { return .java }
         if isJavaScript(trimmed) { return .javascript }
         if isTypeScript(trimmed) { return .typescript }
         if isShell(trimmed) { return .shell }
@@ -112,13 +134,40 @@ enum ClipboardCodeLanguageDetector {
         return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
     }
 
+    private static func isJava(_ text: String) -> Bool {
+        let markers = [
+            "package ",
+            "import java.",
+            "public class ",
+            "public interface ",
+            "public static void main",
+            "System.out.println",
+            "implements ",
+            "extends ",
+            "new "
+        ]
+        return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
+    }
+
     private static func isJavaScript(_ text: String) -> Bool {
         let markers = ["const ", "let ", "var ", "function ", "=>", "export ", "import ", "document.", "window."]
         return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
     }
 
     private static func isTypeScript(_ text: String) -> Bool {
-        let markers = ["interface ", ": string", ": number", "type ", "React.", "export ", "import "]
+        let markers = [
+            "interface ",
+            "enum ",
+            "type ",
+            "export ",
+            "import ",
+            "from ",
+            ": string",
+            ": number",
+            "readonly ",
+            "implements ",
+            " as "
+        ]
         return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
     }
 
@@ -203,6 +252,10 @@ enum ClipboardCodeHighlighter {
             applyKeywordHighlights(to: &attributed, text: line, keywords: swiftKeywords, color: Color(red: 0.56, green: 0.34, blue: 0.92), bold: true)
             applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
             applyCommentHighlights(to: &attributed, text: line, prefix: "//", color: .secondary)
+        case .java:
+            applyKeywordHighlights(to: &attributed, text: line, keywords: javaKeywords, color: Color(red: 0.56, green: 0.34, blue: 0.92), bold: true)
+            applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
+            applyCommentHighlights(to: &attributed, text: line, prefix: "//", color: .secondary)
         case .sql:
             applyKeywordHighlights(to: &attributed, text: line, keywords: sqlKeywords, color: Color(red: 0.17, green: 0.48, blue: 0.95), bold: true)
             applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
@@ -220,6 +273,13 @@ enum ClipboardCodeHighlighter {
         "actor", "as", "async", "await", "case", "catch", "class", "continue", "default", "defer", "do", "else",
         "enum", "extension", "for", "func", "guard", "if", "import", "in", "init", "let", "nil", "protocol",
         "return", "self", "static", "struct", "switch", "throw", "throws", "try", "var", "where", "while"
+    ]
+
+    private static let javaKeywords = [
+        "abstract", "boolean", "break", "byte", "case", "catch", "class", "continue", "default", "do", "double",
+        "else", "extends", "final", "finally", "float", "for", "if", "implements", "import", "instanceof", "int",
+        "interface", "long", "new", "package", "private", "protected", "public", "return", "static", "strictfp",
+        "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try", "void", "volatile", "while"
     ]
 
     private static let sqlKeywords = [
@@ -268,10 +328,11 @@ enum ClipboardCodeHighlighter {
     }
 
     private static func applyRange(to attributed: inout AttributedString, text: String, start: String.Index, end: String.Index, color: Color, bold: Bool) {
-        guard let lower = AttributedString.Index(start, within: attributed),
-              let upper = AttributedString.Index(end, within: attributed) else {
-            return
-        }
+        let lowerOffset = text.distance(from: text.startIndex, to: start)
+        let upperOffset = text.distance(from: text.startIndex, to: end)
+
+        let lower = attributed.index(attributed.startIndex, offsetByCharacters: lowerOffset)
+        let upper = attributed.index(attributed.startIndex, offsetByCharacters: upperOffset)
         let attributedRange = lower..<upper
         attributed[attributedRange].foregroundColor = color
         if bold {

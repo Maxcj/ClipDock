@@ -203,7 +203,6 @@ struct SimpleClipboardWorkspaceView: View {
 
     private func togglePin(_ record: ClipboardRecord) {
         record.isPinned.toggle()
-        record.updatedAt = Date()
         saveContext()
     }
 

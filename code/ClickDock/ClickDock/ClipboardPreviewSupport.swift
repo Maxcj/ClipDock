@@ -152,3 +152,67 @@ struct FileDetailPreview: View {
         }
     }
 }
+
+struct LinkDetailPreview: View {
+    let record: ClipboardRecord
+    let subtitleFontSize: CGFloat
+    let footerFontSize: CGFloat
+    let iconSize: CGFloat
+    let height: CGFloat
+
+    var body: some View {
+        HStack(spacing: 18) {
+            websiteIcon
+                .frame(width: max(120, iconSize + 24), height: height)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(record.rowSubtitle)
+                    .font(.system(size: 28, weight: .semibold))
+                    .lineLimit(3)
+
+                Text(record.previewTitle)
+                    .font(.system(size: subtitleFontSize))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+
+                Text(record.previewSubtitle)
+                    .font(.system(size: footerFontSize, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 0)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .frame(height: height, alignment: .center)
+    }
+
+    @ViewBuilder
+    private var websiteIcon: some View {
+        if let icon = record.websiteIconImage {
+            ZStack {
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(Color.white.opacity(0.22))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+
+                Image(nsImage: icon)
+                    .resizable()
+                    .interpolation(.high)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: iconSize, height: iconSize)
+            }
+        } else {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(record.kind.accent.opacity(0.12))
+                .overlay(
+                    Image(systemName: "globe")
+                        .font(.system(size: iconSize * 0.38, weight: .regular))
+                        .foregroundStyle(record.kind.accent)
+                )
+        }
+    }
+}
