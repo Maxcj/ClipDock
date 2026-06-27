@@ -6,15 +6,15 @@
         <description>ClipDock release feed for Sparkle automatic updates.</description>
         <language>en</language>
         <item>
-            <title>0.9.2</title>
-            <pubDate>Fri, 26 Jun 2026 17:12:45 +0000</pubDate>
+            <title>0.9.3</title>
+            <pubDate>Sat, 27 Jun 2026 03:28:44 +0000</pubDate>
             <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.2/0.9.2.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>7</sparkle:version>
-            <sparkle:shortVersionString>0.9.2</sparkle:shortVersionString>
+            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.3/0.9.3.html</sparkle:fullReleaseNotesLink>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>0.9.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.2/0.9.2.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v0.9.2/ClipDock-0.9.2-macOS-universal.zip" length="4594595" type="application/octet-stream" sparkle:edSignature="/NTLPLtfREfxvdzULe3EfwGYY9dqybj2gdM6z+eD+9BCi6qpHBwHgyyw3Mjb8z+UM4rx1NxEce/PRDfEbrlCDA=="/>
+            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.3/0.9.3.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v0.9.3/ClipDock-0.9.3-macOS-universal.zip" length="4771542" type="application/octet-stream" sparkle:edSignature="VH36VWKT9uZVXNINGYF+dCEh+c6Q7awZostsWYR6JAi6unXT3D6wrreAxkHmta9OtoXHtsx1A9JLY3CJzQ0cDQ=="/>
         </item>
         <item>
             <title>ClipDock 0.9.0</title>
