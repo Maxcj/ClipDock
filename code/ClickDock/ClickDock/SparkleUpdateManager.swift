@@ -8,7 +8,7 @@ import AppKit
 import Sparkle
 
 @MainActor
-final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate {
+final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
     private enum DefaultsKey {
         static let feedURL = "sparkle.feedURL"
         static let ignoredVersion = "sparkle.ignoredVersion"
@@ -36,7 +36,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         SPUStandardUpdaterController(
             startingUpdater: false,
             updaterDelegate: self,
-            userDriverDelegate: nil
+            userDriverDelegate: self
         )
     }()
 
@@ -188,6 +188,19 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
     func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
         handleNoUpdateFound()
+    }
+
+    var supportsGentleScheduledUpdateReminders: Bool {
+        true
+    }
+
+    func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+        true
+    }
+
+    func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
+        // Keep Sparkle's standard scheduled update flow; the delegate only advertises support
+        // so background checks can schedule without emitting the gentle-reminders warning.
     }
 
     private func handleNoUpdateFound() {

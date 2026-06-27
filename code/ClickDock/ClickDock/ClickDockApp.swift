@@ -153,7 +153,9 @@ private struct StatusBarMenuView: View {
         }
 
         Button(localizer.text(.settings)) {
-            NSApp.activate(ignoringOtherApps: true)
+            if !NSApp.isActive {
+                NSApp.activate(ignoringOtherApps: true)
+            }
             openWindow(id: "settings")
         }
 

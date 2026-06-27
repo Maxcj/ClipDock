@@ -34,7 +34,7 @@ struct ContentView: View {
                     selectedRecordID: $selectedRecordID,
                     containerSize: proxy.size,
                     onOpenSettings: {
-                        NSApp.activate(ignoringOtherApps: true)
+                        activateAppIfNeeded()
                         openWindow(id: "settings")
                     }
                 )
@@ -137,9 +137,15 @@ struct ContentView: View {
     private func showMainWindow() {
         guard let windowRef else { return }
 
+        activateAppIfNeeded()
+        DispatchQueue.main.async {
+            windowRef.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    private func activateAppIfNeeded() {
+        guard !NSApp.isActive else { return }
         NSApp.activate(ignoringOtherApps: true)
-        windowRef.makeKeyAndOrderFront(nil)
-        windowRef.orderFrontRegardless()
     }
 
 }

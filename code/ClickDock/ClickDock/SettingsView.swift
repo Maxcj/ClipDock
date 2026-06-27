@@ -119,9 +119,10 @@ struct SettingsView: View {
                 guard !hasConfiguredWindow else { return }
                 hasConfiguredWindow = true
                 configureSettingsWindow(window)
-                NSApp.activate(ignoringOtherApps: true)
-                window.makeKeyAndOrderFront(nil)
-                window.orderFrontRegardless()
+                activateAppIfNeeded()
+                DispatchQueue.main.async {
+                    window.makeKeyAndOrderFront(nil)
+                }
             }
         )
         .onAppear {
@@ -163,6 +164,11 @@ struct SettingsView: View {
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
+    }
+
+    private func activateAppIfNeeded() {
+        guard !NSApp.isActive else { return }
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @ViewBuilder
