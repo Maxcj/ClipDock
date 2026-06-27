@@ -109,39 +109,103 @@
 		C1E5F5E62FE950CD00571FED /* ClickDock */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000001 /* App */,
+				F10000000000000000000002 /* Data */,
+				F10000000000000000000003 /* Clipboard */,
+				F10000000000000000000004 /* Categories */,
+				F10000000000000000000005 /* Views */,
+				F10000000000000000000006 /* Settings */,
+				F10000000000000000000007 /* Support */,
+				F10000000000000000000008 /* Resources */,
+			);
+			path = ClickDock;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
 				C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */,
 				C1E5F5E92FE950CD00571FED /* ContentView.swift */,
 				D93A11002FF2000100A1B2C3 /* AppLocalization.swift */,
-				D93A11022FF2000100A1B2C3 /* WindowSupport.swift */,
+				C1E5F5F52FE950D000571FED /* ClickDock.entitlements */,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000002 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				C1E5F5F02FE950D000571FED /* Persistence.swift */,
+				C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */,
+			);
+			name = Data;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000003 /* Clipboard */ = {
+			isa = PBXGroup;
+			children = (
 				D93A11042FF2000100A1B2C3 /* ClipboardSupport.swift */,
-				A40000000000000000000002 /* ClipboardCategorySupport.swift */,
 				D93A11062FF2000100A1B2C3 /* ClipboardServices.swift */,
+				C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */,
+				E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */,
+				9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */,
+				D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */,
+				A30000000000000000000006 /* ClipboardCodeSupport.swift */,
 				A30000000000000000000004 /* ClipboardColorModels.swift */,
 				A30000000000000000000002 /* ClipboardColorSupport.swift */,
-				A30000000000000000000006 /* ClipboardCodeSupport.swift */,
+			);
+			name = Clipboard;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000004 /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000002 /* ClipboardCategorySupport.swift */,
+				A40000000000000000000004 /* ClipboardCategoryViews.swift */,
+			);
+			name = Categories;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000005 /* Views */ = {
+			isa = PBXGroup;
+			children = (
 				D93A110A2FF2000100A1B2C3 /* MainWindowSupport.swift */,
 				D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */,
 				D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */,
 				D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */,
-				D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */,
-				D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */,
 				D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */,
+				D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */,
+			);
+			name = Views;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000006 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
 				D93A11082FF2000100A1B2C3 /* SettingsView.swift */,
 				D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */,
-				A40000000000000000000004 /* ClipboardCategoryViews.swift */,
-				A10000000000000000000001 /* SparkleUpdateManager.swift */,
-				C1E5F5EB2FE950D000571FED /* Assets.xcassets */,
-				D91B6F742FF0000100A1B2C3 /* Localizable.strings */,
-				C1E5F5F02FE950D000571FED /* Persistence.swift */,
-				C1E5F5F52FE950D000571FED /* ClickDock.entitlements */,
-				C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */,
-				C1E5F5ED2FE950D000571FED /* Preview Content */,
-				DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */,
-				E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */,
-				9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */,
-				C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */,
 			);
-			path = ClickDock;
+			name = Settings;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000007 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				D93A11022FF2000100A1B2C3 /* WindowSupport.swift */,
+				DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */,
+				A10000000000000000000001 /* SparkleUpdateManager.swift */,
+			);
+			name = Support;
+			sourceTree = "<group>";
+		};
+		F10000000000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				C1E5F5EB2FE950D000571FED /* Assets.xcassets */,
+				C1E5F5ED2FE950D000571FED /* Preview Content */,
+				D91B6F742FF0000100A1B2C3 /* Localizable.strings */,
+			);
+			name = Resources;
 			sourceTree = "<group>";
 		};
 		C1E5F5ED2FE950D000571FED /* Preview Content */ = {
