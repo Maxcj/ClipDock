@@ -7,14 +7,14 @@
         <language>en</language>
         <item>
             <title>0.9.4</title>
-            <pubDate>Sat, 27 Jun 2026 07:46:43 +0000</pubDate>
+            <pubDate>Sat, 27 Jun 2026 07:57:19 +0000</pubDate>
             <link>https://github.com/maxcj/ClipDock</link>
             <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.4/0.9.4.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>8</sparkle:version>
+            <sparkle:version>9</sparkle:version>
             <sparkle:shortVersionString>0.9.4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
             <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/0.9.4/0.9.4.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v0.9.4/ClipDock-0.9.4-macOS-universal.zip" length="5147148" type="application/octet-stream" sparkle:edSignature="ddaprQpXaKy5Mt2Jz9r7iYXyC/GI1qfJTmeJ5dqA7ouLgs4S2dFrmeMI5TP7jp9o2qc2Y6tfgaUB0HHFa2N2Bg=="/>
+            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v0.9.4/ClipDock-0.9.4-macOS-universal.zip" length="5147149" type="application/octet-stream" sparkle:edSignature="CVf0cjOJPLrfDvkR5LbVcIVRufvLW1hs1CE6GH8HUYamCy3AfjAqRCvtZq7wNTJgsk+nukF3egmWI9nidb8yBg=="/>
         </item>
         <item>
             <title>ClipDock 0.9.0</title>
