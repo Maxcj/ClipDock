@@ -6,6 +6,7 @@
 import SwiftUI
 import CoreData
 import AppKit
+import UniformTypeIdentifiers
 
 private enum CategoryPresetPalette {
     static let iconNames: [String] = [
@@ -90,6 +91,7 @@ struct ClipboardCategorySettingsView: View {
     @State private var editingCategory: ClipboardCategory?
     @State private var deleteCategory: ClipboardCategory?
     @State private var showResetAlert = false
+    @State private var draggedCategoryID: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -149,25 +151,19 @@ struct ClipboardCategorySettingsView: View {
                 subtitle: localizer.text(.noCustomCategoriesSubtitle)
             )
         } else {
-            ForEach(Array(categories.enumerated()), id: \.element.objectID) { index, category in
-                categoryRow(category, index: index)
+            ForEach(categories, id: \.objectID) { category in
+                categoryRow(category)
             }
         }
     }
 
-    private func categoryRow(_ category: ClipboardCategory, index: Int) -> some View {
-        ClipboardCategoryRow(
+    private func categoryRow(_ category: ClipboardCategory) -> some View {
+        let canReorder = category.systemCategoryKey != .all
+
+        return ClipboardCategoryRow(
             category: category,
-            canMoveUp: index > 1,
-            canMoveDown: index < categories.count - 1 && category.systemCategoryKey != .all,
             canEdit: category.categoryType == .custom,
             canDelete: category.categoryType == .custom,
-            onMoveUp: {
-                ClipboardCategoryManager.move(category, by: -1, context: viewContext)
-            },
-            onMoveDown: {
-                ClipboardCategoryManager.move(category, by: 1, context: viewContext)
-            },
             onToggleVisibility: {
                 ClipboardCategoryManager.toggleVisibility(category, context: viewContext)
             },
@@ -178,11 +174,27 @@ struct ClipboardCategorySettingsView: View {
                 deleteCategory = category
             }
         )
-        .overlay(alignment: .bottom) {
-            if index < categories.count - 1 {
-                Divider().padding(.leading, 56)
+        .opacity(draggedCategoryID == category.id ? 0.72 : 1.0)
+        .contentShape(Rectangle())
+        .onDrag {
+            guard canReorder, let id = category.id else {
+                return NSItemProvider()
             }
+
+            draggedCategoryID = id
+            return NSItemProvider(object: id.uuidString as NSString)
+        } preview: {
+            ClipboardCategoryRowDragPreview(category: category)
         }
+        .onDrop(
+            of: [UTType.text.identifier],
+            delegate: ClipboardCategoryReorderDropDelegate(
+                target: category,
+                categories: Array(categories),
+                draggedCategoryID: $draggedCategoryID,
+                context: viewContext
+            )
+        )
     }
 
     private var addCategoryButton: some View {
@@ -607,18 +619,16 @@ struct ClipboardCategoryBadgeStrip: View {
 
 private struct ClipboardCategoryRow: View {
     let category: ClipboardCategory
-    let canMoveUp: Bool
-    let canMoveDown: Bool
     let canEdit: Bool
     let canDelete: Bool
-    let onMoveUp: () -> Void
-    let onMoveDown: () -> Void
     let onToggleVisibility: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
+            reorderHandle
+
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(category.swiftUIColor.opacity(0.12))
@@ -632,57 +642,156 @@ private struct ClipboardCategoryRow: View {
                 Text(category.resolvedName)
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
 
-            HStack(spacing: 10) {
-                if canMoveUp {
-                    Button(action: onMoveUp) {
-                        Image(systemName: "chevron.up")
+            if canEdit || canDelete {
+                Menu {
+                    if canEdit {
+                        Button(localizerText(.edit)) {
+                            onEdit()
+                        }
                     }
-                    .buttonStyle(SettingsSecondaryButtonStyle())
-                }
 
-                if canMoveDown {
-                    Button(action: onMoveDown) {
-                        Image(systemName: "chevron.down")
+                    if canDelete {
+                        Button(localizerText(.delete), role: .destructive) {
+                            onDelete()
+                        }
                     }
-                    .buttonStyle(SettingsSecondaryButtonStyle())
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(nsColor: .labelColor))
+                        .symbolRenderingMode(.monochrome)
+                        .frame(width: 24, height: 24)
                 }
-
-                Toggle("", isOn: Binding(
-                    get: { category.isVisible },
-                    set: { _ in onToggleVisibility() }
-                ))
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .disabled(category.systemCategoryKey == .all)
-
-                if canEdit {
-                    Button(localizerText(.edit)) {
-                        onEdit()
-                    }
-                    .buttonStyle(SettingsActionButtonStyle(kind: .neutral))
-                    .frame(minWidth: 72)
-                }
-
-                if canDelete {
-                    Button(localizerText(.delete)) {
-                        onDelete()
-                    }
-                    .buttonStyle(SettingsActionButtonStyle(kind: .destructive))
-                    .frame(minWidth: 72)
-                }
+                .menuStyle(.borderlessButton)
+                .buttonStyle(.plain)
+                .foregroundStyle(Color(nsColor: .labelColor))
             }
+
+            Toggle("", isOn: Binding(
+                get: { category.isVisible },
+                set: { _ in onToggleVisibility() }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .disabled(category.systemCategoryKey == .all)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
+    }
+
+    private var reorderHandle: some View {
+        let canReorder = category.systemCategoryKey != .all
+
+        return ReorderHandleIcon(isEnabled: canReorder)
+            .frame(width: 20, height: 20)
     }
 
     private func localizerText(_ key: AppTextKey) -> String {
         AppLocalizer.current.text(key)
     }
+}
+
+private struct ReorderHandleIcon: NSViewRepresentable {
+    let isEnabled: Bool
+
+    func makeNSView(context: Context) -> NSImageView {
+        let view = NonWindowDraggingImageView()
+        view.image = NSImage(
+            systemSymbolName: "line.3.horizontal",
+            accessibilityDescription: nil
+        )
+        view.contentTintColor = isEnabled ? .secondaryLabelColor : .tertiaryLabelColor
+        view.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+        view.imageScaling = .scaleProportionallyUpOrDown
+        view.animates = false
+        return view
+    }
+
+    func updateNSView(_ nsView: NSImageView, context: Context) {
+        nsView.image = NSImage(
+            systemSymbolName: "line.3.horizontal",
+            accessibilityDescription: nil
+        )
+        nsView.contentTintColor = isEnabled ? .secondaryLabelColor : .tertiaryLabelColor
+        nsView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+    }
+
+    private final class NonWindowDraggingImageView: NSImageView {
+        override var mouseDownCanMoveWindow: Bool { false }
+    }
+}
+
+private struct ClipboardCategoryRowDragPreview: View {
+    let category: ClipboardCategory
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20, height: 20)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(category.swiftUIColor.opacity(0.14))
+                Image(systemName: category.resolvedIconName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(category.swiftUIColor)
+            }
+            .frame(width: 28, height: 28)
+
+            Text(category.resolvedName)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 0)
+
+            Toggle("", isOn: .constant(category.isVisible))
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(width: 420)
+        .background(
+            RoundedRectangle(cornerRadius: 0, style: .continuous)
+                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.96))
+        )
+    }
+}
+
+private struct ClipboardCategoryReorderDropDelegate: DropDelegate {
+    let target: ClipboardCategory
+    let categories: [ClipboardCategory]
+    @Binding var draggedCategoryID: UUID?
+    let context: NSManagedObjectContext
+
+    func dropEntered(info: DropInfo) {
+        guard
+            let draggedCategoryID,
+            draggedCategoryID != target.id,
+            let draggedCategory = categories.first(where: { $0.id == draggedCategoryID }),
+            draggedCategory.systemCategoryKey != .all,
+            target.systemCategoryKey != .all
+        else {
+            return
+        }
+
+        _ = ClipboardCategoryManager.move(draggedCategory, before: target, context: context)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedCategoryID = nil
+        return true
+    }
+
+    func dropExited(info: DropInfo) {}
 }
 
 private func settingsSection<Content: View>(
