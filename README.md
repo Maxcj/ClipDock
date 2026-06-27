@@ -27,7 +27,7 @@ It lives in the menu bar, stays out of the Dock, and lets you bring up the main 
 - Assign clipboard items to up to 3 custom categories
 - One-click color copy as HEX, RGB, or RGBA
 - Code language detection and lightweight syntax highlighting
-- Code actions for Copy as Markdown, Pretty JSON, and Minify JSON
+- Code actions for Copy as Markdown
 - Quick actions for copy, pin, delete, and exclude-source-app
 - Per-item metadata for faster scanning
 - Localized UI in English and Simplified Chinese

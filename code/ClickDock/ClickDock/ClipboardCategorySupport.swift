@@ -396,59 +396,6 @@ final class ClipboardCategoryManager {
         }
     }
 
-    static func move(_ category: ClipboardCategory, by offset: Int, context: NSManagedObjectContext) {
-        guard category.systemCategoryKey != .all else { return }
-
-        context.performAndWait {
-            let siblings = fetchCategories(context: context)
-            guard let currentIndex = siblings.firstIndex(where: { $0.objectID == category.objectID }) else {
-                return
-            }
-
-            let newIndex = max(0, min(siblings.count - 1, currentIndex + offset))
-            guard newIndex != currentIndex else { return }
-            var ordered = siblings
-            let item = ordered.remove(at: currentIndex)
-            ordered.insert(item, at: newIndex)
-            normalizeSortOrder(for: ordered, context: context)
-        }
-    }
-
-    @discardableResult
-    static func move(_ category: ClipboardCategory, before target: ClipboardCategory, context: NSManagedObjectContext) -> Bool {
-        guard category.objectID != target.objectID else { return false }
-        guard category.systemCategoryKey != .all else { return false }
-        guard target.systemCategoryKey != .all else { return false }
-
-        var didMove = false
-
-        context.performAndWait {
-            let siblings = fetchCategories(context: context)
-            guard let currentIndex = siblings.firstIndex(where: { $0.objectID == category.objectID }),
-                  let targetIndex = siblings.firstIndex(where: { $0.objectID == target.objectID }) else {
-                return
-            }
-
-            var insertIndex = targetIndex
-            if currentIndex < targetIndex {
-                insertIndex -= 1
-            }
-
-            if currentIndex == insertIndex {
-                return
-            }
-
-            var ordered = siblings
-            let item = ordered.remove(at: currentIndex)
-            insertIndex = max(1, min(ordered.count, insertIndex))
-            ordered.insert(item, at: insertIndex)
-            normalizeSortOrder(for: ordered, context: context)
-            didMove = true
-        }
-
-        return didMove
-    }
-
     static func canAssign(record: ClipboardRecord, to category: ClipboardCategory, context: NSManagedObjectContext) -> Bool {
         guard category.categoryType == .custom else { return false }
 
@@ -588,19 +535,6 @@ final class ClipboardCategoryManager {
         let values = (try? context.fetch(request)) ?? []
         let maxValue = max(values.map(\.sortOrder).max() ?? (customSortOrderBase - 10), customSortOrderBase - 10)
         return maxValue + 10
-    }
-
-    private static func normalizeSortOrder(for categories: [ClipboardCategory], context: NSManagedObjectContext) {
-        for (index, category) in categories.enumerated() {
-            category.sortOrder = Int32(index * 10)
-            category.updatedAt = Date()
-        }
-
-        do {
-            try context.save()
-        } catch {
-            NSLog("Failed to normalize clipboard category sort order: \(error.localizedDescription)")
-        }
     }
 
     static func saveOrderedCategories(
