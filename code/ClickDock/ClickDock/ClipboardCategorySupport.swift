@@ -44,8 +44,8 @@ struct SystemClipboardCategoryDefinition: Identifiable {
         .init(key: .links, defaultName: "Links", iconName: "link", colorHex: "#10B981", defaultVisible: true, sortOrder: 20),
         .init(key: .images, defaultName: "Images", iconName: "photo", colorHex: "#3B82F6", defaultVisible: true, sortOrder: 30),
         .init(key: .code, defaultName: "Code", iconName: "chevron.left.forwardslash.chevron.right", colorHex: "#8B5CF6", defaultVisible: true, sortOrder: 40),
-        .init(key: .files, defaultName: "Files", iconName: "doc", colorHex: "#F59E0B", defaultVisible: true, sortOrder: 50),
-        .init(key: .colors, defaultName: "Colors", iconName: "paintpalette", colorHex: "#FB923C", defaultVisible: false, sortOrder: 60),
+        .init(key: .files, defaultName: "Files", iconName: "doc", colorHex: "#F59E0B", defaultVisible: false, sortOrder: 50),
+        .init(key: .colors, defaultName: "Colors", iconName: "paintpalette", colorHex: "#FB923C", defaultVisible: true, sortOrder: 60),
         .init(key: .other, defaultName: "Other", iconName: "ellipsis", colorHex: "#64748B", defaultVisible: false, sortOrder: 70)
     ]
 
@@ -391,6 +391,8 @@ final class ClipboardCategoryManager {
     }
 
     static func move(_ category: ClipboardCategory, by offset: Int, context: NSManagedObjectContext) {
+        guard category.systemCategoryKey != .all else { return }
+
         context.performAndWait {
             let siblings = fetchCategories(context: context)
             guard let currentIndex = siblings.firstIndex(where: { $0.objectID == category.objectID }) else {
@@ -404,6 +406,41 @@ final class ClipboardCategoryManager {
             ordered.insert(item, at: newIndex)
             normalizeSortOrder(for: ordered, context: context)
         }
+    }
+
+    @discardableResult
+    static func move(_ category: ClipboardCategory, before target: ClipboardCategory, context: NSManagedObjectContext) -> Bool {
+        guard category.objectID != target.objectID else { return false }
+        guard category.systemCategoryKey != .all else { return false }
+        guard target.systemCategoryKey != .all else { return false }
+
+        var didMove = false
+
+        context.performAndWait {
+            let siblings = fetchCategories(context: context)
+            guard let currentIndex = siblings.firstIndex(where: { $0.objectID == category.objectID }),
+                  let targetIndex = siblings.firstIndex(where: { $0.objectID == target.objectID }) else {
+                return
+            }
+
+            var insertIndex = targetIndex
+            if currentIndex < targetIndex {
+                insertIndex -= 1
+            }
+
+            if currentIndex == insertIndex {
+                return
+            }
+
+            var ordered = siblings
+            let item = ordered.remove(at: currentIndex)
+            insertIndex = max(1, min(ordered.count, insertIndex))
+            ordered.insert(item, at: insertIndex)
+            normalizeSortOrder(for: ordered, context: context)
+            didMove = true
+        }
+
+        return didMove
     }
 
     static func canAssign(record: ClipboardRecord, to category: ClipboardCategory, context: NSManagedObjectContext) -> Bool {
