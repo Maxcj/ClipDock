@@ -33,9 +33,7 @@ struct ClipboardDetailInspector: View {
                 }
 
                 HStack(spacing: layout.detailButtonGap) {
-                    detailButton(title: localizer.text(.copy), icon: "doc.on.doc", action: onCopy)
                     detailButton(title: localizer.text(.pin), icon: record.isPinned ? "pin.fill" : "pin", action: onTogglePin)
-                    detailButton(title: localizer.text(.categories), icon: "folder.badge.gearshape", action: onManageCategories)
                     if record.sourceBundleId?.isEmpty == false {
                         detailButton(title: localizer.text(.excludeApp), icon: "hand.raised", action: onExcludeSourceApp)
                     }
@@ -275,10 +273,15 @@ struct ClipboardDetailInspector: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             .font(.system(size: layout.detailButtonSize, weight: .medium))
             .foregroundStyle(isDestructive ? Color.red : .primary)
             .frame(maxWidth: .infinity)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .allowsTightening(true)
             .frame(height: layout.detailActionHeight)
             .background(Color.white.opacity(0.20))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

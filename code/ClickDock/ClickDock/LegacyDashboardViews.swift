@@ -199,6 +199,7 @@ struct ClipboardDashboardView: View {
     private var displayOrderedRecords: [ClipboardRecord] {
         records
             .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
+            .sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func copy(_ record: ClipboardRecord) {
@@ -208,6 +209,7 @@ struct ClipboardDashboardView: View {
 
     private func togglePin(_ record: ClipboardRecord) {
         record.isPinned.toggle()
+        record.pinnedAtValue = record.isPinned ? Date() : nil
         saveContext()
     }
 

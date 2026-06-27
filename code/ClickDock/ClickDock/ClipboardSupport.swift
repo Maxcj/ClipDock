@@ -941,8 +941,8 @@ func clipboardRecordDisplaysBefore(_ lhs: ClipboardRecord, _ rhs: ClipboardRecor
         return lhs.isPinned && !rhs.isPinned
     }
 
-    let lhsAnchor = lhs.isPinned ? (lhs.updatedAt ?? lhs.createdAt ?? .distantPast) : (lhs.createdAt ?? .distantPast)
-    let rhsAnchor = rhs.isPinned ? (rhs.updatedAt ?? rhs.createdAt ?? .distantPast) : (rhs.createdAt ?? .distantPast)
+    let lhsAnchor = lhs.isPinned ? (lhs.pinnedAtValue ?? lhs.updatedAt ?? lhs.createdAt ?? .distantPast) : (lhs.createdAt ?? .distantPast)
+    let rhsAnchor = rhs.isPinned ? (rhs.pinnedAtValue ?? rhs.updatedAt ?? rhs.createdAt ?? .distantPast) : (rhs.createdAt ?? .distantPast)
     if lhsAnchor != rhsAnchor {
         return lhsAnchor > rhsAnchor
     }
@@ -959,6 +959,11 @@ extension ClipboardRecord {
     var assetPathValue: String? {
         get { value(forKey: "assetPath") as? String }
         set { setValue(newValue, forKey: "assetPath") }
+    }
+
+    var pinnedAtValue: Date? {
+        get { value(forKey: "pinnedAt") as? Date }
+        set { setValue(newValue, forKey: "pinnedAt") }
     }
 
     var linkHostValue: String? {

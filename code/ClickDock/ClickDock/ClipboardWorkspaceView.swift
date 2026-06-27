@@ -51,8 +51,9 @@ struct SimpleClipboardWorkspaceView: View {
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
         request.sortDescriptors = [
             NSSortDescriptor(key: "isPinned", ascending: false),
-            NSSortDescriptor(key: "updatedAt", ascending: false),
-            NSSortDescriptor(key: "createdAt", ascending: false)
+            NSSortDescriptor(key: "pinnedAt", ascending: false),
+            NSSortDescriptor(key: "createdAt", ascending: false),
+            NSSortDescriptor(key: "updatedAt", ascending: false)
         ]
         request.predicate = predicate
         request.fetchBatchSize = Self.fetchBatchSize
@@ -157,29 +158,30 @@ struct SimpleClipboardWorkspaceView: View {
 
     private var currentSelectedRecord: ClipboardRecord? {
         if let selectedRecordID,
-           let record = visibleRecords.first(where: { $0.objectID == selectedRecordID }) {
+           let record = displayOrderedRecords.first(where: { $0.objectID == selectedRecordID }) {
             return record
         }
-        return visibleRecords.first
+        return displayOrderedRecords.first
     }
 
-    private var visibleRecords: [ClipboardRecord] {
+    private var displayOrderedRecords: [ClipboardRecord] {
         records
             .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
+            .sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func syncSelection() {
-        guard !records.isEmpty else {
+        guard !displayOrderedRecords.isEmpty else {
             selectedRecordID = nil
             return
         }
 
         if let selectedRecordID,
-           visibleRecords.contains(where: { $0.objectID == selectedRecordID }) {
+           displayOrderedRecords.contains(where: { $0.objectID == selectedRecordID }) {
             return
         }
 
-        selectedRecordID = visibleRecords.first?.objectID
+        selectedRecordID = displayOrderedRecords.first?.objectID
     }
 
     private func syncSelectedImageCachePaths() {
@@ -196,11 +198,11 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     private func moveRecordSelection(by offset: Int) {
-        guard !records.isEmpty else { return }
+        guard !displayOrderedRecords.isEmpty else { return }
 
-        let currentIndex = records.firstIndex(where: { $0.objectID == selectedRecordID }) ?? records.startIndex
-        let nextIndex = min(max(records.index(currentIndex, offsetBy: offset, limitedBy: records.index(before: records.endIndex)) ?? currentIndex, records.startIndex), records.index(before: records.endIndex))
-        selectedRecordID = records[nextIndex].objectID
+        let currentIndex = displayOrderedRecords.firstIndex(where: { $0.objectID == selectedRecordID }) ?? displayOrderedRecords.startIndex
+        let nextIndex = min(max(displayOrderedRecords.index(currentIndex, offsetBy: offset, limitedBy: displayOrderedRecords.index(before: displayOrderedRecords.endIndex)) ?? currentIndex, displayOrderedRecords.startIndex), displayOrderedRecords.index(before: displayOrderedRecords.endIndex))
+        selectedRecordID = displayOrderedRecords[nextIndex].objectID
     }
 
     private func moveFilterSelection(by offset: Int) {
@@ -224,6 +226,7 @@ struct SimpleClipboardWorkspaceView: View {
 
     private func togglePin(_ record: ClipboardRecord) {
         record.isPinned.toggle()
+        record.pinnedAtValue = record.isPinned ? Date() : nil
         saveContext()
     }
 

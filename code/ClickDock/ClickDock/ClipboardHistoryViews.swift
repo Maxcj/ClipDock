@@ -130,8 +130,8 @@ struct ClipboardHistorySidebar: View {
     }
 
     private var visibleCategoryEntries: [CategoryChipEntry] {
-        let visibleSystem = categories
-            .filter { $0.categoryType == .system && ($0.isVisible || $0.systemCategoryKey == .all) }
+        categories
+            .filter { $0.isVisible || $0.systemCategoryKey == .all }
             .compactMap { category -> CategoryChipEntry? in
                 guard let selection = category.selection else { return nil }
                 return CategoryChipEntry(
@@ -141,26 +141,13 @@ struct ClipboardHistorySidebar: View {
                     accentColor: category.swiftUIColor
                 )
             }
-
-        let visibleCustom = categories
-            .filter { $0.categoryType == .custom && $0.isVisible }
-            .compactMap { category -> CategoryChipEntry? in
-                guard let selection = category.selection else { return nil }
-                return CategoryChipEntry(
-                    selection: selection,
-                    title: category.resolvedName,
-                    symbolName: category.resolvedIconName,
-                    accentColor: category.swiftUIColor
-                )
-            }
-
-        return visibleSystem + visibleCustom
     }
 
     private var groupedSections: [ClipboardHistorySection] {
         let calendar = Calendar.current
-        let pinnedRecords = records.filter(\.isPinned)
-        let unpinnedRecords = records.filter { !$0.isPinned }
+        let orderedRecords = records.sorted(by: clipboardRecordDisplaysBefore)
+        let pinnedRecords = orderedRecords.filter(\.isPinned)
+        let unpinnedRecords = orderedRecords.filter { !$0.isPinned }
         let dayKeys = Dictionary(grouping: unpinnedRecords, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
         let sortedDays = dayKeys.keys.sorted(by: >)
 
