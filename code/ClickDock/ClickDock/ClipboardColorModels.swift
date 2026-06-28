@@ -127,6 +127,11 @@ enum ClipboardColorDetector {
     }
 
     private static func parseHex(_ text: String) -> ClipboardColorValue? {
+        let hasLeadingHash = text.hasPrefix("#")
+        if !hasLeadingHash, text.rangeOfCharacter(from: CharacterSet.decimalDigits.inverted) == nil {
+            return nil
+        }
+
         let pattern = #"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"#
         guard let regex = try? NSRegularExpression(pattern: pattern),
               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),

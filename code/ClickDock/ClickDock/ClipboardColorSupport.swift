@@ -154,22 +154,21 @@ struct ClipboardColorDetailView: View {
                 Spacer(minLength: 0)
                 Image(systemName: copiedValueKey == key ? "checkmark.circle.fill" : "doc.on.doc")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(copiedValueKey == key ? Color.green : .secondary)
+                    .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(copiedValueKey == key ? Color.green.opacity(0.12) : Color.white.opacity(0.20))
+                    .fill(Color.white.opacity(0.20))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(copiedValueKey == key ? Color.green.opacity(0.32) : Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.16), value: copiedValueKey == key)
     }
 
     private func infoPill(text: String) -> some View {
