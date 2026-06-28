@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClipDock 0.9.7 Release Notes</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px 40px;
+        color: #1f2937;
+        background: #ffffff;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      .meta {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 20px 24px;
+        background: #fafafa;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ClipDock 0.9.7</h1>
+    <p class="meta">Release notes for the Sparkle-powered update channel.</p>
+
+    <div class="card">
+      <h2 class="section-title">本次更新</h2>
+      <p>ClipDock 0.9.7 修复了 Core Data 版本切换带来的复制崩溃，并进一步加固了剪贴板元数据访问，提升了整体稳定性。</p>
+      <ul>
+        <li>修正 Core Data 当前模型版本，避免复制时因旧模型缺少新字段而崩溃。</li>
+        <li>移除对剪贴板记录元数据的脆弱访问方式，降低运行时异常风险。</li>
+        <li>保留版本控制能力，同时让模型演进后的数据读取保持稳定。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">What’s New</h2>
+      <p>ClipDock 0.9.7 fixes the Core Data version mismatch that could crash during clipboard capture and further hardens metadata access for better stability.</p>
+      <ul>
+        <li>Fix the Core Data current version so clipboard capture no longer crashes on missing model fields.</li>
+        <li>Replace fragile metadata access patterns to reduce runtime exception risk.</li>
+        <li>Keep versioned models enabled while making evolved data reads stable.</li>
+      </ul>
+    </div>
+  </body>
+</html>
