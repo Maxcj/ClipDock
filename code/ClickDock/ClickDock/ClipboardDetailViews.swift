@@ -106,6 +106,7 @@ struct ClipboardDetailInspector: View {
             return AnyView(
                 AsyncDetailImageView(
                     imagePath: record.imagePath,
+                    initialImage: record.previewImage,
                     placeholderTitle: record.previewTitle,
                     maxPixelSize: layout.heroImageHeight * 2,
                     cornerRadius: 18,
@@ -262,16 +263,17 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.imageFormat), record.imageFormatLabel))
             rows.append((localizer.text(.resolution), record.imageResolutionLabel))
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
+            rows.append((localizer.text(.path), record.imagePathText))
         case .code:
             rows.append((localizer.text(.language), record.codeLanguage.title))
             rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
+            rows.append((localizer.text(.path), record.fileSubtitleText))
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))
         default:
             rows.append((localizer.text(.characters), "\(record.characterCount)"))
         }
 
-        rows.append((localizer.text(.type), record.kind.title))
         return rows
     }
 

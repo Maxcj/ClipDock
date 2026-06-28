@@ -577,7 +577,6 @@
 			children = (
 				C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */,
 			);
-			currentVersion = C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */;
 			path = ClickDock.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

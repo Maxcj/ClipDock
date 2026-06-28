@@ -8,6 +8,7 @@ import AppKit
 
 struct AsyncDetailImageView: View {
     let imagePath: String?
+    let initialImage: NSImage?
     let placeholderTitle: String
     let maxPixelSize: CGFloat
     let cornerRadius: CGFloat
@@ -22,6 +23,10 @@ struct AsyncDetailImageView: View {
         Group {
             if let image {
                 Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else if let initialImage {
+                Image(nsImage: initialImage)
                     .resizable()
                     .scaledToFit()
             } else {
@@ -41,6 +46,10 @@ struct AsyncDetailImageView: View {
         )
         .task(id: imagePath) {
             image = nil
+
+            if let initialImage {
+                image = initialImage
+            }
 
             let token = UUID()
             requestToken = token
@@ -106,7 +115,7 @@ struct FileDetailPreview: View {
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(3)
 
-                Text(record.fileStatusText)
+                Text(record.fileSubtitleText)
                     .font(.system(size: subtitleFontSize))
                     .foregroundStyle(.secondary)
 

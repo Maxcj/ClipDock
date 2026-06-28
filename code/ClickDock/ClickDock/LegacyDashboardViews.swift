@@ -492,6 +492,7 @@ struct ClipboardHeroDetailPanel: View {
             if record.kind == .image {
                 AsyncDetailImageView(
                     imagePath: record.imagePath,
+                    initialImage: record.previewImage,
                     placeholderTitle: record.previewTitle,
                     maxPixelSize: layout.heroPreviewMinHeight * 2,
                     cornerRadius: layout.mediumCornerRadius,

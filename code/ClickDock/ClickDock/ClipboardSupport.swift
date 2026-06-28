@@ -208,6 +208,10 @@ extension ClipboardRecord {
             return sourceAppDisplayName
         }
 
+        if kind == .files {
+            return fileSubtitleText
+        }
+
         if kind == .code {
             return codeLanguage.title
         }
@@ -269,7 +273,7 @@ extension ClipboardRecord {
         }
 
         if kind == .files {
-            return fileStatusText
+            return fileSubtitleText
         }
 
         if kind == .colors {
@@ -379,6 +383,35 @@ extension ClipboardRecord {
             return AppLocalizer.current.text(.originalFileNoLongerExists)
         }
         return AppLocalizer.current.text(.fileReady)
+    }
+
+    var fileSubtitleText: String {
+        guard kind == .files else { return "" }
+
+        if fileReferenceSet.hasMissingOriginalFiles {
+            return AppLocalizer.current.text(.originalFileNoLongerExists)
+        }
+
+        let filePaths = fileReferenceSet.displayPathText
+        if !filePaths.isEmpty {
+            return filePaths
+        }
+
+        return fileStatusText
+    }
+
+    var imagePathText: String {
+        guard kind == .image else { return "" }
+
+        if let imagePath, !imagePath.isEmpty {
+            return imagePath
+        }
+
+        if let thumbnailPathValue, !thumbnailPathValue.isEmpty {
+            return thumbnailPathValue
+        }
+
+        return "-"
     }
 
     var fileReferenceSet: ClipboardFileReferenceSet {
