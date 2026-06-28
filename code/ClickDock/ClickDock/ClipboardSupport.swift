@@ -306,10 +306,17 @@ extension ClipboardRecord {
     }
 
     var cachedImagePaths: [String] {
-        [imagePath, thumbnailPathValue].compactMap { path in
-            guard let path, !path.isEmpty else { return nil }
-            return path
+        var paths: [String] = []
+
+        if let imagePath, !imagePath.isEmpty {
+            paths.append(imagePath)
         }
+
+        if let thumbnailPath, !thumbnailPath.isEmpty, thumbnailPath != imagePath {
+            paths.append(thumbnailPath)
+        }
+
+        return paths
     }
 
     func detailImage(maxPixelSize: CGFloat) -> NSImage? {
@@ -952,37 +959,37 @@ func clipboardRecordDisplaysBefore(_ lhs: ClipboardRecord, _ rhs: ClipboardRecor
 
 extension ClipboardRecord {
     var thumbnailPathValue: String? {
-        get { value(forKey: "thumbnailPath") as? String }
-        set { setValue(newValue, forKey: "thumbnailPath") }
+        get { thumbnailPath }
+        set { thumbnailPath = newValue }
     }
 
     var assetPathValue: String? {
-        get { value(forKey: "assetPath") as? String }
-        set { setValue(newValue, forKey: "assetPath") }
+        get { assetPath }
+        set { assetPath = newValue }
     }
 
     var pinnedAtValue: Date? {
-        get { value(forKey: "pinnedAt") as? Date }
-        set { setValue(newValue, forKey: "pinnedAt") }
+        get { pinnedAt }
+        set { pinnedAt = newValue }
     }
 
     var linkHostValue: String? {
-        get { value(forKey: "linkHost") as? String }
-        set { setValue(newValue, forKey: "linkHost") }
+        get { linkHost }
+        set { linkHost = newValue }
     }
 
     var linkTitleValue: String? {
-        get { value(forKey: "linkTitle") as? String }
-        set { setValue(newValue, forKey: "linkTitle") }
+        get { linkTitle }
+        set { linkTitle = newValue }
     }
 
     var linkIconDataValue: Data? {
-        get { value(forKey: "linkIconData") as? Data }
-        set { setValue(newValue, forKey: "linkIconData") }
+        get { linkIconData }
+        set { linkIconData = newValue }
     }
 
     var linkMetadataCheckedAtValue: Date? {
-        get { value(forKey: "linkMetadataCheckedAt") as? Date }
-        set { setValue(newValue, forKey: "linkMetadataCheckedAt") }
+        get { linkMetadataCheckedAt }
+        set { linkMetadataCheckedAt = newValue }
     }
 }
