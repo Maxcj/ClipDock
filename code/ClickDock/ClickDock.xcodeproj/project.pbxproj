@@ -462,7 +462,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -477,7 +477,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -493,7 +493,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -508,7 +508,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.9.8;
+				MARKETING_VERSION = 0.9.9;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
