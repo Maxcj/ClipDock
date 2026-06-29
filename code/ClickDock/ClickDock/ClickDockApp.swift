@@ -150,7 +150,7 @@ private struct StatusBarMenuView: View {
     private var appVersion: String { Bundle.main.appVersionString }
 
     var body: some View {
-        Text(localizer.text(.versionLabel, appVersion))
+        Text("Version \(appVersion)")
             .font(.system(size: 11))
             .foregroundStyle(.secondary)
 
