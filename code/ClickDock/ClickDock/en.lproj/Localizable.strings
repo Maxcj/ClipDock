@@ -49,6 +49,8 @@
 "betaChannel" = "Beta";
 "checkForUpdates" = "Check for Updates";
 "checkForUpdatesSubtitle" = "Check for a new release and open the download link if one is available";
+"checkForUpdatesStandardFlow" = "Sparkle User Flow";
+"checkForUpdatesStandardFlowSubtitle" = "Open Sparkle's standard user update flow for testing";
 "updatesFeedNotConfigured" = "Choose a valid update channel before checking for updates.";
 "updateAvailableTitle" = "Version %@ is available";
 "updateAvailableSubtitle" = "Click Download to open the release asset in your browser.";

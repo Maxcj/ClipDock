@@ -28,6 +28,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published var releaseNotesPresentation: UpdateReleaseNotesPresentation?
     private var shouldShowReleaseNotesForNextManualCheck = false
     private var shouldShowReleaseNotesForNextStartupCheck = false
+    private var shouldBypassCustomPromptForNextStandardFlowCheck = false
     private var didPerformStartupUpdateCheck = false
 
     var canCheckForUpdates: Bool {
@@ -61,6 +62,16 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         shouldShowReleaseNotesForNextManualCheck = true
         updaterController.updater.checkForUpdateInformation()
+    }
+
+    func checkForUpdatesUsingStandardFlow() {
+        guard canCheckForUpdates else {
+            NSLog("Sparkle feed URL is not configured")
+            return
+        }
+
+        shouldBypassCustomPromptForNextStandardFlowCheck = true
+        updaterController.updater.checkForUpdates()
     }
 
     func clearIgnoredVersion() {
@@ -167,6 +178,11 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         guard !matchesIgnoredVersion else { return }
 
+        if shouldBypassCustomPromptForNextStandardFlowCheck {
+            shouldBypassCustomPromptForNextStandardFlowCheck = false
+            return
+        }
+
         if shouldShowReleaseNotesForNextManualCheck || shouldShowReleaseNotesForNextStartupCheck {
             shouldShowReleaseNotesForNextManualCheck = false
             shouldShowReleaseNotesForNextStartupCheck = false
@@ -189,6 +205,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         if nsError.code != 1001 {
             shouldShowReleaseNotesForNextManualCheck = false
             shouldShowReleaseNotesForNextStartupCheck = false
+            shouldBypassCustomPromptForNextStandardFlowCheck = false
             NSLog("Sparkle update cycle finished with error: \(nsError.localizedDescription)")
         }
     }
@@ -215,6 +232,8 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     private func handleNoUpdateFound() {
+        shouldBypassCustomPromptForNextStandardFlowCheck = false
+
         if shouldShowReleaseNotesForNextManualCheck {
             shouldShowReleaseNotesForNextManualCheck = false
             shouldShowReleaseNotesForNextStartupCheck = false
