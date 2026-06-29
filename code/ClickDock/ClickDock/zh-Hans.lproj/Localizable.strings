@@ -44,9 +44,13 @@
 "automaticCheckIntervalEvery3Days" = "每 3 天";
 "automaticCheckIntervalWeekly" = "每周";
 "automaticCheckIntervalEvery2Weeks" = "每 2 周";
+"updateChannel" = "更新通道";
+"updateChannelSubtitle" = "选择正式版或 beta 版更新源";
+"releaseChannel" = "正式版";
+"betaChannel" = "Beta 版";
 "checkForUpdates" = "检查更新";
 "checkForUpdatesSubtitle" = "检查新版本，若有可用版本则打开下载链接";
-"updatesFeedNotConfigured" = "请先配置 Sparkle appcast 地址再检查更新。";
+"updatesFeedNotConfigured" = "请先选择有效的更新通道再检查更新。";
 "updateAvailableTitle" = "发现新版本 %@";
 "updateAvailableSubtitle" = "点击“下载”会在浏览器中打开发布资产链接。";
 "downloadUpdate" = "下载";
@@ -60,7 +64,7 @@
 "ignoredVersionSubtitle" = "该版本会在检查更新时被跳过";
 "clearIgnoredVersion" = "重新显示";
 "general" = "通用";
-"privacy" = "安全与隐私";
+"privacy" = "安全 & 隐私";
 "quickOpen" = "快捷键";
 "autoClean" = "自动清理";
 "storage" = "存储";

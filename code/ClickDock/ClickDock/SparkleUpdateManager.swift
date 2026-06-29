@@ -9,11 +9,41 @@ import Sparkle
 
 @MainActor
 final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
+    private enum FeedURL {
+        static let release = "https://maxcj.github.io/ClipDock/appcast.xml"
+        static let beta = "https://maxcj.github.io/ClipDock/appcast-beta.xml"
+    }
+
     private enum DefaultsKey {
-        static let feedURL = "sparkle.feedURL"
+        static let updateChannel = "sparkle.updateChannel"
         static let ignoredVersion = "sparkle.ignoredVersion"
         static let automaticallyChecksForUpdates = "sparkle.automaticallyChecksForUpdates"
         static let updateCheckInterval = "sparkle.updateCheckInterval"
+    }
+
+    enum UpdateChannel: String, CaseIterable, Identifiable {
+        case release
+        case beta
+
+        var id: String { rawValue }
+
+        var titleKey: AppTextKey {
+            switch self {
+            case .release:
+                return .releaseChannel
+            case .beta:
+                return .betaChannel
+            }
+        }
+
+        var feedURLString: String {
+            switch self {
+            case .release:
+                return FeedURL.release
+            case .beta:
+                return FeedURL.beta
+            }
+        }
     }
 
     private var localizer: AppLocalizer {
@@ -24,6 +54,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published private(set) var isConfigured: Bool = false
     @Published private(set) var automaticallyChecksForUpdates: Bool
     @Published private(set) var updateCheckInterval: TimeInterval
+    @Published private(set) var selectedUpdateChannel: UpdateChannel
     @Published var releaseNotesPresentation: UpdateReleaseNotesPresentation?
     private var shouldShowReleaseNotesForNextManualCheck = false
     private var shouldShowReleaseNotesForNextStartupCheck = false
@@ -46,6 +77,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             .flatMap { $0.isEmpty ? nil : $0 }
         automaticallyChecksForUpdates = UserDefaults.standard.object(forKey: DefaultsKey.automaticallyChecksForUpdates) as? Bool ?? false
         updateCheckInterval = UserDefaults.standard.object(forKey: DefaultsKey.updateCheckInterval) as? TimeInterval ?? 60 * 60 * 24
+        selectedUpdateChannel = UpdateChannel(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.updateChannel) ?? "") ?? .release
         super.init()
 
         configureUpdater()
@@ -84,6 +116,17 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         updaterController.updater.updateCheckInterval = sanitizedInterval
     }
 
+    func setUpdateChannel(_ channel: UpdateChannel) {
+        guard channel != selectedUpdateChannel else { return }
+
+        UserDefaults.standard.set(channel.rawValue, forKey: DefaultsKey.updateChannel)
+        selectedUpdateChannel = channel
+
+        guard isConfigured else { return }
+
+        updaterController.updater.resetUpdateCycle()
+    }
+
     func performStartupUpdateCheckIfNeeded() {
         guard !didPerformStartupUpdateCheck else { return }
         didPerformStartupUpdateCheck = true
@@ -103,10 +146,13 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     private func configureUpdater() {
         guard configuredFeedURLString != nil else {
             isConfigured = false
-            NSLog("Sparkle feed URL is missing. Set SUFeedURL or sparkle.feedURL before checking for updates.")
+            NSLog("Sparkle feed URL is missing for the selected update channel.")
             return
         }
 
+        // Remove any legacy feed URL stored by older Sparkle APIs so the selected
+        // channel is the single source of truth.
+        updaterController.updater.clearFeedURLFromUserDefaults()
         updaterController.updater.automaticallyChecksForUpdates = automaticallyChecksForUpdates
         updaterController.updater.automaticallyDownloadsUpdates = false
         updaterController.updater.updateCheckInterval = updateCheckInterval
@@ -115,17 +161,8 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     private var configuredFeedURLString: String? {
-        if let feedURLString = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String,
-           !feedURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return feedURLString
-        }
-
-        if let feedURLString = UserDefaults.standard.string(forKey: DefaultsKey.feedURL),
-           !feedURLString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return feedURLString
-        }
-
-        return nil
+        let feedURLString = selectedUpdateChannel.feedURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        return feedURLString.isEmpty ? nil : feedURLString
     }
 
     func feedURLString(for updater: SPUUpdater) -> String? {

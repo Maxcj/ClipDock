@@ -46,12 +46,14 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 更新发布拆分为 GitHub 的两个部分：
 
 - GitHub Releases 用于存放可下载的应用压缩包
-- GitHub Pages 用于托管 `appcast.xml`
+- GitHub Pages 用于托管 `appcast.xml` 和 `appcast-beta.xml`
 - Sparkle 负责更新检测、下载、校验和安装
 
 更新订阅地址：
 
 `https://maxcj.github.io/ClipDock/appcast.xml`
+
+`https://maxcj.github.io/ClipDock/appcast-beta.xml`
 
 ## 开始使用
 

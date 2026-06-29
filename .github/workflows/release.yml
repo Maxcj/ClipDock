@@ -18,6 +18,9 @@ jobs:
 
     outputs:
       version: ${{ steps.resolve_version.outputs.version }}
+      update_channel: ${{ steps.resolve_tag_type.outputs.update_channel }}
+      appcast_file: ${{ steps.resolve_tag_type.outputs.appcast_file }}
+      prerelease: ${{ steps.resolve_tag_type.outputs.prerelease }}
 
     steps:
       - name: Checkout
@@ -40,6 +43,24 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve tag type
+        id: resolve_tag_type
+        shell: bash
+        run: |
+          version="${{ steps.resolve_version.outputs.version }}"
+          if [[ "${version}" == *-beta* ]]; then
+            update_channel="beta"
+            appcast_file="appcast-beta.xml"
+            prerelease="true"
+          else
+            update_channel="release"
+            appcast_file="appcast.xml"
+            prerelease="false"
+          fi
+          echo "update_channel=${update_channel}" >> "$GITHUB_OUTPUT"
+          echo "appcast_file=${appcast_file}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
 
       - name: Print Xcode version
         run: xcodebuild -version
@@ -126,18 +147,20 @@ jobs:
 
       - name: Generate appcast
         shell: bash
-        run: ./scripts/generate_appcast.sh "${{ needs.build_release_archive.outputs.version }}"
+        run: ./scripts/generate_appcast.sh "${{ needs.build_release_archive.outputs.version }}" "${{ needs.build_release_archive.outputs.update_channel }}"
 
       - name: Upload generated appcast
         uses: actions/upload-artifact@v4
         with:
           name: appcast-xml
-          path: docs/appcast.xml
+          path: docs/${{ needs.build_release_archive.outputs.appcast_file }}
           if-no-files-found: error
 
   create_github_release:
     name: Create GitHub Release
-    needs: generate_appcast
+    needs:
+      - build_release_archive
+      - generate_appcast
     runs-on: macos-latest
 
     steps:
@@ -188,11 +211,13 @@ jobs:
           body_path: docs/release-notes/${{ steps.resolve_version.outputs.version }}/${{ steps.resolve_version.outputs.version }}.md
           files: dist/ClipDock-${{ steps.resolve_version.outputs.version }}-macOS-universal.zip
           draft: false
-          prerelease: false
+          prerelease: ${{ needs.build_release_archive.outputs.prerelease }}
 
   publish_github_pages:
     name: Publish GitHub Pages
-    needs: generate_appcast
+    needs:
+      - build_release_archive
+      - generate_appcast
     runs-on: macos-latest
 
     steps:
@@ -219,12 +244,16 @@ jobs:
       - name: Restore appcast into docs
         shell: bash
         run: |
+          appcast_file="${{ needs.build_release_archive.outputs.appcast_file }}"
           appcast_path="$(find ./artifact -type f -name appcast.xml -print -quit)"
+          if [[ -z "${appcast_path}" ]]; then
+            appcast_path="$(find ./artifact -type f -name "${appcast_file}" -print -quit)"
+          fi
           if [[ -z "${appcast_path}" ]]; then
             echo "Generated appcast artifact not found." >&2
             exit 1
           fi
-          cp "${appcast_path}" docs/appcast.xml
+          cp "${appcast_path}" "docs/${appcast_file}"
 
       - name: Publish GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

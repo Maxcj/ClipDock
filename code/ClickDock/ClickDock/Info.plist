@@ -4,8 +4,6 @@
 <dict>
 	<key>AppContactEmail</key>
 	<string>maxcj.zhong@outlook.com</string>
-	<key>SUFeedURL</key>
-	<string>https://maxcj.github.io/ClipDock/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>4DH6jx/k8lx97Evxai61vb84FV9Mf0FLePZxD+hN234=</string>
 </dict>

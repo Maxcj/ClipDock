@@ -48,12 +48,14 @@ ClipDock uses [Sparkle](https://sparkle-project.org/) for automatic updates.
 Update distribution is split across GitHub services:
 
 - GitHub Releases hosts the downloadable app archive
-- GitHub Pages hosts `appcast.xml`
+- GitHub Pages hosts `appcast.xml` and `appcast-beta.xml`
 - Sparkle handles update detection, download, verification, and installation
 
-The update feed is:
+The update feeds are:
 
 `https://maxcj.github.io/ClipDock/appcast.xml`
+
+`https://maxcj.github.io/ClipDock/appcast-beta.xml`
 
 ## Getting Started
 

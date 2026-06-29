@@ -44,9 +44,13 @@
 "automaticCheckIntervalEvery3Days" = "Every 3 days";
 "automaticCheckIntervalWeekly" = "Every week";
 "automaticCheckIntervalEvery2Weeks" = "Every 2 weeks";
+"updateChannel" = "Update channel";
+"updateChannelSubtitle" = "Choose the release feed or the beta feed";
+"releaseChannel" = "Release";
+"betaChannel" = "Beta";
 "checkForUpdates" = "Check for Updates";
 "checkForUpdatesSubtitle" = "Check for a new release and open the download link if one is available";
-"updatesFeedNotConfigured" = "Set the Sparkle appcast URL before checking for updates.";
+"updatesFeedNotConfigured" = "Choose a valid update channel before checking for updates.";
 "updateAvailableTitle" = "Version %@ is available";
 "updateAvailableSubtitle" = "Click Download to open the release asset in your browser.";
 "downloadUpdate" = "Download";

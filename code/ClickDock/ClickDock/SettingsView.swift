@@ -46,6 +46,13 @@ struct SettingsView: View {
         )
     }
 
+    private var updateChannelBinding: Binding<SparkleUpdateManager.UpdateChannel> {
+        Binding(
+            get: { sparkleUpdateManager.selectedUpdateChannel },
+            set: { sparkleUpdateManager.setUpdateChannel($0) }
+        )
+    }
+
     var body: some View {
         GeometryReader { proxy in
             let layout = SettingsWindowMetrics(containerSize: proxy.size)
@@ -475,6 +482,25 @@ struct SettingsView: View {
         case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
+                    settingsValueRow(
+                        iconName: "arrow.triangle.branch",
+                        title: localizer.text(.updateChannel),
+                        subtitle: localizer.text(.updateChannelSubtitle),
+                        isDimmed: !sparkleUpdateManager.isConfigured
+                    ) {
+                        Picker("", selection: updateChannelBinding) {
+                            ForEach(SparkleUpdateManager.UpdateChannel.allCases) { channel in
+                                Text(localizer.text(channel.titleKey)).tag(channel)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 200)
+                        .disabled(!sparkleUpdateManager.isConfigured)
+                    }
+
+                    Divider().padding(.leading, 52)
+
                     settingsToggleRow(
                         iconName: "clock.arrow.circlepath",
                         title: localizer.text(.automaticCheckForUpdates),
