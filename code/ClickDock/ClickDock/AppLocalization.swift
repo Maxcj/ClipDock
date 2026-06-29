@@ -81,7 +81,6 @@ enum AppTextKey: String {
     case type
     case excludeApp
     case fileReady
-    case versionLabel
     case updates
     case updatesSubtitle
     case automaticCheckForUpdates
@@ -193,6 +192,38 @@ enum AppTextKey: String {
     case ignorePrivateKeysSubtitle
     case ignoreLongSensitiveText
     case ignoreLongSensitiveTextSubtitle
+    case customSensitiveRules
+    case customSensitiveRulesSubtitle
+    case manage
+    case addRule
+    case editRule
+    case ruleName
+    case ruleNameSubtitle
+    case ruleNamePlaceholder
+    case matchType
+    case matchTypeSubtitle
+    case rulePattern
+    case keyword
+    case keywordSubtitle
+    case keywordPlaceholder
+    case keywordMatchMode
+    case keywordMatchModeSubtitle
+    case contains
+    case exactMatch
+    case regex
+    case regexSubtitle
+    case regexPlaceholder
+    case scope
+    case scopeSubtitle
+    case options
+    case optionsSubtitle
+    case caseSensitive
+    case enabled
+    case ruleEditorSubtitle
+    case noCustomSensitiveRules
+    case noCustomSensitiveRulesSubtitle
+    case deleteRuleTitle
+    case deleteRuleMessage
     case noExcludedApps
     case noExcludedAppsSubtitle
     case remove

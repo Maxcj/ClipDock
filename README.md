@@ -25,6 +25,7 @@ It lives in the menu bar, stays out of the Dock, and lets you bring up the main 
 - Rich previews for links, images, files, colors, and code
 - Custom categories with visibility control and drag-to-reorder
 - Assign clipboard items to up to 3 custom categories
+- Custom sensitive rules for keyword and regex filtering
 - One-click color copy as HEX, RGB, or RGBA
 - Code language detection and lightweight syntax highlighting
 - Code actions for Copy as Markdown
@@ -38,7 +39,7 @@ It lives in the menu bar, stays out of the Dock, and lets you bring up the main 
 - Image history can be enabled or disabled in Settings
 - File history can be enabled or disabled in Settings
 - Color detection and copying are built in
-- Sensitive clipboard content can be filtered out in Settings
+- Sensitive clipboard content can be filtered out in Settings with built-in rules or custom keyword/regex rules
 - You can ignore a specific update version from the Updates tab
 
 ## Updates
@@ -62,7 +63,7 @@ The update feeds are:
 1. Download or build ClipDock.
 2. Launch the app and allow clipboard access if prompted by macOS.
 3. Use the menu bar icon or the global hotkey to open the main window.
-4. Open Settings to adjust history retention, content filters, and update preferences.
+4. Open Settings to adjust history retention, content filters, custom sensitive rules, and update preferences.
 
 ## Build
 

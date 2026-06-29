@@ -17,6 +17,10 @@ struct SettingsView: View {
     @State private var activeTab: SettingsTab = .general
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
+    @State private var customSensitiveRules: [ClipboardSensitiveRule] = []
+    @State private var editingCustomSensitiveRule: ClipboardSensitiveRule?
+    @State private var deleteCustomSensitiveRule: ClipboardSensitiveRule?
+    @State private var showingCustomSensitiveRuleEditor = false
     @StateObject private var storageSummaryLoader = StorageSummaryLoader()
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
@@ -150,6 +154,43 @@ struct SettingsView: View {
                 storageSummaryLoader.load(context: viewContext)
             }
         }
+        .onAppear {
+            loadCustomSensitiveRules()
+        }
+        .sheet(isPresented: $showingCustomSensitiveRuleEditor) {
+            ClipboardSensitiveRuleEditorView(rule: nil) { newRule in
+                customSensitiveRules.append(newRule)
+                sortCustomSensitiveRules()
+                saveCustomSensitiveRules()
+            }
+        }
+        .sheet(item: $editingCustomSensitiveRule) { rule in
+            ClipboardSensitiveRuleEditorView(rule: rule) { updatedRule in
+                guard let index = customSensitiveRules.firstIndex(where: { $0.id == updatedRule.id }) else {
+                    return
+                }
+                customSensitiveRules[index] = updatedRule
+                sortCustomSensitiveRules()
+                saveCustomSensitiveRules()
+            }
+        }
+        .alert(localizer.text(.deleteRuleTitle), isPresented: Binding(
+            get: { deleteCustomSensitiveRule != nil },
+            set: { if !$0 { deleteCustomSensitiveRule = nil } }
+        )) {
+            Button(localizer.text(.delete), role: .destructive) {
+                if let deleteCustomSensitiveRule {
+                    customSensitiveRules.removeAll { $0.id == deleteCustomSensitiveRule.id }
+                    saveCustomSensitiveRules()
+                }
+                deleteCustomSensitiveRule = nil
+            }
+            Button(localizer.text(.cancel), role: .cancel) {
+                deleteCustomSensitiveRule = nil
+            }
+        } message: {
+            Text(localizer.text(.deleteRuleMessage))
+        }
     }
 
     private func configureSettingsWindow(_ window: NSWindow) {
@@ -197,7 +238,7 @@ struct SettingsView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .allowsTightening(true)
-                    Text(localizer.text(.versionLabel, appVersion))
+                    Text(appVersion)
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -336,6 +377,32 @@ struct SettingsView: View {
                         subtitle: localizer.text(.ignoreLongSensitiveTextSubtitle),
                         isOn: $ignoreLongSensitiveText
                     )
+                }
+
+                settingsSection(title: localizer.text(.customSensitiveRules), subtitle: localizer.text(.customSensitiveRulesSubtitle)) {
+                    VStack(spacing: 0) {
+                        if customSensitiveRules.isEmpty {
+                            settingsPlaceholderRow(
+                                iconName: "shield.lefthalf.filled",
+                                title: localizer.text(.noCustomSensitiveRules),
+                                subtitle: localizer.text(.noCustomSensitiveRulesSubtitle)
+                            )
+                        } else {
+                            customSensitiveRuleRows
+                        }
+
+                        Divider().padding(.leading, 52)
+
+                        settingsActionRow(
+                            iconName: "plus.circle",
+                            title: localizer.text(.addRule),
+                            subtitle: localizer.text(.ruleEditorSubtitle),
+                            buttonTitle: localizer.text(.addRule),
+                            action: {
+                                showingCustomSensitiveRuleEditor = true
+                            }
+                        )
+                    }
                 }
 
                 settingsSection(title: localizer.text(.privacySection), subtitle: localizer.text(.privacySectionSubtitle)) {
@@ -783,6 +850,31 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private var customSensitiveRuleRows: some View {
+        let lastIndex = customSensitiveRules.indices.last ?? -1
+
+        ForEach(customSensitiveRules.indices, id: \.self) { index in
+            let rule = $customSensitiveRules[index]
+            ClipboardSensitiveRuleRow(
+                rule: rule,
+                onEdit: {
+                    editingCustomSensitiveRule = rule.wrappedValue
+                },
+                onDelete: {
+                    deleteCustomSensitiveRule = rule.wrappedValue
+                },
+                onToggle: {
+                    saveCustomSensitiveRules()
+                }
+            )
+
+            if index != lastIndex {
+                Divider().padding(.leading, 56)
+            }
+        }
+    }
+
+    @ViewBuilder
     private func settingsShortcutRow() -> some View {
         SettingsPreferenceRow(
             iconName: "command",
@@ -890,6 +982,24 @@ struct SettingsView: View {
         } catch {
             NSLog("Failed to clear storage cache from settings: \(error.localizedDescription)")
         }
+    }
+
+    private func loadCustomSensitiveRules() {
+        customSensitiveRules = ClipboardSensitiveRuleStore.load()
+        sortCustomSensitiveRules()
+    }
+
+    private func sortCustomSensitiveRules() {
+        customSensitiveRules.sort {
+            if $0.createdAt != $1.createdAt {
+                return $0.createdAt < $1.createdAt
+            }
+            return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+    }
+
+    private func saveCustomSensitiveRules() {
+        ClipboardSensitiveRuleStore.save(customSensitiveRules)
     }
 
     private func localizedTitle(for preference: AppLanguagePreference) -> String {

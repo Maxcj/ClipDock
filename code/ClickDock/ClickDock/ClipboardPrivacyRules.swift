@@ -13,6 +13,7 @@ enum ClipboardPrivacyRules {
         case privateKey
         case longSensitiveText
         case privateKeyFile
+        case customRule(String)
 
         var description: String {
             switch self {
@@ -21,6 +22,7 @@ enum ClipboardPrivacyRules {
             case .privateKey: return "private key"
             case .longSensitiveText: return "long sensitive text"
             case .privateKeyFile: return "private key file"
+            case .customRule(let name): return "custom rule: \(name)"
             }
         }
     }
@@ -76,11 +78,15 @@ enum ClipboardPrivacyRules {
 
         switch contentKind {
         case .code:
-            return ignoreReasonForCodeContent(trimmed, defaults: defaults)
+            if let reason = ignoreReasonForCodeContent(trimmed, defaults: defaults) {
+                return reason
+            }
         case .colors:
             return nil
         case .image, .files:
-            return ignoreReasonForFileLikeContent(trimmed, defaults: defaults)
+            if let reason = ignoreReasonForFileLikeContent(trimmed, defaults: defaults) {
+                return reason
+            }
         case .link, .text, .unknown, nil:
             for candidate in inspectionCandidates(for: trimmed) {
                 if defaults.bool(forKey: ignoreVerificationCodesStorageKey),
@@ -105,6 +111,10 @@ enum ClipboardPrivacyRules {
             }
         }
 
+        if let matchedRule = matchedCustomSensitiveRule(trimmed, contentKind: contentKind, defaults: defaults) {
+            return .customRule(matchedRule.name)
+        }
+
         return nil
     }
 
@@ -121,6 +131,62 @@ enum ClipboardPrivacyRules {
             guard let text = textContent(from: url) else { continue }
             if let reason = shouldIgnoreCapturedText(text, contentKind: .files, defaults: defaults) {
                 return reason
+            }
+        }
+
+        return nil
+    }
+
+    static func matchedCustomSensitiveRule(
+        _ text: String,
+        contentKind: ClipboardContentKind?,
+        defaults: UserDefaults = .standard
+    ) -> ClipboardSensitiveRule? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let rules = ClipboardSensitiveRuleStore.load(defaults: defaults)
+
+        for rule in rules where rule.isEnabled {
+            let pattern = rule.pattern.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !pattern.isEmpty, rule.scope.matches(contentKind) else {
+                continue
+            }
+
+            switch rule.matchType {
+            case .keyword:
+                switch rule.keywordMatchMode {
+                case .contains:
+                    if rule.isCaseSensitive {
+                        if trimmed.contains(pattern) {
+                            return rule
+                        }
+                    } else if trimmed.range(
+                        of: pattern,
+                        options: [.caseInsensitive, .diacriticInsensitive]
+                    ) != nil {
+                        return rule
+                    }
+                case .exact:
+                    if rule.isCaseSensitive {
+                        if trimmed == pattern {
+                            return rule
+                        }
+                    } else if trimmed.compare(pattern, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+                        return rule
+                    }
+                }
+
+            case .regex:
+                let options: NSRegularExpression.Options = rule.isCaseSensitive ? [] : [.caseInsensitive]
+                guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+                    continue
+                }
+
+                let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+                if regex.firstMatch(in: trimmed, options: [], range: range) != nil {
+                    return rule
+                }
             }
         }
 
