@@ -52,6 +52,17 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    var highlighterLanguageIdentifier: String? {
+        switch self {
+        case .plain:
+            return nil
+        case .shell:
+            return "bash"
+        default:
+            return rawValue
+        }
+    }
+
     var badgeColor: Color {
         switch self {
         case .plain: return Color.secondary
@@ -227,26 +238,6 @@ enum ClipboardCodeActions {
         ```
         """
     }
-
-    static func prettyJSON(_ code: String) -> String? {
-        guard let data = code.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let prettyData = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]),
-              let result = String(data: prettyData, encoding: .utf8) else {
-            return nil
-        }
-        return result
-    }
-
-    static func minifyJSON(_ code: String) -> String? {
-        guard let data = code.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let minifiedData = try? JSONSerialization.data(withJSONObject: object),
-              let result = String(data: minifiedData, encoding: .utf8) else {
-            return nil
-        }
-        return result
-    }
 }
 
 extension ClipboardRecord {
@@ -264,12 +255,9 @@ extension ClipboardRecord {
             return persisted
         }
 
-        return ClipboardCodeLineCache.shared.lines(for: self).count
-    }
-
-    var codeDisplayTitle: String {
-        let title = (displayText ?? fullText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        return title.isEmpty ? codeLanguage.title : title
+        let text = detailText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline)
+        return max(1, lines.isEmpty ? 1 : lines.count)
     }
 
     var persistedCodeLanguageRaw: String? {
@@ -281,106 +269,5 @@ extension ClipboardRecord {
             return value.intValue
         }
         return nil
-    }
-}
-
-enum ClipboardCodeHighlighter {
-    static func attributedLine(_ line: String, language: ClipboardCodeLanguage) -> AttributedString {
-        var attributed = AttributedString(line.isEmpty ? " " : line)
-        attributed.font = .system(size: 13, design: .monospaced)
-
-        switch language {
-        case .json:
-            applyJSONHighlights(to: &attributed, text: line)
-        case .swift:
-            applyKeywordHighlights(to: &attributed, text: line, keywords: swiftKeywords, color: Color(red: 0.56, green: 0.34, blue: 0.92), bold: true)
-            applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
-            applyCommentHighlights(to: &attributed, text: line, prefix: "//", color: .secondary)
-        case .java:
-            applyKeywordHighlights(to: &attributed, text: line, keywords: javaKeywords, color: Color(red: 0.56, green: 0.34, blue: 0.92), bold: true)
-            applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
-            applyCommentHighlights(to: &attributed, text: line, prefix: "//", color: .secondary)
-        case .sql:
-            applyKeywordHighlights(to: &attributed, text: line, keywords: sqlKeywords, color: Color(red: 0.17, green: 0.48, blue: 0.95), bold: true)
-            applyQuotedStringHighlights(to: &attributed, text: line, color: Color(red: 0.11, green: 0.64, blue: 0.36))
-        case .shell:
-            applyCommentHighlights(to: &attributed, text: line, prefix: "#", color: .secondary)
-            applyCommandHighlights(to: &attributed, text: line)
-        default:
-            break
-        }
-
-        return attributed
-    }
-
-    private static let swiftKeywords = [
-        "actor", "as", "async", "await", "case", "catch", "class", "continue", "default", "defer", "do", "else",
-        "enum", "extension", "for", "func", "guard", "if", "import", "in", "init", "let", "nil", "protocol",
-        "return", "self", "static", "struct", "switch", "throw", "throws", "try", "var", "where", "while"
-    ]
-
-    private static let javaKeywords = [
-        "abstract", "boolean", "break", "byte", "case", "catch", "class", "continue", "default", "do", "double",
-        "else", "extends", "final", "finally", "float", "for", "if", "implements", "import", "instanceof", "int",
-        "interface", "long", "new", "package", "private", "protected", "public", "return", "static", "strictfp",
-        "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try", "void", "volatile", "while"
-    ]
-
-    private static let sqlKeywords = [
-        "SELECT", "FROM", "WHERE", "JOIN", "LEFT", "RIGHT", "INNER", "OUTER", "GROUP", "ORDER", "BY", "LIMIT",
-        "INSERT", "INTO", "VALUES", "UPDATE", "DELETE", "CREATE", "TABLE", "ALTER", "DROP", "AND", "OR", "NOT", "NULL"
-    ]
-
-    private static func applyJSONHighlights(to attributed: inout AttributedString, text: String) {
-        applyQuotedStringHighlights(to: &attributed, text: text, color: Color(red: 0.11, green: 0.64, blue: 0.36))
-        applyPattern(to: &attributed, text: text, pattern: #"\b(true|false|null)\b"#, color: Color(red: 0.56, green: 0.34, blue: 0.92), bold: true)
-        applyPattern(to: &attributed, text: text, pattern: #"\b-?\d+(\.\d+)?([eE][+-]?\d+)?\b"#, color: Color(red: 0.17, green: 0.48, blue: 0.95), bold: false)
-    }
-
-    private static func applyKeywordHighlights(to attributed: inout AttributedString, text: String, keywords: [String], color: Color, bold: Bool) {
-        let pattern = #"\b("# + keywords.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|") + #")\b"#
-        applyPattern(to: &attributed, text: text, pattern: pattern, color: color, bold: bold, options: [.caseInsensitive])
-    }
-
-    private static func applyQuotedStringHighlights(to attributed: inout AttributedString, text: String, color: Color) {
-        applyPattern(to: &attributed, text: text, pattern: #""([^"\\]|\\.)*""#, color: color, bold: false)
-        applyPattern(to: &attributed, text: text, pattern: #"'([^'\\]|\\.)*'"#, color: color, bold: false)
-    }
-
-    private static func applyCommentHighlights(to attributed: inout AttributedString, text: String, prefix: String, color: Color) {
-        guard let index = text.range(of: prefix) else { return }
-        let end = text.endIndex
-        applyRange(to: &attributed, text: text, start: index.lowerBound, end: end, color: color, bold: false)
-    }
-
-    private static func applyCommandHighlights(to attributed: inout AttributedString, text: String) {
-        guard let regex = try? NSRegularExpression(pattern: #"\b(brew|git|npm|pnpm|yarn|make|curl|chmod|python3?|node|swift)\b"#, options: [.caseInsensitive]) else { return }
-        apply(regex: regex, to: &attributed, text: text, color: Color(red: 0.17, green: 0.48, blue: 0.95), bold: true)
-    }
-
-    private static func applyPattern(to attributed: inout AttributedString, text: String, pattern: String, color: Color, bold: Bool, options: NSRegularExpression.Options = []) {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else { return }
-        apply(regex: regex, to: &attributed, text: text, color: color, bold: bold)
-    }
-
-    private static func apply(regex: NSRegularExpression, to attributed: inout AttributedString, text: String, color: Color, bold: Bool) {
-        let range = NSRange(text.startIndex..., in: text)
-        for match in regex.matches(in: text, range: range).reversed() {
-            guard let swiftRange = Range(match.range, in: text) else { continue }
-            applyRange(to: &attributed, text: text, start: swiftRange.lowerBound, end: swiftRange.upperBound, color: color, bold: bold)
-        }
-    }
-
-    private static func applyRange(to attributed: inout AttributedString, text: String, start: String.Index, end: String.Index, color: Color, bold: Bool) {
-        let lowerOffset = text.distance(from: text.startIndex, to: start)
-        let upperOffset = text.distance(from: text.startIndex, to: end)
-
-        let lower = attributed.index(attributed.startIndex, offsetByCharacters: lowerOffset)
-        let upper = attributed.index(attributed.startIndex, offsetByCharacters: upperOffset)
-        let attributedRange = lower..<upper
-        attributed[attributedRange].foregroundColor = color
-        if bold {
-            attributed[attributedRange].font = .system(size: 13, weight: .semibold, design: .monospaced)
-        }
     }
 }

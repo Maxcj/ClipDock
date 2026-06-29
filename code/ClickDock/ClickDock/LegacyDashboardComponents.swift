@@ -10,11 +10,9 @@ struct ClipboardCodePane: View {
     @Environment(\.appLocalizer) private var localizer
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     let record: ClipboardRecord
-    private let scrollAnchorID = "clipboard.code.pane.scroll.top"
     @State private var copiedActionKey: String?
 
     var body: some View {
-        let lines = ClipboardCodeLineCache.shared.lines(for: record)
         let language = record.codeLanguage
 
         VStack(alignment: .leading, spacing: 12) {
@@ -23,7 +21,7 @@ struct ClipboardCodePane: View {
                     Text(language.title)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(language.badgeColor)
-                    Text("\(lines.count) lines")
+                    Text("\(record.codeLineCount) lines")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -48,41 +46,8 @@ struct ClipboardCodePane: View {
                 .buttonStyle(.plain)
                 .help(localizer.text(.copyMarkdown))
             }
-            ScrollViewReader { proxy in
-                ScrollView([.vertical, .horizontal], showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Color.clear
-                            .frame(width: 0, height: 0)
-                            .id(scrollAnchorID)
-
-                        ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                            HStack(alignment: .top, spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundStyle(.secondary.opacity(0.75))
-                                    .frame(width: 34, alignment: .trailing)
-
-                                Text(ClipboardCodeHighlighter.attributedLine(line, language: language))
-                                    .lineLimit(1)
-                                    .fixedSize(horizontal: true, vertical: false)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .textSelection(.enabled)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
-                .id(record.objectID)
+            HighlighterCodeView(text: record.detailText, language: language)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .onAppear {
-                    scrollToTop(proxy)
-                }
-                .onChange(of: record.objectID) { _ in
-                    scrollToTop(proxy)
-                }
-            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -94,12 +59,6 @@ struct ClipboardCodePane: View {
                         .stroke(Color.gray.opacity(0.12), lineWidth: 1)
                 )
         )
-    }
-
-    private func scrollToTop(_ proxy: ScrollViewProxy) {
-        DispatchQueue.main.async {
-            proxy.scrollTo(scrollAnchorID, anchor: .topLeading)
-        }
     }
 
     private func triggerCopiedFeedback(key: String) {

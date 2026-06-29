@@ -935,29 +935,6 @@ final class ClipboardFileIconCache {
     }
 }
 
-final class ClipboardCodeLineCache {
-    static let shared = ClipboardCodeLineCache()
-
-    private let cache = NSCache<NSString, NSArray>()
-
-    private init() {
-        cache.countLimit = 96
-    }
-
-    func lines(for record: ClipboardRecord) -> [String] {
-        let key = (record.contentHash ?? record.objectID.uriRepresentation().absoluteString) as NSString
-        if let cached = cache.object(forKey: key) as? [String] {
-            return cached
-        }
-
-        let text = record.detailText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lines = text.split(whereSeparator: \.isNewline).map(String.init)
-        let result = lines.isEmpty ? [text] : lines
-        cache.setObject(result as NSArray, forKey: key)
-        return result
-    }
-}
-
 struct ClipboardSnapshot {
     let kind: ClipboardContentKind
     let displayText: String

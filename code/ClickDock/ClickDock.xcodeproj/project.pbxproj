@@ -13,11 +13,15 @@
 		7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */; };
 		A10000000000000000000004 /* SparkleUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* SparkleUpdateManager.swift */; };
 		A20000000000000000000002 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A20000000000000000000003 /* Sparkle */; };
+		B10000000000000000000003 /* Highlighter in Frameworks */ = {isa = PBXBuildFile; productRef = B10000000000000000000001 /* Highlighter */; };
 		A30000000000000000000001 /* ClipboardColorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000002 /* ClipboardColorSupport.swift */; };
 		A30000000000000000000003 /* ClipboardColorModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000004 /* ClipboardColorModels.swift */; };
 		A30000000000000000000005 /* ClipboardCodeSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30000000000000000000006 /* ClipboardCodeSupport.swift */; };
 		A40000000000000000000001 /* ClipboardCategorySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000002 /* ClipboardCategorySupport.swift */; };
 		A40000000000000000000003 /* ClipboardCategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000004 /* ClipboardCategoryViews.swift */; };
+		A50000000000000000000001 /* ClipboardSensitiveRulesSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50000000000000000000002 /* ClipboardSensitiveRulesSupport.swift */; };
+		A50000000000000000000003 /* ClipboardSensitiveRuleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50000000000000000000004 /* ClipboardSensitiveRuleViews.swift */; };
+		B20000000000000000000001 /* ClipboardCodeRenderingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */; };
 		C1E5F5E82FE950CD00571FED /* ClickDockApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */; };
 		C1E5F5EC2FE950D000571FED /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EB2FE950D000571FED /* Assets.xcassets */; };
 		C1E5F5EF2FE950D000571FED /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EE2FE950D000571FED /* Preview Assets.xcassets */; };
@@ -49,6 +53,9 @@
 		A30000000000000000000006 /* ClipboardCodeSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCodeSupport.swift; sourceTree = "<group>"; };
 		A40000000000000000000002 /* ClipboardCategorySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCategorySupport.swift; sourceTree = "<group>"; };
 		A40000000000000000000004 /* ClipboardCategoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCategoryViews.swift; sourceTree = "<group>"; };
+		A50000000000000000000002 /* ClipboardSensitiveRulesSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSensitiveRulesSupport.swift; sourceTree = "<group>"; };
+		A50000000000000000000004 /* ClipboardSensitiveRuleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSensitiveRuleViews.swift; sourceTree = "<group>"; };
+		B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCodeRenderingViews.swift; sourceTree = "<group>"; };
 		C1E5F5E42FE950CD00571FED /* ClipDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClipDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickDockApp.swift; sourceTree = "<group>"; };
 		C1E5F5E92FE950CD00571FED /* ContentView.swift */ = {isa = PBXFileReference; indentWidth = 5; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; tabWidth = 5; };
@@ -83,6 +90,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1342A91C68244D0A90A06209 /* KeyboardShortcuts in Frameworks */,
+				B10000000000000000000003 /* Highlighter in Frameworks */,
 				A20000000000000000000002 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -149,6 +157,7 @@
 				C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */,
 				E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */,
 				9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */,
+				A50000000000000000000002 /* ClipboardSensitiveRulesSupport.swift */,
 				D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */,
 				A30000000000000000000006 /* ClipboardCodeSupport.swift */,
 				A30000000000000000000004 /* ClipboardColorModels.swift */,
@@ -175,6 +184,7 @@
 				D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */,
 				D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */,
 				D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */,
+				B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -184,6 +194,7 @@
 			children = (
 				D93A11082FF2000100A1B2C3 /* SettingsView.swift */,
 				D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */,
+				A50000000000000000000004 /* ClipboardSensitiveRuleViews.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -234,6 +245,7 @@
 			name = ClickDock;
 			packageProductDependencies = (
 				92DF3A85009AC36F416DE2EA /* KeyboardShortcuts */,
+				B10000000000000000000001 /* Highlighter */,
 				A20000000000000000000003 /* Sparkle */,
 			);
 			productName = ClickDock;
@@ -267,6 +279,7 @@
 			mainGroup = C1E5F5DB2FE950CD00571FED;
 			packageReferences = (
 				3CF05FE38382266EF83B22E1 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				B10000000000000000000002 /* XCRemoteSwiftPackageReference "HighlighterSwift" */,
 				A20000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			productRefGroup = C1E5F5E52FE950CD00571FED /* Products */;
@@ -317,6 +330,9 @@
 				CDA7D2CD4E316E93F2B02B0E /* KeyboardShortcutsSupport.swift in Sources */,
 				26CB2CCC0640640CD7C2D124 /* ClipboardFileSupport.swift in Sources */,
 				7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */,
+				A50000000000000000000001 /* ClipboardSensitiveRulesSupport.swift in Sources */,
+				A50000000000000000000003 /* ClipboardSensitiveRuleViews.swift in Sources */,
+				B20000000000000000000001 /* ClipboardCodeRenderingViews.swift in Sources */,
 				57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */,
 				A40000000000000000000001 /* ClipboardCategorySupport.swift in Sources */,
 				A40000000000000000000003 /* ClipboardCategoryViews.swift in Sources */,
@@ -548,6 +564,14 @@
 				minimumVersion = 1.15.0;
 			};
 		};
+		B10000000000000000000002 /* XCRemoteSwiftPackageReference "HighlighterSwift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/smittytone/HighlighterSwift";
+			requirement = {
+				kind = revision;
+				revision = 120d654b7126559b68127a0a0f5b1d57742dd900;
+			};
+		};
 		A20000000000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
@@ -563,6 +587,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 3CF05FE38382266EF83B22E1 /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		B10000000000000000000001 /* Highlighter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B10000000000000000000002 /* XCRemoteSwiftPackageReference "HighlighterSwift" */;
+			productName = Highlighter;
 		};
 		A20000000000000000000003 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
