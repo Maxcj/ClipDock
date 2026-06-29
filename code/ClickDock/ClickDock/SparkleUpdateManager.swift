@@ -9,41 +9,11 @@ import Sparkle
 
 @MainActor
 final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
-    private enum FeedURL {
-        static let release = "https://maxcj.github.io/ClipDock/appcast.xml"
-        static let beta = "https://maxcj.github.io/ClipDock/appcast-beta.xml"
-    }
-
     private enum DefaultsKey {
         static let updateChannel = "sparkle.updateChannel"
         static let ignoredVersion = "sparkle.ignoredVersion"
         static let automaticallyChecksForUpdates = "sparkle.automaticallyChecksForUpdates"
         static let updateCheckInterval = "sparkle.updateCheckInterval"
-    }
-
-    enum UpdateChannel: String, CaseIterable, Identifiable {
-        case release
-        case beta
-
-        var id: String { rawValue }
-
-        var titleKey: AppTextKey {
-            switch self {
-            case .release:
-                return .releaseChannel
-            case .beta:
-                return .betaChannel
-            }
-        }
-
-        var feedURLString: String {
-            switch self {
-            case .release:
-                return FeedURL.release
-            case .beta:
-                return FeedURL.beta
-            }
-        }
     }
 
     private var localizer: AppLocalizer {
@@ -54,7 +24,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published private(set) var isConfigured: Bool = false
     @Published private(set) var automaticallyChecksForUpdates: Bool
     @Published private(set) var updateCheckInterval: TimeInterval
-    @Published private(set) var selectedUpdateChannel: UpdateChannel
+    @Published private(set) var selectedUpdateChannel: SparkleUpdateChannel
     @Published var releaseNotesPresentation: UpdateReleaseNotesPresentation?
     private var shouldShowReleaseNotesForNextManualCheck = false
     private var shouldShowReleaseNotesForNextStartupCheck = false
@@ -77,7 +47,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             .flatMap { $0.isEmpty ? nil : $0 }
         automaticallyChecksForUpdates = UserDefaults.standard.object(forKey: DefaultsKey.automaticallyChecksForUpdates) as? Bool ?? false
         updateCheckInterval = UserDefaults.standard.object(forKey: DefaultsKey.updateCheckInterval) as? TimeInterval ?? 60 * 60 * 24
-        selectedUpdateChannel = UpdateChannel(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.updateChannel) ?? "") ?? .release
+        selectedUpdateChannel = SparkleUpdateChannel(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.updateChannel) ?? "") ?? .release
         super.init()
 
         configureUpdater()
@@ -116,7 +86,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         updaterController.updater.updateCheckInterval = sanitizedInterval
     }
 
-    func setUpdateChannel(_ channel: UpdateChannel) {
+    func setUpdateChannel(_ channel: SparkleUpdateChannel) {
         guard channel != selectedUpdateChannel else { return }
 
         UserDefaults.standard.set(channel.rawValue, forKey: DefaultsKey.updateChannel)
@@ -161,7 +131,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     private var configuredFeedURLString: String? {
-        let feedURLString = selectedUpdateChannel.feedURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let feedURLString = selectedUpdateChannel.feedURLString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         return feedURLString.isEmpty ? nil : feedURLString
     }
 
@@ -231,15 +201,15 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         handleNoUpdateFound()
     }
 
-    var supportsGentleScheduledUpdateReminders: Bool {
+    nonisolated var supportsGentleScheduledUpdateReminders: Bool {
         true
     }
 
-    func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
+    nonisolated func standardUserDriverShouldHandleShowingScheduledUpdate(_ update: SUAppcastItem, andInImmediateFocus immediateFocus: Bool) -> Bool {
         true
     }
 
-    func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
+    nonisolated func standardUserDriverWillHandleShowingUpdate(_ handleShowingUpdate: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
         // Keep Sparkle's standard scheduled update flow; the delegate only advertises support
         // so background checks can schedule without emitting the gentle-reminders warning.
     }

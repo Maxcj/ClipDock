@@ -46,7 +46,7 @@ struct SettingsView: View {
         )
     }
 
-    private var updateChannelBinding: Binding<SparkleUpdateManager.UpdateChannel> {
+    private var updateChannelBinding: Binding<SparkleUpdateChannel> {
         Binding(
             get: { sparkleUpdateManager.selectedUpdateChannel },
             set: { sparkleUpdateManager.setUpdateChannel($0) }
@@ -489,7 +489,7 @@ struct SettingsView: View {
                         isDimmed: !sparkleUpdateManager.isConfigured
                     ) {
                         Picker("", selection: updateChannelBinding) {
-                            ForEach(SparkleUpdateManager.UpdateChannel.allCases) { channel in
+                            ForEach(SparkleUpdateChannel.allCases) { channel in
                                 Text(localizer.text(channel.titleKey)).tag(channel)
                             }
                         }

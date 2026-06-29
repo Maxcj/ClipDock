@@ -36,7 +36,7 @@ struct ClipDockApp: App {
             "clipboard.retentionUnit": RetentionUnit.day.rawValue,
             "sparkle.automaticallyChecksForUpdates": false,
             "sparkle.updateCheckInterval": 60.0 * 60.0 * 24.0,
-            "sparkle.updateChannel": SparkleUpdateManager.UpdateChannel.release.rawValue,
+            "sparkle.updateChannel": SparkleUpdateDefaults.defaultUpdateChannelRawValue,
             ClipboardPrivacyRules.ignoreVerificationCodesStorageKey: false,
             ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey: false,
             ClipboardPrivacyRules.ignorePrivateKeysStorageKey: false,
