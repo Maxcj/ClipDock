@@ -146,8 +146,15 @@ final class LoginItemManager: ObservableObject {
 private struct StatusBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.appLocalizer) private var localizer
+    private var appVersion: String { Bundle.main.appVersionString }
 
     var body: some View {
+        Text(localizer.text(.versionLabel, appVersion))
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+
+        Divider()
+
         Button(localizer.text(.showHideMainWindow)) {
             NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
         }

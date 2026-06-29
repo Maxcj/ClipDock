@@ -359,7 +359,13 @@ extension SettingsView {
     }
 
     var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        Bundle.main.appVersionString
+    }
+}
+
+extension Bundle {
+    var appVersionString: String {
+        object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         ?? "Unknown"
     }
 }
