@@ -6,15 +6,15 @@
         <description>ClipDock beta feed for Sparkle automatic updates.</description>
         <language>en</language>
         <item>
-            <title>1.1.1-beta3</title>
-            <pubDate>Mon, 29 Jun 2026 17:38:24 +0000</pubDate>
+            <title>1.1.0-beta4</title>
+            <pubDate>Tue, 30 Jun 2026 02:17:26 +0000</pubDate>
             <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.1.1-beta3/1.1.1-beta3.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>19</sparkle:version>
-            <sparkle:shortVersionString>1.1.1-beta3</sparkle:shortVersionString>
+            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.1.0-beta4/1.1.0-beta4.html</sparkle:fullReleaseNotesLink>
+            <sparkle:version>20</sparkle:version>
+            <sparkle:shortVersionString>1.1.0-beta4</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.1.1-beta3/1.1.1-beta3.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.1.1-beta3/ClipDock-1.1.1-beta3-macOS-universal.zip" length="5949936" type="application/octet-stream" sparkle:edSignature="bDZt5np0fYtahISYy8JIxKhU23eXr5ISsuENrM8OCepkXTQw9x85nyeGgIR5m+IC5HQQ4Jglv+5eYvtvn3PUDg=="/>
+            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.1.0-beta4/1.1.0-beta4.html</sparkle:releaseNotesLink>
+            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.1.0-beta4/ClipDock-1.1.0-beta4-macOS-universal.zip" length="5845334" type="application/octet-stream" sparkle:edSignature="PC9kqAFDfnuBcuM660+JkzHCqRCefK4iTK651sp5cHf7wWU+h47kSpLFbx1FW1wxa2LO2a0ug+0dOs9H5risBw=="/>
         </item>
         <item>
             <title>1.0.0</title>
