@@ -48,9 +48,10 @@
 "releaseChannel" = "Release";
 "betaChannel" = "Beta";
 "checkForUpdates" = "Check for Updates";
-"checkForUpdatesSubtitle" = "Check for a new release and open the download link if one is available";
-"checkForUpdatesStandardFlow" = "Sparkle User Flow";
-"checkForUpdatesStandardFlowSubtitle" = "Open Sparkle's standard user update flow for testing";
+"checkForUpdatesSubtitle" = "Check for a new release and open Sparkle's standard update window if one is available";
+"githubReleases" = "GitHub Releases";
+"githubReleasesSubtitle" = "Open the release page in your browser if Sparkle fails";
+"open" = "Open";
 "updatesFeedNotConfigured" = "Choose a valid update channel before checking for updates.";
 "updateAvailableTitle" = "Version %@ is available";
 "updateAvailableSubtitle" = "Click Download to open the release asset in your browser.";

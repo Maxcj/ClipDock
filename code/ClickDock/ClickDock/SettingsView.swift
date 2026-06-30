@@ -10,6 +10,7 @@ import KeyboardShortcuts
 
 struct SettingsView: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.openURL) private var openURL
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var loginItemManager: LoginItemManager
@@ -602,7 +603,7 @@ struct SettingsView: View {
                         title: localizer.text(.checkForUpdates),
                         subtitle: localizer.text(.checkForUpdatesSubtitle),
                         buttonTitle: localizer.text(.checkForUpdates),
-                        isDimmed: !sparkleUpdateManager.canCheckForUpdates,
+                        isDimmed: !sparkleUpdateManager.isConfigured || sparkleUpdateManager.isUpdateCheckInProgress,
                         action: {
                             sparkleUpdateManager.checkForUpdates()
                         }
@@ -610,39 +611,14 @@ struct SettingsView: View {
 
                     Divider().padding(.leading, 52)
 
-                    HStack(alignment: .center, spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Color.black.opacity(0.04))
-
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 15, weight: .regular))
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 28, height: 28)
-
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(localizer.text(.checkForUpdatesStandardFlow))
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundStyle(.primary)
-                            Text(localizer.text(.checkForUpdatesStandardFlowSubtitle))
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        Spacer(minLength: 12)
-
-                        Button(action: {
-                            sparkleUpdateManager.checkForUpdatesUsingStandardFlow()
-                        }) {
-                            Text(localizer.text(.checkForUpdatesStandardFlow))
-                        }
-                        .buttonStyle(SettingsSecondaryButtonStyle())
-                        .disabled(!sparkleUpdateManager.canCheckForUpdates)
+                    settingsActionRow(
+                        iconName: "safari",
+                        title: localizer.text(.githubReleases),
+                        subtitle: localizer.text(.githubReleasesSubtitle),
+                        buttonTitle: localizer.text(.open)
+                    ) {
+                        openURL(URL(string: "https://github.com/maxcj/ClipDock/releases")!)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
 
                     if let ignoredVersion = sparkleUpdateManager.ignoredVersion {
                         Divider().padding(.leading, 52)

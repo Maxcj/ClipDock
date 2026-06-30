@@ -97,8 +97,8 @@ enum AppTextKey: String {
     case betaChannel
     case checkForUpdates
     case checkForUpdatesSubtitle
-    case checkForUpdatesStandardFlow
-    case checkForUpdatesStandardFlowSubtitle
+    case githubReleases
+    case githubReleasesSubtitle
     case updatesFeedNotConfigured
     case updateAvailableTitle
     case updateAvailableSubtitle
@@ -106,6 +106,7 @@ enum AppTextKey: String {
     case releaseNotes
     case releaseNotesUnavailable
     case ok
+    case open
     case noUpdateTitle
     case noUpdateSubtitle
     case ignoredVersion

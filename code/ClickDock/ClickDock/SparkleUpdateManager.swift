@@ -4,8 +4,8 @@
 //
 
 import Foundation
-import AppKit
 import Sparkle
+import ObjectiveC.runtime
 
 @MainActor
 final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
@@ -16,19 +16,12 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         static let updateCheckInterval = "sparkle.updateCheckInterval"
     }
 
-    private var localizer: AppLocalizer {
-        AppLocalizer.current
-    }
-
     @Published private(set) var ignoredVersion: String?
     @Published private(set) var isConfigured: Bool = false
     @Published private(set) var automaticallyChecksForUpdates: Bool
+    @Published private(set) var isUpdateCheckInProgress: Bool = false
     @Published private(set) var updateCheckInterval: TimeInterval
     @Published private(set) var selectedUpdateChannel: SparkleUpdateChannel
-    @Published var releaseNotesPresentation: UpdateReleaseNotesPresentation?
-    private var shouldShowReleaseNotesForNextManualCheck = false
-    private var shouldShowReleaseNotesForNextStartupCheck = false
-    private var shouldBypassCustomPromptForNextStandardFlowCheck = false
     private var didPerformStartupUpdateCheck = false
 
     var canCheckForUpdates: Bool {
@@ -44,6 +37,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }()
 
     override init() {
+        Self.installSparkleLocalizationOverride()
         ignoredVersion = UserDefaults.standard.string(forKey: DefaultsKey.ignoredVersion)
             .flatMap { $0.isEmpty ? nil : $0 }
         automaticallyChecksForUpdates = UserDefaults.standard.object(forKey: DefaultsKey.automaticallyChecksForUpdates) as? Bool ?? false
@@ -60,17 +54,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
             return
         }
 
-        shouldShowReleaseNotesForNextManualCheck = true
-        updaterController.updater.checkForUpdateInformation()
-    }
-
-    func checkForUpdatesUsingStandardFlow() {
-        guard canCheckForUpdates else {
-            NSLog("Sparkle feed URL is not configured")
-            return
-        }
-
-        shouldBypassCustomPromptForNextStandardFlowCheck = true
+        isUpdateCheckInProgress = true
         updaterController.updater.checkForUpdates()
     }
 
@@ -111,10 +95,10 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     func performStartupUpdateCheckIfNeeded() {
         guard !didPerformStartupUpdateCheck else { return }
         didPerformStartupUpdateCheck = true
-        guard canCheckForUpdates else { return }
+        guard canCheckForUpdates, automaticallyChecksForUpdates else { return }
 
-        shouldShowReleaseNotesForNextStartupCheck = true
-        updaterController.updater.checkForUpdateInformation()
+        isUpdateCheckInProgress = true
+        updaterController.updater.checkForUpdatesInBackground()
     }
 
     func setIgnoredVersion(_ version: String?) {
@@ -171,51 +155,21 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         }
     }
 
-    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
-        let versionString = item.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayVersionString = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
-        let matchesIgnoredVersion = versionString == ignoredVersion || displayVersionString == ignoredVersion
-
-        guard !matchesIgnoredVersion else { return }
-
-        if shouldBypassCustomPromptForNextStandardFlowCheck {
-            shouldBypassCustomPromptForNextStandardFlowCheck = false
-            return
-        }
-
-        if shouldShowReleaseNotesForNextManualCheck || shouldShowReleaseNotesForNextStartupCheck {
-            shouldShowReleaseNotesForNextManualCheck = false
-            shouldShowReleaseNotesForNextStartupCheck = false
-            Task { await presentReleaseNotesPrompt(for: item) }
-        } else {
-            presentDownloadPrompt(for: item)
-        }
-    }
-
     func updater(_ updater: SPUUpdater, userDidSkipThisVersion updateItem: SUAppcastItem) {
         setIgnoredVersion(updateItem.versionString)
     }
 
     func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor error: Error?) {
+        isUpdateCheckInProgress = false
+
         let nsError = error as NSError?
         guard let nsError, nsError.domain == SUSparkleErrorDomain else {
             return
         }
 
         if nsError.code != 1001 {
-            shouldShowReleaseNotesForNextManualCheck = false
-            shouldShowReleaseNotesForNextStartupCheck = false
-            shouldBypassCustomPromptForNextStandardFlowCheck = false
             NSLog("Sparkle update cycle finished with error: \(nsError.localizedDescription)")
         }
-    }
-
-    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
-        handleNoUpdateFound()
-    }
-
-    func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: Error) {
-        handleNoUpdateFound()
     }
 
     nonisolated var supportsGentleScheduledUpdateReminders: Bool {
@@ -231,161 +185,61 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         // so background checks can schedule without emitting the gentle-reminders warning.
     }
 
-    private func handleNoUpdateFound() {
-        shouldBypassCustomPromptForNextStandardFlowCheck = false
+    nonisolated func standardUserDriverWillFinishUpdateSession() {
+        Task { @MainActor in
+            self.isUpdateCheckInProgress = false
+        }
+    }
 
-        if shouldShowReleaseNotesForNextManualCheck {
-            shouldShowReleaseNotesForNextManualCheck = false
-            shouldShowReleaseNotesForNextStartupCheck = false
-            presentNoUpdatePrompt()
+    private static func installSparkleLocalizationOverride() {
+        _ = Self.sparkleLocalizationSwizzleToken
+    }
+
+    private static let sparkleLocalizationSwizzleToken: Void = {
+        let originalSelector = #selector(Bundle.localizedString(forKey:value:table:))
+        let swizzledSelector = #selector(Bundle.cdx_localizedString(forKey:value:table:))
+
+        guard let originalMethod = class_getInstanceMethod(Bundle.self, originalSelector),
+              let swizzledMethod = class_getInstanceMethod(Bundle.self, swizzledSelector) else {
+            NSLog("Sparkle localization override could not be installed")
             return
         }
 
-        if shouldShowReleaseNotesForNextStartupCheck {
-            shouldShowReleaseNotesForNextStartupCheck = false
-        }
-    }
-
-    private func presentDownloadPrompt(for item: SUAppcastItem) {
-        let version = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? item.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
-            : item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
-        let downloadURL = item.fileURL ?? item.infoURL ?? URL(string: "https://github.com/maxcj/ClipDock/releases/latest")
-
-        let alert = NSAlert()
-        alert.messageText = localizer.text(.updateAvailableTitle, version)
-        alert.informativeText = localizer.text(.updateAvailableSubtitle)
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: localizer.text(.downloadUpdate))
-        alert.addButton(withTitle: localizer.text(.later))
-
-        let response = alert.runModal()
-        guard response == .alertFirstButtonReturn else { return }
-
-        if let downloadURL {
-            NSWorkspace.shared.open(downloadURL)
-        }
-    }
-
-    private func presentReleaseNotesPrompt(for item: SUAppcastItem) async {
-        let version = item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? item.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
-            : item.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let releaseNotesURL = item.fullReleaseNotesURL ?? item.releaseNotesURL ?? item.infoURL
-        let releaseNotesText = await loadReleaseNotesText(for: releaseNotesURL)
-
-        releaseNotesPresentation = UpdateReleaseNotesPresentation(
-            version: version,
-            releaseNotesText: releaseNotesText ?? localizer.text(.releaseNotesUnavailable),
-            downloadURL: item.fileURL ?? item.infoURL ?? URL(string: "https://github.com/maxcj/ClipDock/releases/latest"),
-            releaseNotesURL: releaseNotesURL
-        )
-    }
-
-    func dismissReleaseNotesPresentation() {
-        releaseNotesPresentation = nil
-    }
-
-    func openDownloadURL(for presentation: UpdateReleaseNotesPresentation) {
-        if let downloadURL = presentation.downloadURL {
-            NSWorkspace.shared.open(downloadURL)
-        }
-    }
-
-    func openReleaseNotesURL(for presentation: UpdateReleaseNotesPresentation) {
-        if let releaseNotesURL = presentation.releaseNotesURL {
-            NSWorkspace.shared.open(releaseNotesURL)
-        }
-    }
-
-    private func loadReleaseNotesText(for url: URL?) async -> String? {
-        guard let url else { return nil }
-
-        do {
-            let (data, response) = try await URLSession.shared.data(from: url)
-            let mimeType = response.mimeType?.lowercased()
-
-            if mimeType?.contains("html") == true || mimeType?.contains("xml") == true {
-                let attributed = try NSAttributedString(
-                    data: data,
-                    options: [
-                        .documentType: NSAttributedString.DocumentType.html,
-                        .characterEncoding: String.Encoding.utf8.rawValue
-                    ],
-                    documentAttributes: nil
-                )
-                return attributed.string.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            if let plainText = String(data: data, encoding: .utf8) {
-                return preferredReleaseNotesText(from: plainText)
-            }
-        } catch {
-            NSLog("Failed to load release notes from \(url.absoluteString): \(error.localizedDescription)")
-        }
-
-        return nil
-    }
-
-    private func preferredReleaseNotesText(from text: String) -> String {
-        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
-
-        switch localizer.language {
-        case .english:
-            return sectionText(
-                in: normalized,
-                startingAt: ["What’s New", "Highlights"],
-                endingBefore: ["本次更新"]
-            ) ?? normalized.trimmingCharacters(in: .whitespacesAndNewlines)
-        case .simplifiedChinese:
-            return sectionText(
-                in: normalized,
-                startingAt: ["本次更新"],
-                endingBefore: ["What’s New", "Highlights"]
-            ) ?? normalized.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-    }
-
-    private func sectionText(
-        in text: String,
-        startingAt startHeadings: [String],
-        endingBefore endHeadings: [String]
-    ) -> String? {
-        guard let startMatch = firstRange(in: text, matchingAnyOf: startHeadings) else { return nil }
-
-        let tail = String(text[startMatch.lowerBound...])
-        if let endMatch = firstRange(in: tail, matchingAnyOf: endHeadings) {
-            let section = String(tail[..<endMatch.lowerBound])
-            return section.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        return tail.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func firstRange(in text: String, matchingAnyOf candidates: [String]) -> Range<String.Index>? {
-        for candidate in candidates {
-            if let range = text.range(of: candidate) {
-                return range
-            }
-        }
-        return nil
-    }
-
-    private func presentNoUpdatePrompt() {
-        let alert = NSAlert()
-        alert.messageText = localizer.text(.noUpdateTitle)
-        alert.informativeText = localizer.text(.noUpdateSubtitle)
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: localizer.text(.ok))
-        alert.runModal()
-    }
+        method_exchangeImplementations(originalMethod, swizzledMethod)
+    }()
 }
 
-struct UpdateReleaseNotesPresentation: Identifiable {
-    let id = UUID()
-    let version: String
-    let releaseNotesText: String
-    let downloadURL: URL?
-    let releaseNotesURL: URL?
+private extension Bundle {
+    @objc func cdx_localizedString(forKey key: String, value: String?, table tableName: String?) -> String {
+        if let overrideBundle = Self.cdx_sparkleLocalizationBundle(for: self),
+           overrideBundle != self {
+            return overrideBundle.cdx_localizedString(forKey: key, value: value, table: tableName)
+        }
+
+        return cdx_localizedString(forKey: key, value: value, table: tableName)
+    }
+
+    static func cdx_sparkleLocalizationBundle(for bundle: Bundle) -> Bundle? {
+        guard cdx_isSparkleBundle(bundle) else { return nil }
+
+        let preference = AppLanguagePreference(rawValue: UserDefaults.standard.string(forKey: "app.languagePreference") ?? AppLanguagePreference.system.rawValue) ?? .system
+        let language = AppDisplayLanguage.resolve(from: preference.rawValue)
+        // Sparkle ships Simplified Chinese resources as zh_CN, while English lives in Base.
+        let resourceName = language == .simplifiedChinese ? "zh_CN" : "Base"
+
+        guard let path = bundle.path(forResource: resourceName, ofType: "lproj"),
+              let localizedBundle = Bundle(path: path) else {
+            return nil
+        }
+
+        return localizedBundle
+    }
+
+    static func cdx_isSparkleBundle(_ bundle: Bundle) -> Bool {
+        if bundle.bundleIdentifier == "org.sparkle-project.Sparkle" {
+            return true
+        }
+
+        return bundle.bundlePath.contains("Sparkle.framework")
+    }
 }

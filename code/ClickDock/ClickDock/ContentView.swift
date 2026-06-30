@@ -74,17 +74,6 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .clipDockHidePanelRequested)) { _ in
             hideMainWindow()
         }
-        .sheet(item: $sparkleUpdateManager.releaseNotesPresentation) { presentation in
-            UpdateReleaseNotesSheetView(
-                presentation: presentation,
-                onDownload: {
-                    sparkleUpdateManager.openDownloadURL(for: presentation)
-                },
-                onClose: {
-                    sparkleUpdateManager.dismissReleaseNotesPresentation()
-                }
-            )
-        }
     }
 
     private func configureFloatingWindow(_ window: NSWindow) {
