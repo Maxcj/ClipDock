@@ -170,6 +170,7 @@ final class ClipboardMonitor: ObservableObject {
                         imagePath: assets.original.path,
                         assetPath: nil,
                         thumbnailPath: assets.thumbnail.path,
+                        cachedSizeBytes: assets.cachedSizeBytes,
                         sourceAppName: appName,
                         sourceBundleId: bundleId,
                         hash: Self.hash(kind: .image, data: imageData)
@@ -188,6 +189,7 @@ final class ClipboardMonitor: ObservableObject {
                 imagePath: nil,
                 assetPath: nil,
                 thumbnailPath: nil,
+                cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .files, text: fullText)
@@ -205,6 +207,7 @@ final class ClipboardMonitor: ObservableObject {
                     imagePath: assets.original.path,
                     assetPath: nil,
                     thumbnailPath: assets.thumbnail.path,
+                    cachedSizeBytes: assets.cachedSizeBytes,
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
                     hash: Self.hash(kind: .image, data: assets.originalData)
@@ -227,6 +230,7 @@ final class ClipboardMonitor: ObservableObject {
                 imagePath: nil,
                 assetPath: nil,
                 thumbnailPath: nil,
+                cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .link, text: urlText)
@@ -259,6 +263,7 @@ final class ClipboardMonitor: ObservableObject {
                     imagePath: nil,
                     assetPath: nil,
                     thumbnailPath: nil,
+                    cachedSizeBytes: 0,
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
                     hash: Self.hash(kind: kind, text: color.sourceText)
@@ -272,6 +277,7 @@ final class ClipboardMonitor: ObservableObject {
                 imagePath: nil,
                 assetPath: nil,
                 thumbnailPath: nil,
+                cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: kind, text: trimmed)
@@ -418,18 +424,15 @@ final class ClipboardMonitor: ObservableObject {
         record.displayText = snapshot.displayText
         record.fullText = snapshot.fullText
         record.imagePath = snapshot.imagePath
-        if let assetPath = snapshot.assetPath {
-            record.setValue(assetPath, forKey: "assetPath")
-        }
-        if let thumbnailPath = snapshot.thumbnailPath {
-            record.setValue(thumbnailPath, forKey: "thumbnailPath")
-        }
+        record.cachedSizeBytesValue = snapshot.cachedSizeBytes
+        record.assetPathValue = snapshot.assetPath
+        record.thumbnailPathValue = snapshot.thumbnailPath
         record.sourceAppName = snapshot.sourceAppName
         record.sourceBundleId = snapshot.sourceBundleId
         record.contentHash = snapshot.hash
 
         if snapshot.kind == .code {
-            let codeText = snapshot.fullText ?? snapshot.displayText ?? ""
+            let codeText = snapshot.fullText ?? snapshot.displayText
             let language = ClipboardCodeLanguageDetector.detect(from: codeText)
             record.setValue(language.rawValue, forKey: "codeLanguageRaw")
             record.setValue(Int32(codeText.split(whereSeparator: \.isNewline).count), forKey: "codeLineCountValue")
@@ -439,7 +442,7 @@ final class ClipboardMonitor: ObservableObject {
         }
 
         if snapshot.kind == .colors,
-           let color = ClipboardColorDetector.detect(from: snapshot.fullText ?? snapshot.displayText ?? "") {
+           let color = ClipboardColorDetector.detect(from: snapshot.fullText ?? snapshot.displayText) {
             record.setValue(color.normalizedHexString, forKey: "colorHex")
             record.setValue(color.red, forKey: "colorRed")
             record.setValue(color.green, forKey: "colorGreen")
@@ -511,13 +514,19 @@ final class ClipboardMonitor: ObservableObject {
             try originalData.write(to: originalURL, options: .atomic)
 
             let thumbnailURL = folderURL.appendingPathComponent(UUID().uuidString).appendingPathExtension("thumb.png")
-            if let thumbnailData = Self.thumbnailData(from: originalData, maxPixelSize: 420) {
+            let thumbnailData = Self.thumbnailData(from: originalData, maxPixelSize: 420)
+            if let thumbnailData {
                 try thumbnailData.write(to: thumbnailURL, options: .atomic)
             } else {
                 try originalData.write(to: thumbnailURL, options: .atomic)
             }
 
-            return SavedImageAssets(original: originalURL, thumbnail: thumbnailURL, originalData: originalData)
+            return SavedImageAssets(
+                original: originalURL,
+                thumbnail: thumbnailURL,
+                originalData: originalData,
+                thumbnailData: thumbnailData
+            )
         } catch {
             NSLog("Failed to save clipboard image: \(error.localizedDescription)")
             return nil

@@ -36,6 +36,7 @@ struct SettingsView: View {
     @AppStorage(ClipboardPrivacyRules.ignorePrivateKeysStorageKey) private var ignorePrivateKeys = false
     @AppStorage(ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey) private var ignoreLongSensitiveText = false
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
+    @AppStorage(ClipboardStorageSummaryStore.lastUpdatedAtDefaultsKey) private var storageSummaryLastUpdatedAt = 0.0
 
     private var automaticCheckForUpdatesBinding: Binding<Bool> {
         Binding(
@@ -152,6 +153,11 @@ struct SettingsView: View {
         }
         .onChange(of: activeTab) { newValue in
             if newValue == .storage {
+                storageSummaryLoader.load(context: viewContext)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .clipDockStorageSummaryDidChange)) { _ in
+            if activeTab == .storage {
                 storageSummaryLoader.load(context: viewContext)
             }
         }
@@ -430,51 +436,76 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.storageSectionTitle), subtitle: localizer.text(.storageSectionSubtitle)) {
                     if let storageSummary = storageSummaryLoader.summary {
-                        settingsStaticValueRow(
-                            iconName: "tray.full",
-                            title: localizer.text(.storageTotalItems),
-                            subtitle: localizer.text(.storageTotalItemsSubtitle),
-                            value: storageSummary.totalItemsValue
-                        )
+                        VStack(alignment: .leading, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                settingsStaticValueRow(
+                                    iconName: "tray.full",
+                                    title: localizer.text(.storageTotalItems),
+                                    subtitle: localizer.text(.storageTotalItemsSubtitle),
+                                    value: storageSummary.totalItemsValue
+                                )
 
-                        Divider().padding(.leading, 52)
+                                Divider().padding(.leading, 52)
 
-                        settingsStaticValueRow(
-                            iconName: "text.alignleft",
-                            title: localizer.text(.storageTextItems),
-                            subtitle: localizer.text(.storageTextItemsSubtitle),
-                            value: storageSummary.textItemsValue
-                        )
+                                settingsStaticValueRow(
+                                    iconName: "text.alignleft",
+                                    title: localizer.text(.storageTextItems),
+                                    subtitle: localizer.text(.storageTextItemsSubtitle),
+                                    value: storageSummary.textItemsValue
+                                )
 
-                        Divider().padding(.leading, 52)
+                                Divider().padding(.leading, 52)
 
-                        settingsStaticValueRow(
-                            iconName: "photo.stack",
-                            title: localizer.text(.storageImages),
-                            subtitle: localizer.text(.storageImagesSubtitle),
-                            value: storageSummary.imagesValue
-                        )
+                                settingsStaticValueRow(
+                                    iconName: "photo.stack",
+                                    title: localizer.text(.storageImages),
+                                    subtitle: localizer.text(.storageImagesSubtitle),
+                                    value: storageSummary.imagesValue
+                                )
+                            }
 
-                        Divider().padding(.leading, 52)
+                            VStack(alignment: .leading, spacing: 0) {
+                                settingsStaticValueRow(
+                                    iconName: "externaldrive",
+                                    title: localizer.text(.storageFilesCache),
+                                    subtitle: localizer.text(.storageFilesCacheSubtitle),
+                                    value: storageSummary.filesCacheValue
+                                )
 
-                        settingsStaticValueRow(
-                            iconName: "externaldrive",
-                            title: localizer.text(.storageFilesCache),
-                            subtitle: localizer.text(.storageFilesCacheSubtitle),
-                            value: storageSummary.filesCacheValue
-                        )
+                                Divider().padding(.leading, 52)
 
-                        Divider().padding(.leading, 52)
+                                settingsStaticValueRow(
+                                    iconName: "globe.asia.australia",
+                                    title: localizer.text(.storageLinkMetadata),
+                                    subtitle: localizer.text(.storageLinkMetadataSubtitle),
+                                    value: storageSummary.linkMetadataValue
+                                )
 
-                        settingsStaticValueRow(
-                            iconName: "globe.asia.australia",
-                            title: localizer.text(.storageLinkMetadata),
-                            subtitle: localizer.text(.storageLinkMetadataSubtitle),
-                            value: storageSummary.linkMetadataValue
-                        )
+                                Divider().padding(.leading, 52)
 
-                        Divider().padding(.leading, 52)
+                                settingsStaticValueRow(
+                                    iconName: "clock",
+                                    title: localizer.text(.storageLastUpdated),
+                                    subtitle: localizer.text(.storageLastUpdatedSubtitle),
+                                    value: storageSummaryLastUpdatedValue
+                                )
 
+                                Divider().padding(.leading, 52)
+
+                                settingsActionRow(
+                                    iconName: "arrow.clockwise",
+                                    title: localizer.text(.rescanStorageUsage),
+                                    subtitle: localizer.text(.rescanStorageUsageSubtitle),
+                                    buttonTitle: localizer.text(.rescan),
+                                    isDimmed: storageSummaryLoader.isLoading,
+                                    action: {
+                                        storageSummaryLoader.rebuild(context: viewContext)
+                                    }
+                                )
+                            }
+
+                            Divider().padding(.leading, 52)
+                        }
                     } else {
                         HStack {
                             Spacer(minLength: 0)
@@ -975,6 +1006,10 @@ struct SettingsView: View {
                         record.assetPathValue = nil
                         changed = true
                     }
+                    if record.cachedSizeBytesValue != 0 {
+                        record.cachedSizeBytesValue = 0
+                        changed = true
+                    }
                 default:
                     continue
                 }
@@ -991,6 +1026,21 @@ struct SettingsView: View {
             NSLog("Failed to clear storage cache from settings: \(error.localizedDescription)")
         }
     }
+
+    private var storageSummaryLastUpdatedValue: String {
+        guard storageSummaryLastUpdatedAt > 0 else {
+            return localizer.text(.storageLastUpdatedNever)
+        }
+
+        return Self.storageSummaryDateFormatter.string(from: Date(timeIntervalSince1970: storageSummaryLastUpdatedAt))
+    }
+
+    private static let storageSummaryDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     private func loadCustomSensitiveRules() {
         customSensitiveRules = ClipboardSensitiveRuleStore.load()
@@ -1112,12 +1162,25 @@ final class StorageSummaryLoader: ObservableObject {
     private var requestToken = UUID()
 
     func load(context: NSManagedObjectContext) {
+        load(context: context, recalculateCachedSizes: false)
+    }
+
+    func rebuild(context: NSManagedObjectContext) {
+        load(context: context, recalculateCachedSizes: true)
+    }
+
+    private func load(context: NSManagedObjectContext, recalculateCachedSizes: Bool) {
         let token = UUID()
         requestToken = token
         summary = nil
         isLoading = true
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
+            if recalculateCachedSizes {
+                ClipboardStorageCalculator.rebuildCachedSizes(context: context)
+                ClipboardStorageSummaryStore.recordUpdated()
+            }
+
             let computedSummary = ClipboardStorageCalculator.summary(context: context)
 
             DispatchQueue.main.async {

@@ -109,6 +109,12 @@
 "storageFilesCacheSubtitle" = "Legacy cached file copies kept by older versions of ClipDock";
 "storageLinkMetadata" = "Link metadata";
 "storageLinkMetadataSubtitle" = "Website titles, hosts, and favicon data cached for links";
+"storageLastUpdated" = "Last statistics";
+"storageLastUpdatedSubtitle" = "When storage usage was last recalculated";
+"storageLastUpdatedNever" = "Never";
+"rescanStorageUsage" = "Rescan storage usage";
+"rescanStorageUsageSubtitle" = "Recalculate cached image and legacy file storage from disk";
+"rescan" = "Rescan";
 "clearCache" = "Clear cache";
 "clearCacheSubtitle" = "Remove rebuildable metadata and legacy cache files";
 "systemCategories" = "System Categories";

@@ -109,6 +109,12 @@
 "storageFilesCacheSubtitle" = "旧版本 ClipDock 遗留的文件副本缓存";
 "storageLinkMetadata" = "链接元数据";
 "storageLinkMetadataSubtitle" = "链接的网站标题、域名和 favicon 缓存数据";
+"storageLastUpdated" = "上次统计";
+"storageLastUpdatedSubtitle" = "最近一次重新统计存储占用的时间";
+"storageLastUpdatedNever" = "从未";
+"rescanStorageUsage" = "重新扫描存储占用";
+"rescanStorageUsageSubtitle" = "重新统计缓存图片和旧文件缓存的实际占用";
+"rescan" = "重新扫描";
 "clearCache" = "清理缓存";
 "clearCacheSubtitle" = "移除可重建的元数据和旧缓存文件";
 "systemCategories" = "系统分类";

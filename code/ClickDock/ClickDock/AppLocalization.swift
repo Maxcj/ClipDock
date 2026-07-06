@@ -154,6 +154,12 @@ enum AppTextKey: String {
     case storageFilesCacheSubtitle
     case storageLinkMetadata
     case storageLinkMetadataSubtitle
+    case storageLastUpdated
+    case storageLastUpdatedSubtitle
+    case storageLastUpdatedNever
+    case rescanStorageUsage
+    case rescanStorageUsageSubtitle
+    case rescan
     case clearCache
     case clearCacheSubtitle
     case systemCategories

@@ -73,17 +73,18 @@ struct HighlighterCodeView: NSViewRepresentable {
     }
 
     final class Coordinator {
-        private let highlighter: Highlighter
+        private let highlighter: Highlighter?
         private weak var textView: NSTextView?
         private weak var scrollView: NSScrollView?
         private var lastSignature: String?
 
         init() {
-            guard let highlighter = Highlighter() else {
-                preconditionFailure("HighlighterSwift failed to initialize")
+            if let highlighter = Highlighter() {
+                self.highlighter = highlighter
+                _ = highlighter.setTheme("github", withFont: "Menlo-Regular", ofSize: 13.0)
+            } else {
+                self.highlighter = nil
             }
-            self.highlighter = highlighter
-            _ = self.highlighter.setTheme("github", withFont: "Menlo-Regular", ofSize: 13.0)
         }
 
         func install(into textView: NSTextView, scrollView: NSScrollView) {
@@ -103,7 +104,7 @@ struct HighlighterCodeView: NSViewRepresentable {
             }
             lastSignature = signature
 
-            let rendered = highlighter.highlight(text, as: language.highlighterLanguageIdentifier) ?? NSAttributedString(string: text)
+            let rendered = highlighter?.highlight(text, as: language.highlighterLanguageIdentifier) ?? NSAttributedString(string: text)
             textView.textStorage?.setAttributedString(rendered)
             textView.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
             textView.frame = NSRect(origin: .zero, size: textView.fittingSize)

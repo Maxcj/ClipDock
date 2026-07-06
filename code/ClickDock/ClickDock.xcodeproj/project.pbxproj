@@ -21,6 +21,7 @@
 		A40000000000000000000001 /* ClipboardCategorySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000002 /* ClipboardCategorySupport.swift */; };
 		A40000000000000000000003 /* ClipboardCategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000004 /* ClipboardCategoryViews.swift */; };
 		B20000000000000000000001 /* ClipboardCodeRenderingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */; };
+		F30000000000000000000001 /* StorageSummaryScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30000000000000000000002 /* StorageSummaryScheduler.swift */; };
 		C1E5F5E82FE950CD00571FED /* ClickDockApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */; };
 		C1E5F5EC2FE950D000571FED /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EB2FE950D000571FED /* Assets.xcassets */; };
 		C1E5F5EF2FE950D000571FED /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C1E5F5EE2FE950D000571FED /* Preview Assets.xcassets */; };
@@ -56,6 +57,7 @@
 		A40000000000000000000002 /* ClipboardCategorySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCategorySupport.swift; sourceTree = "<group>"; };
 		A40000000000000000000004 /* ClipboardCategoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCategoryViews.swift; sourceTree = "<group>"; };
 		B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCodeRenderingViews.swift; sourceTree = "<group>"; };
+		F30000000000000000000002 /* StorageSummaryScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSummaryScheduler.swift; sourceTree = "<group>"; };
 		C1E5F5E42FE950CD00571FED /* ClipDock.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClipDock.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C1E5F5E72FE950CD00571FED /* ClickDockApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickDockApp.swift; sourceTree = "<group>"; };
 		C1E5F5E92FE950CD00571FED /* ContentView.swift */ = {isa = PBXFileReference; indentWidth = 5; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; tabWidth = 5; };
@@ -205,6 +207,7 @@
 			children = (
 				D93A11022FF2000100A1B2C3 /* WindowSupport.swift */,
 				DDB7CBE8D9A042A6ACC78B98 /* KeyboardShortcutsSupport.swift */,
+				F30000000000000000000002 /* StorageSummaryScheduler.swift */,
 				A10000000000000000000006 /* SparkleUpdateTypes.swift */,
 				A10000000000000000000001 /* SparkleUpdateManager.swift */,
 				E20000000000000000000002 /* ClipboardSensitiveRuleSupport.swift */,
@@ -335,6 +338,7 @@
 				26CB2CCC0640640CD7C2D124 /* ClipboardFileSupport.swift in Sources */,
 				7572A79C6DD9B93C727F20F6 /* ClipboardPrivacyRules.swift in Sources */,
 				B20000000000000000000001 /* ClipboardCodeRenderingViews.swift in Sources */,
+				F30000000000000000000001 /* StorageSummaryScheduler.swift in Sources */,
 				57782C52DC651151C645104F /* ClipboardStorageSupport.swift in Sources */,
 				A40000000000000000000001 /* ClipboardCategorySupport.swift in Sources */,
 				A40000000000000000000003 /* ClipboardCategoryViews.swift in Sources */,

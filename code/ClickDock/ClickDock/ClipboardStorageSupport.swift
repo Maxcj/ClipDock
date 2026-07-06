@@ -18,6 +18,8 @@ struct ClipboardStorageSummary {
     let totalItemCount: Int
     let textItemCount: Int
     let imageItemCount: Int
+    let filesCacheItemCount: Int
+    let linkMetadataItemCount: Int
     let imageBytes: Int64
     let filesCacheBytes: Int64
     let linkMetadataBytes: Int64
@@ -26,6 +28,8 @@ struct ClipboardStorageSummary {
         totalItemCount: 0,
         textItemCount: 0,
         imageItemCount: 0,
+        filesCacheItemCount: 0,
+        linkMetadataItemCount: 0,
         imageBytes: 0,
         filesCacheBytes: 0,
         linkMetadataBytes: 0
@@ -44,11 +48,11 @@ struct ClipboardStorageSummary {
     }
 
     var filesCacheValue: String {
-        Self.byteFormatter.string(fromByteCount: filesCacheBytes)
+        "\(Self.countFormatter.string(from: NSNumber(value: filesCacheItemCount)) ?? "\(filesCacheItemCount)") / \(Self.byteFormatter.string(fromByteCount: filesCacheBytes))"
     }
 
     var linkMetadataValue: String {
-        Self.byteFormatter.string(fromByteCount: linkMetadataBytes)
+        "\(Self.countFormatter.string(from: NSNumber(value: linkMetadataItemCount)) ?? "\(linkMetadataItemCount)") / \(Self.byteFormatter.string(fromByteCount: linkMetadataBytes))"
     }
 
     private static let countFormatter: NumberFormatter = {
@@ -74,6 +78,8 @@ enum ClipboardStorageCalculator {
         let totalItemCount = snapshots.count
         var textItemCount = 0
         var imageItemCount = 0
+        var filesCacheItemCount = 0
+        var linkMetadataItemCount = 0
         var imageBytes: Int64 = 0
         var filesCacheBytes: Int64 = 0
         var linkMetadataBytes: Int64 = 0
@@ -91,6 +97,7 @@ enum ClipboardStorageCalculator {
                     imageBytes += Int64(fileSize(atPath: path) ?? 0)
                 }
             case .files:
+                filesCacheItemCount += 1
                 if let legacyCacheFolderURL = snapshot.fileReferenceSet.legacyCacheFolderURL {
                     let standardizedPath = legacyCacheFolderURL.standardizedFileURL.path
                     if seenLegacyFileCachePaths.insert(standardizedPath).inserted {
@@ -98,6 +105,7 @@ enum ClipboardStorageCalculator {
                     }
                 }
             case .link:
+                linkMetadataItemCount += 1
                 linkMetadataBytes += Int64(snapshot.linkIconBytes + snapshot.linkTextBytes)
             }
         }
@@ -106,6 +114,8 @@ enum ClipboardStorageCalculator {
             totalItemCount: totalItemCount,
             textItemCount: textItemCount,
             imageItemCount: imageItemCount,
+            filesCacheItemCount: filesCacheItemCount,
+            linkMetadataItemCount: linkMetadataItemCount,
             imageBytes: imageBytes,
             filesCacheBytes: filesCacheBytes,
             linkMetadataBytes: linkMetadataBytes
@@ -116,27 +126,87 @@ enum ClipboardStorageCalculator {
         var result = ClipboardStorageSummary.empty
 
         context.performAndWait {
-            let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+            let request = NSFetchRequest<NSDictionary>(entityName: "ClipboardRecord")
+            request.resultType = .dictionaryResultType
+            request.includesPropertyValues = true
+            request.returnsObjectsAsFaults = false
+            request.propertiesToFetch = [
+                "contentTypeRaw",
+                "cachedSizeBytes",
+                "linkIconData",
+                "linkTitle",
+                "linkHost"
+            ]
 
             guard let records = try? context.fetch(request) else {
                 result = .empty
                 return
             }
 
-            let snapshots = records.map { record in
-                ClipboardStorageSnapshot(
-                    kind: record.kind,
-                    cachedImagePaths: record.cachedImagePaths,
-                    fileReferenceSet: record.fileReferenceSet,
-                    linkIconBytes: record.linkIconDataValue?.count ?? 0,
-                    linkTextBytes: (record.linkTitleValue?.utf8.count ?? 0) + (record.linkHostValue?.utf8.count ?? 0)
-                )
+        var totalItemCount = 0
+        var textItemCount = 0
+        var imageItemCount = 0
+        var filesCacheItemCount = 0
+        var linkMetadataItemCount = 0
+        var imageBytes: Int64 = 0
+        var filesCacheBytes: Int64 = 0
+        var linkMetadataBytes: Int64 = 0
+
+            for record in records {
+                totalItemCount += 1
+                let kind = ClipboardContentKind(rawValue: record["contentTypeRaw"] as? String ?? "") ?? .unknown
+
+                switch kind {
+                case .text, .code, .colors, .unknown:
+                    textItemCount += 1
+                case .image:
+                    imageItemCount += 1
+                    imageBytes += int64Value(record["cachedSizeBytes"])
+                case .files:
+                    filesCacheItemCount += 1
+                    filesCacheBytes += int64Value(record["cachedSizeBytes"])
+                case .link:
+                    linkMetadataItemCount += 1
+                    linkMetadataBytes += Int64((record["linkIconData"] as? Data)?.count ?? 0)
+                    linkMetadataBytes += Int64((record["linkTitle"] as? String)?.utf8.count ?? 0)
+                    linkMetadataBytes += Int64((record["linkHost"] as? String)?.utf8.count ?? 0)
+                }
             }
 
-            result = summary(for: snapshots)
+            result = ClipboardStorageSummary(
+                totalItemCount: totalItemCount,
+                textItemCount: textItemCount,
+                imageItemCount: imageItemCount,
+                filesCacheItemCount: filesCacheItemCount,
+                linkMetadataItemCount: linkMetadataItemCount,
+                imageBytes: imageBytes,
+                filesCacheBytes: filesCacheBytes,
+                linkMetadataBytes: linkMetadataBytes
+            )
         }
 
         return result
+    }
+
+    static func rebuildCachedSizes(context: NSManagedObjectContext) {
+        context.performAndWait {
+            let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+            request.fetchBatchSize = 32
+
+            guard let records = try? context.fetch(request) else { return }
+
+            var didChange = false
+            for record in records {
+                let cachedSizeBytes = cachedSizeBytes(for: record)
+                guard record.cachedSizeBytesValue != cachedSizeBytes else { continue }
+                record.cachedSizeBytesValue = cachedSizeBytes
+                didChange = true
+            }
+
+            if didChange {
+                try? context.save()
+            }
+        }
     }
 
     private static func fileSize(atPath path: String) -> Int? {
@@ -181,5 +251,62 @@ enum ClipboardStorageCalculator {
         }
 
         return total > 0 ? total : nil
+    }
+
+    private static func cachedSizeBytes(for record: ClipboardRecord) -> Int64 {
+        switch record.kind {
+        case .image:
+            return cachedSizeBytes(forPaths: record.cachedImagePaths)
+        case .files:
+            guard let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL else { return 0 }
+            return Int64(fileSize(at: legacyCacheFolderURL) ?? 0)
+        case .text, .link, .code, .colors, .unknown:
+            return 0
+        }
+    }
+
+    private static func cachedSizeBytes(forPaths paths: [String]) -> Int64 {
+        var total: Int64 = 0
+        var seenPaths = Set<String>()
+
+        for path in paths where seenPaths.insert(path).inserted {
+            total += Int64(fileSize(atPath: path) ?? 0)
+        }
+
+        return total
+    }
+
+    private static func int64Value(_ value: Any?) -> Int64 {
+        if let value = value as? Int64 {
+            return value
+        }
+
+        if let value = value as? Int {
+            return Int64(value)
+        }
+
+        if let value = value as? NSNumber {
+            return value.int64Value
+        }
+
+        return 0
+    }
+}
+
+extension Notification.Name {
+    static let clipDockStorageSummaryDidChange = Notification.Name("clipDockStorageSummaryDidChange")
+}
+
+enum ClipboardStorageSummaryStore {
+    static let lastUpdatedAtDefaultsKey = "clipboard.storageSummary.lastUpdatedAt"
+
+    static func recordUpdated(at date: Date = Date()) {
+        UserDefaults.standard.set(date.timeIntervalSince1970, forKey: lastUpdatedAtDefaultsKey)
+    }
+
+    static var lastUpdatedAt: Date? {
+        let timeInterval = UserDefaults.standard.double(forKey: lastUpdatedAtDefaultsKey)
+        guard timeInterval > 0 else { return nil }
+        return Date(timeIntervalSince1970: timeInterval)
     }
 }

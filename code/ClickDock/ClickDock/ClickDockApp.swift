@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import CoreData
 import ServiceManagement
 import KeyboardShortcuts
 
@@ -21,6 +22,7 @@ struct ClipDockApp: App {
     @StateObject private var clipboardMonitor: ClipboardMonitor
     @StateObject private var keyboardShortcutManager: KeyboardShortcutManager
     @StateObject private var loginItemManager: LoginItemManager
+    @StateObject private var storageSummaryScheduler: StorageSummaryScheduler
     @StateObject private var sparkleUpdateManager: SparkleUpdateManager
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
@@ -44,6 +46,9 @@ struct ClipDockApp: App {
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        let storageSummaryScheduler = StorageSummaryScheduler(container: PersistenceController.shared.container)
+        _storageSummaryScheduler = StateObject(wrappedValue: storageSummaryScheduler)
+        storageSummaryScheduler.start()
         _sparkleUpdateManager = StateObject(wrappedValue: SparkleUpdateManager())
     }
 
@@ -58,6 +63,7 @@ struct ClipDockApp: App {
                 .environmentObject(clipboardMonitor)
                 .environmentObject(keyboardShortcutManager)
                 .environmentObject(loginItemManager)
+                .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
@@ -69,6 +75,7 @@ struct ClipDockApp: App {
                 .environment(\.appLocalizer, localizer)
                 .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
                 .environmentObject(loginItemManager)
+                .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
         }
         .defaultSize(width: 760, height: 520)

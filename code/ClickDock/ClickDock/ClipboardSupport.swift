@@ -942,6 +942,7 @@ struct ClipboardSnapshot {
     let imagePath: String?
     let assetPath: String?
     let thumbnailPath: String?
+    let cachedSizeBytes: Int64
     let sourceAppName: String?
     let sourceBundleId: String?
     let hash: String
@@ -951,6 +952,12 @@ struct SavedImageAssets {
     let original: URL
     let thumbnail: URL
     let originalData: Data
+    let thumbnailData: Data?
+
+    var cachedSizeBytes: Int64 {
+        let thumbnailBytes = Int64(thumbnailData?.count ?? originalData.count)
+        return Int64(originalData.count) + thumbnailBytes
+    }
 }
 
 func clipboardRecordDisplaysBefore(_ lhs: ClipboardRecord, _ rhs: ClipboardRecord) -> Bool {
@@ -968,6 +975,11 @@ func clipboardRecordDisplaysBefore(_ lhs: ClipboardRecord, _ rhs: ClipboardRecor
 }
 
 extension ClipboardRecord {
+    var cachedSizeBytesValue: Int64 {
+        get { Int64((value(forKey: "cachedSizeBytes") as? NSNumber)?.int64Value ?? 0) }
+        set { setValue(newValue, forKey: "cachedSizeBytes") }
+    }
+
     var thumbnailPathValue: String? {
         get { thumbnailPath }
         set { thumbnailPath = newValue }
