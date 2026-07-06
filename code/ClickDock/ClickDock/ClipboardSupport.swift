@@ -499,14 +499,12 @@ extension ClipboardRecord {
         }
 
         if kind == .files {
-            if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
-                return AppLocalizer.current.text(.originalFileNoLongerExists)
-            }
-
             let filePaths = fileReferenceSet.displayPathText
             if !filePaths.isEmpty {
                 return filePaths
             }
+
+            return fileReferenceSet.overallStatusText
         }
 
         if let fullText, !fullText.isEmpty {
@@ -539,17 +537,24 @@ extension ClipboardRecord {
 
     var fileStatusText: String {
         guard kind == .files else { return "" }
-        if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
-            return AppLocalizer.current.text(.originalFileNoLongerExists)
-        }
-        return AppLocalizer.current.text(.fileReady)
+        return fileReferenceSet.overallStatusText
+    }
+
+    var fileOriginalStatusText: String {
+        guard kind == .files else { return "" }
+        return fileReferenceSet.originalFileStatusText
+    }
+
+    var fileCachedStatusText: String {
+        guard kind == .files else { return "" }
+        return fileReferenceSet.cachedCopyStatusText
     }
 
     var fileSubtitleText: String {
         guard kind == .files else { return "" }
 
         if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
-            return AppLocalizer.current.text(.originalFileNoLongerExists)
+            return AppLocalizer.current.text(.originalFileMissing)
         }
 
         let filePaths = fileReferenceSet.displayPathText

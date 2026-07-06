@@ -46,6 +46,17 @@ struct ClipboardFileCopyManifest: Codable, Equatable {
         return manifestURL
     }
 
+    static func load(from folderURL: URL) -> ClipboardFileCopyManifest? {
+        let manifestURL = folderURL.appendingPathComponent(Self.fileName, isDirectory: false)
+        guard FileManager.default.fileExists(atPath: manifestURL.path) else { return nil }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        guard let data = try? Data(contentsOf: manifestURL) else { return nil }
+        return try? decoder.decode(Self.self, from: data)
+    }
+
     struct File: Codable, Equatable {
         let sourcePath: String
         let originalFileName: String
@@ -82,6 +93,62 @@ struct ClipboardFileReferenceSet {
 
     var hasCachedCopies: Bool {
         !cachedURLs.isEmpty
+    }
+
+    var hasMissingCachedCopies: Bool {
+        if hasCachedFolderPath && cachedFolderURL == nil {
+            return true
+        }
+
+        if cachedFolderURL != nil && !hasCachedCopies {
+            return true
+        }
+
+        return !missingCachedManifestFiles.isEmpty
+    }
+
+    var originalFileStatusText: String {
+        if !hasOriginalPaths {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if missingOriginalURLs.isEmpty {
+            return AppLocalizer.current.text(.originalFileAvailable)
+        }
+
+        if hasCachedCopies {
+            return AppLocalizer.current.text(.originalFileMissingUsingCachedCopy)
+        }
+
+        return AppLocalizer.current.text(.originalFileMissing)
+    }
+
+    var cachedCopyStatusText: String {
+        if !hasCachedFolderPath {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if !hasCachedCopies || cachedFolderURL == nil || hasMissingCachedCopies {
+            return AppLocalizer.current.text(.cachedCopyMissing)
+        }
+
+        return AppLocalizer.current.text(.cachedCopyAvailable)
+    }
+
+    var overallStatusText: String {
+        if !hasOriginalPaths {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if missingOriginalURLs.isEmpty {
+            return AppLocalizer.current.text(.originalFileAvailable)
+        }
+
+        if hasCachedCopies {
+            return AppLocalizer.current.text(.originalFileMissingUsingCachedCopy)
+        }
+
+        return AppLocalizer.current.text(.originalFileMissing)
     }
 
     var preferredURLsForPasteboard: [URL] {
@@ -143,6 +210,11 @@ struct ClipboardFileReferenceSet {
         cachedFolderURL
     }
 
+    var hasCachedFolderPath: Bool {
+        guard let legacyCacheFolderPath else { return false }
+        return !legacyCacheFolderPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var cachedURLs: [URL] {
         guard let cachedFolderURL else { return [] }
         return Self.fileURLs(in: cachedFolderURL) ?? []
@@ -150,6 +222,18 @@ struct ClipboardFileReferenceSet {
 
     var legacyCachedURLs: [URL] {
         cachedURLs
+    }
+
+    var cachedManifest: ClipboardFileCopyManifest? {
+        guard let cachedFolderURL else { return nil }
+        return ClipboardFileCopyManifest.load(from: cachedFolderURL)
+    }
+
+    var missingCachedManifestFiles: [ClipboardFileCopyManifest.File] {
+        guard let cachedManifest else { return [] }
+
+        let existingCopiedFileNames = Set(cachedURLs.map(\.lastPathComponent))
+        return cachedManifest.files.filter { !existingCopiedFileNames.contains($0.copiedFileName) }
     }
 
     static func urls(fromPathsText text: String?) -> [URL] {

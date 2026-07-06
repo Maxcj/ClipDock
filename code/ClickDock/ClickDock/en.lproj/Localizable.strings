@@ -33,6 +33,15 @@
 "type" = "Type";
 "excludeApp" = "Exclude App";
 "fileReady" = "File ready to copy or open from Finder.";
+"fileState" = "File State";
+"originalFile" = "Original File";
+"cachedCopy" = "Cached Copy";
+"originalFileAvailable" = "Original file available";
+"originalFileMissingUsingCachedCopy" = "Original file is missing, using cached copy";
+"originalFileMissing" = "Original file is missing";
+"pathOnlyNoCachedCopy" = "Path only, no cached copy";
+"cachedCopyAvailable" = "Cached copy available";
+"cachedCopyMissing" = "Cached copy missing";
 "updates" = "Updates";
 "updatesSubtitle" = "Check for new releases and manage ignored versions";
 "automaticCheckForUpdates" = "Automatically check for updates";

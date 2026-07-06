@@ -33,6 +33,15 @@
 "type" = "类型";
 "excludeApp" = "排除应用";
 "fileReady" = "文件已准备好，可复制或在 Finder 中打开。";
+"fileState" = "文件状态";
+"originalFile" = "原始文件";
+"cachedCopy" = "缓存副本";
+"originalFileAvailable" = "原始文件可用";
+"originalFileMissingUsingCachedCopy" = "原始文件已丢失，正在使用缓存副本";
+"originalFileMissing" = "原始文件已丢失";
+"pathOnlyNoCachedCopy" = "仅保存路径，没有缓存副本";
+"cachedCopyAvailable" = "缓存副本可用";
+"cachedCopyMissing" = "缓存副本丢失";
 "updates" = "更新";
 "updatesSubtitle" = "检查新版本并管理已忽略版本";
 "automaticCheckForUpdates" = "自动检查更新";

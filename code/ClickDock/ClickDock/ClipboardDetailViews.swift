@@ -27,6 +27,10 @@ struct ClipboardDetailInspector: View {
                 Divider()
                     .overlay(Color.black.opacity(0.06))
 
+                if record.kind == .files {
+                    fileStateSection(for: record)
+                }
+
                 metadata(for: record)
 
                 if !record.customCategories.isEmpty {
@@ -245,6 +249,59 @@ struct ClipboardDetailInspector: View {
             }
         }
         .padding(.top, 2)
+    }
+
+    private func fileStateSection(for record: ClipboardRecord) -> some View {
+        let fileReferenceSet = record.fileReferenceSet
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(localizer.text(.fileState))
+                .font(.system(size: layout.detailLabelSize, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 10) {
+                fileStateRow(
+                    title: localizer.text(.originalFile),
+                    value: record.fileOriginalStatusText,
+                    tint: fileReferenceSet.hasMissingOriginalFiles ? (fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? .orange : .red) : .green,
+                    symbolName: fileReferenceSet.hasMissingOriginalFiles ? (fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? "exclamationmark.triangle.fill" : "xmark.circle.fill") : "checkmark.circle.fill"
+                )
+
+                fileStateRow(
+                    title: localizer.text(.cachedCopy),
+                    value: record.fileCachedStatusText,
+                    tint: fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? .green : .red,
+                    symbolName: fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? "checkmark.circle.fill" : "xmark.circle.fill"
+                )
+            }
+            .padding(14)
+            .background(Color.white.opacity(0.14))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+        }
+    }
+
+    private func fileStateRow(title: String, value: String, tint: Color, symbolName: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: symbolName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 16)
+
+            Text(title)
+                .font(.system(size: layout.detailLabelSize))
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.system(size: layout.detailValueSize, weight: .medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.trailing)
+        }
     }
 
     private func metadataRows(for record: ClipboardRecord) -> [(title: String, value: String)] {

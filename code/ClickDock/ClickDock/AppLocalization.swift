@@ -285,6 +285,15 @@ enum AppTextKey: String {
     case minifyJSON
     case copyOriginal
     case empty
+    case fileState
+    case originalFile
+    case cachedCopy
+    case originalFileAvailable
+    case originalFileMissingUsingCachedCopy
+    case originalFileMissing
+    case pathOnlyNoCachedCopy
+    case cachedCopyAvailable
+    case cachedCopyMissing
     case originalFileNoLongerExists
 }
 
