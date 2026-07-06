@@ -77,6 +77,10 @@ enum AppTextKey: String {
     case fileSize
     case keepFiles
     case keepFilesSubtitle
+    case fileHistoryCopyStrategy
+    case fileHistoryCopyStrategySubtitle
+    case fileHistoryPathOnly
+    case fileHistorySaveCopy
     case characters
     case type
     case excludeApp

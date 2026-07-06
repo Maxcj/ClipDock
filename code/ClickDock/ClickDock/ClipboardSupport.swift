@@ -339,7 +339,7 @@ extension ClipboardRecord {
         }
 
         if kind == .files {
-            if fileReferenceSet.hasMissingOriginalFiles {
+            if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
                 return AppLocalizer.current.text(.originalFileNoLongerExists)
             }
 
@@ -379,7 +379,7 @@ extension ClipboardRecord {
 
     var fileStatusText: String {
         guard kind == .files else { return "" }
-        if fileReferenceSet.hasMissingOriginalFiles {
+        if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
             return AppLocalizer.current.text(.originalFileNoLongerExists)
         }
         return AppLocalizer.current.text(.fileReady)
@@ -388,7 +388,7 @@ extension ClipboardRecord {
     var fileSubtitleText: String {
         guard kind == .files else { return "" }
 
-        if fileReferenceSet.hasMissingOriginalFiles {
+        if fileReferenceSet.hasMissingOriginalFiles && !fileReferenceSet.hasCachedCopies {
             return AppLocalizer.current.text(.originalFileNoLongerExists)
         }
 
@@ -630,8 +630,8 @@ func removeCachedAssets(for record: ClipboardRecord) {
         try? FileManager.default.removeItem(atPath: imagePath)
         ClipboardImageCache.shared.remove(path: imagePath)
     }
-    if let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL {
-        try? FileManager.default.removeItem(at: legacyCacheFolderURL)
+    if let cachedFolderURL = record.fileReferenceSet.cachedFolderURL {
+        try? FileManager.default.removeItem(at: cachedFolderURL)
     }
     if let thumbnailPath = record.thumbnailPathValue, !thumbnailPath.isEmpty {
         try? FileManager.default.removeItem(atPath: thumbnailPath)

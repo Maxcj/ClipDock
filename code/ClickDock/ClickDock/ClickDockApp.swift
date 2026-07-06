@@ -33,6 +33,7 @@ struct ClipDockApp: App {
             "clipboard.autoHideAfterCopy": false,
             "clipboard.keepImages": true,
             "clipboard.keepFiles": false,
+            "clipboard.fileHistoryCopyStrategy": FileHistoryCopyStrategy.pathOnly.rawValue,
             "clipboard.retentionEnabled": true,
             "clipboard.retentionValue": 7,
             "clipboard.retentionUnit": RetentionUnit.day.rawValue,

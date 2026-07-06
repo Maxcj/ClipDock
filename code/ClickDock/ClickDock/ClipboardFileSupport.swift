@@ -5,6 +5,20 @@
 
 import Foundation
 
+enum FileHistoryCopyStrategy: Int, CaseIterable, Identifiable {
+    case pathOnly = 0
+    case saveCopy = 1
+
+    var id: Int { rawValue }
+
+    var titleKey: AppTextKey {
+        switch self {
+        case .pathOnly: return .fileHistoryPathOnly
+        case .saveCopy: return .fileHistorySaveCopy
+        }
+    }
+}
+
 struct ClipboardFileReferenceSet {
     let originalPathsText: String?
     let legacyCacheFolderPath: String?
@@ -29,12 +43,16 @@ struct ClipboardFileReferenceSet {
         !missingOriginalURLs.isEmpty
     }
 
+    var hasCachedCopies: Bool {
+        !cachedURLs.isEmpty
+    }
+
     var preferredURLsForPasteboard: [URL] {
         if !existingOriginalURLs.isEmpty {
             return existingOriginalURLs
         }
 
-        return legacyCachedURLs
+        return cachedURLs
     }
 
     var representativeURL: URL? {
@@ -42,12 +60,13 @@ struct ClipboardFileReferenceSet {
     }
 
     var displayPathText: String {
-        let paths = originalURLs.map(\.path)
+        let displayURLs = !existingOriginalURLs.isEmpty ? existingOriginalURLs : cachedURLs
+        let paths = displayURLs.map(\.path)
         if !paths.isEmpty {
             return paths.joined(separator: "\n")
         }
 
-        return legacyCachedURLs.map(\.path).joined(separator: "\n")
+        return originalURLs.map(\.path).joined(separator: "\n")
     }
 
     var fileSizeLabel: String {
@@ -55,14 +74,18 @@ struct ClipboardFileReferenceSet {
             return label
         }
 
-        if let legacyCacheFolderURL {
-            return Self.fileSizeLabel(forPath: legacyCacheFolderURL.path)
+        if let label = Self.fileSizeLabel(for: cachedURLs), label != "-" {
+            return label
+        }
+
+        if let cachedFolderURL {
+            return Self.fileSizeLabel(forPath: cachedFolderURL.path)
         }
 
         return "-"
     }
 
-    var legacyCacheFolderURL: URL? {
+    var cachedFolderURL: URL? {
         guard let legacyCacheFolderPath,
               !legacyCacheFolderPath.isEmpty,
               !legacyCacheFolderPath.contains("\n") else {
@@ -70,16 +93,24 @@ struct ClipboardFileReferenceSet {
         }
 
         let url = URL(fileURLWithPath: legacyCacheFolderPath)
-        guard Self.isLegacyCacheFolder(url) else { return nil }
+        guard Self.isCachedAssetFolder(url) else { return nil }
 
         let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
         guard values?.isDirectory == true else { return nil }
         return url
     }
 
+    var legacyCacheFolderURL: URL? {
+        cachedFolderURL
+    }
+
+    var cachedURLs: [URL] {
+        guard let cachedFolderURL else { return [] }
+        return Self.fileURLs(in: cachedFolderURL) ?? []
+    }
+
     var legacyCachedURLs: [URL] {
-        guard let legacyCacheFolderURL else { return [] }
-        return Self.fileURLs(in: legacyCacheFolderURL) ?? []
+        cachedURLs
     }
 
     static func urls(fromPathsText text: String?) -> [URL] {
@@ -97,17 +128,20 @@ struct ClipboardFileReferenceSet {
             }
     }
 
-    static func isLegacyCacheFolder(_ url: URL) -> Bool {
+    static func isCachedAssetFolder(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.path
-        return path.hasPrefix(legacyCacheRootURL().standardizedFileURL.path)
+        return cachedAssetRootURLs().contains(where: { path.hasPrefix($0.standardizedFileURL.path) })
     }
 
-    private static func legacyCacheRootURL() -> URL {
+    private static func cachedAssetRootURLs() -> [URL] {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let bundleName = Bundle.main.bundleIdentifier ?? "ClipDock"
-        return base.appendingPathComponent(bundleName, isDirectory: true)
-            .appendingPathComponent("ClipboardImages", isDirectory: true)
+        let bundleRoot = base.appendingPathComponent(bundleName, isDirectory: true)
+        return [
+            bundleRoot.appendingPathComponent("ClipboardAssets", isDirectory: true),
+            bundleRoot.appendingPathComponent("ClipboardImages", isDirectory: true)
+        ]
     }
 
     private static func fileURLs(in folderURL: URL) -> [URL]? {

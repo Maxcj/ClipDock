@@ -182,14 +182,16 @@ final class ClipboardMonitor: ObservableObject {
 
             guard keepsFileHistory else { return .dropped(reason: "file history disabled") }
 
+            let fileAssets = fileHistoryCopyStrategy == .saveCopy ? saveFileAssets(from: fileURLs) : nil
+
             return .snapshot(ClipboardSnapshot(
                 kind: .files,
                 displayText: names.joined(separator: ", "),
                 fullText: fullText,
                 imagePath: nil,
-                assetPath: nil,
+                assetPath: fileAssets?.folder.path,
                 thumbnailPath: nil,
-                cachedSizeBytes: 0,
+                cachedSizeBytes: fileAssets?.cachedSizeBytes ?? 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
                 hash: Self.hash(kind: .files, text: fullText)
@@ -338,6 +340,12 @@ final class ClipboardMonitor: ObservableObject {
 
     private var keepsFileHistory: Bool {
         UserDefaults.standard.object(forKey: "clipboard.keepFiles") as? Bool ?? false
+    }
+
+    private var fileHistoryCopyStrategy: FileHistoryCopyStrategy {
+        let rawValue = UserDefaults.standard.object(forKey: "clipboard.fileHistoryCopyStrategy") as? Int
+            ?? FileHistoryCopyStrategy.pathOnly.rawValue
+        return FileHistoryCopyStrategy(rawValue: rawValue) ?? .pathOnly
     }
 
     private func insert(snapshot: ClipboardSnapshot) {
@@ -533,6 +541,35 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
+    private func saveFileAssets(from fileURLs: [URL]) -> SavedFileAssets? {
+        guard !fileURLs.isEmpty else { return nil }
+
+        var sourceSizes: Int64 = 0
+        for fileURL in fileURLs {
+            guard Self.isCacheableFileURL(fileURL) else { return nil }
+            guard let fileSize = Self.fileSizeBytes(for: fileURL) else { return nil }
+            guard fileSize <= Self.maximumFileHistoryCopySizeBytes else { return nil }
+            sourceSizes += fileSize
+        }
+
+        let folderURL = Self.fileAssetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+
+            for (index, sourceURL) in fileURLs.enumerated() {
+                let destinationName = "\(index)-\(sourceURL.lastPathComponent)"
+                let destinationURL = folderURL.appendingPathComponent(destinationName)
+                try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+            }
+
+            return SavedFileAssets(folder: folderURL, cachedSizeBytes: sourceSizes)
+        } catch {
+            try? FileManager.default.removeItem(at: folderURL)
+            NSLog("Failed to save clipboard files: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
     private func currentFrontmostApplicationName() -> String? {
         NSWorkspace.shared.frontmostApplication?.localizedName
     }
@@ -715,6 +752,39 @@ final class ClipboardMonitor: ObservableObject {
         return base.appendingPathComponent(bundleName, isDirectory: true)
             .appendingPathComponent("ClipboardImages", isDirectory: true)
     }
+
+    private static func fileAssetFolderURL() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        let bundleName = Bundle.main.bundleIdentifier ?? "ClipDock"
+        return base.appendingPathComponent(bundleName, isDirectory: true)
+            .appendingPathComponent("ClipboardAssets", isDirectory: true)
+            .appendingPathComponent("Files", isDirectory: true)
+    }
+
+    private static func isCacheableFileURL(_ url: URL) -> Bool {
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey])
+        return values?.isRegularFile == true && values?.isDirectory != true
+    }
+
+    private static func fileSizeBytes(for url: URL) -> Int64? {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .totalFileAllocatedSizeKey, .isDirectoryKey])
+        guard values?.isDirectory != true else { return nil }
+        if let allocated = values?.totalFileAllocatedSize, allocated > 0 {
+            return Int64(allocated)
+        }
+        if let fileSize = values?.fileSize, fileSize > 0 {
+            return Int64(fileSize)
+        }
+        return nil
+    }
+
+    private static let maximumFileHistoryCopySizeBytes: Int64 = 50 * 1024 * 1024
+}
+
+struct SavedFileAssets {
+    let folder: URL
+    let cachedSizeBytes: Int64
 }
 
 final class LinkMetadataManager {

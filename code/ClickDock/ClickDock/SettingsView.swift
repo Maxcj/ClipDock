@@ -26,6 +26,7 @@ struct SettingsView: View {
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
     @AppStorage("clipboard.keepFiles") private var keepFiles = false
+    @AppStorage("clipboard.fileHistoryCopyStrategy") private var fileHistoryCopyStrategyRaw = FileHistoryCopyStrategy.pathOnly.rawValue
     @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = true
     @AppStorage("clipboard.retentionValue") private var retentionValue = 7
     @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
@@ -56,6 +57,13 @@ struct SettingsView: View {
         Binding(
             get: { sparkleUpdateManager.selectedUpdateChannel },
             set: { sparkleUpdateManager.setUpdateChannel($0) }
+        )
+    }
+
+    private var fileHistoryCopyStrategyBinding: Binding<FileHistoryCopyStrategy> {
+        Binding(
+            get: { FileHistoryCopyStrategy(rawValue: fileHistoryCopyStrategyRaw) ?? .pathOnly },
+            set: { fileHistoryCopyStrategyRaw = $0.rawValue }
         )
     }
 
@@ -340,6 +348,25 @@ struct SettingsView: View {
                         subtitle: localizer.text(.keepFilesSubtitle),
                         isOn: $keepFiles
                     )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsValueRow(
+                        iconName: "doc.on.doc",
+                        title: localizer.text(.fileHistoryCopyStrategy),
+                        subtitle: localizer.text(.fileHistoryCopyStrategySubtitle),
+                        isDimmed: !keepFiles
+                    ) {
+                        Picker("", selection: fileHistoryCopyStrategyBinding) {
+                            ForEach(FileHistoryCopyStrategy.allCases) { strategy in
+                                Text(localizer.text(strategy.titleKey)).tag(strategy)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 172)
+                        .disabled(!keepFiles)
+                    }
                 }
             }
         case .quickOpen:
@@ -999,8 +1026,8 @@ struct SettingsView: View {
                         changed = true
                     }
                 case .files:
-                    if let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL {
-                        try? FileManager.default.removeItem(at: legacyCacheFolderURL)
+                    if let cachedFolderURL = record.fileReferenceSet.cachedFolderURL {
+                        try? FileManager.default.removeItem(at: cachedFolderURL)
                     }
                     if record.assetPathValue != nil {
                         record.assetPathValue = nil
