@@ -44,6 +44,18 @@ struct VerifyCodeSnippets {
         let sqlSnippet = "SELECT * FROM users WHERE id = 1"
         expect(ClipboardCodeLanguageDetector.detect(from: sqlSnippet) == .sql, "sql detect")
 
+        let typeScriptSnippet = """
+        interface User { id: number; name: string }
+        const formatUser = (user: User): string => user.name
+        """
+        expect(ClipboardCodeLanguageDetector.detect(from: typeScriptSnippet) == .typescript, "typescript before javascript")
+
+        let javaScriptSnippet = """
+        import formatName from "./format-name.js"
+        export const greet = (name) => formatName(name)
+        """
+        expect(ClipboardCodeLanguageDetector.detect(from: javaScriptSnippet) == .javascript, "javascript module stays javascript")
+
         let markdown = ClipboardCodeActions.markdownCodeBlock("let a = 1", language: .swift)
         expect(markdown.contains("```swift"), "markdown language fence")
 

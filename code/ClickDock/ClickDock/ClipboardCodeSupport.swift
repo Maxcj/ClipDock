@@ -129,8 +129,8 @@ enum ClipboardCodeLanguageDetector {
         if isSQL(trimmed) { return .sql }
         if isSwift(trimmed) { return .swift }
         if isJava(trimmed) { return .java }
-        if isJavaScript(trimmed) { return .javascript }
         if isTypeScript(trimmed) { return .typescript }
+        if isJavaScript(trimmed) { return .javascript }
         if isShell(trimmed) { return .shell }
         if isCSS(trimmed) { return .css }
         if isPython(trimmed) { return .python }
@@ -202,20 +202,30 @@ enum ClipboardCodeLanguageDetector {
     }
 
     private static func isTypeScript(_ text: String) -> Bool {
-        let markers = [
-            "interface ",
-            "enum ",
-            "type ",
-            "export ",
-            "import ",
-            "from ",
-            ": string",
-            ": number",
-            "readonly ",
-            "implements ",
-            " as "
+        let declarationPatterns = [
+            #"(?m)^\s*(?:export\s+)?(?:declare\s+)?interface\s+[A-Za-z_$]"#,
+            #"(?m)^\s*(?:export\s+)?type\s+[A-Za-z_$][A-Za-z0-9_$]*\s*="#,
+            #"(?m)^\s*(?:export\s+)?(?:const\s+)?enum\s+[A-Za-z_$]"#,
+            #"(?m)^\s*(?:export\s+)?(?:declare\s+)?namespace\s+[A-Za-z_$]"#
         ]
-        return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
+        if declarationPatterns.contains(where: { text.range(of: $0, options: .regularExpression) != nil }) {
+            return true
+        }
+
+        let typeSyntaxPatterns = [
+            #":\s*(?:string|number|boolean|unknown|any|never|void)(?:\[\])?\b"#,
+            #":\s*[A-Z][A-Za-z0-9_$]*(?:<[^>]+>)?(?:\[\])?\b"#,
+            #"\bas\s+(?:const|[A-Z][A-Za-z0-9_$]*(?:<[^>]+>)?)\b"#,
+            #"\b(?:keyof|satisfies|implements)\s+"#,
+            #"\breadonly\s+[A-Za-z_$]"#
+        ]
+        let hasTypeSyntax = typeSyntaxPatterns.contains {
+            text.range(of: $0, options: .regularExpression) != nil
+        }
+        guard hasTypeSyntax else { return false }
+
+        let codeMarkers = ["const ", "let ", "function ", "=>", "class ", "export ", "import "]
+        return codeMarkers.contains(where: text.contains)
     }
 
     private static func isShell(_ text: String) -> Bool {
