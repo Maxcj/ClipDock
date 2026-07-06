@@ -9,6 +9,166 @@ import AppKit
 import ImageIO
 import UniformTypeIdentifiers
 
+struct ClipboardSearchQuery: Equatable {
+    enum Filter: Equatable {
+        case contentType(String)
+        case sourceApp(String)
+        case host(String)
+        case language(String)
+        case pinned(Bool)
+    }
+
+    let text: String
+    let filters: [Filter]
+
+    init(_ rawValue: String) {
+        var textTokens: [String] = []
+        var parsedFilters: [Filter] = []
+
+        for token in Self.tokenize(rawValue) {
+            if let filter = Self.filter(from: token) {
+                parsedFilters.append(filter)
+            } else {
+                textTokens.append(token)
+            }
+        }
+
+        self.text = textTokens.joined(separator: " ")
+        self.filters = parsedFilters
+    }
+
+    var predicate: NSPredicate? {
+        var predicates: [NSPredicate] = []
+
+        if !text.isEmpty {
+            predicates.append(NSCompoundPredicate(orPredicateWithSubpredicates: [
+                NSPredicate(format: "displayText CONTAINS[cd] %@", text),
+                NSPredicate(format: "fullText CONTAINS[cd] %@", text),
+                NSPredicate(format: "sourceAppName CONTAINS[cd] %@", text)
+            ]))
+        }
+
+        for filter in filters {
+            switch filter {
+            case .contentType(let rawValue):
+                predicates.append(NSPredicate(format: "contentTypeRaw == %@", rawValue))
+            case .sourceApp(let value):
+                predicates.append(NSCompoundPredicate(orPredicateWithSubpredicates: [
+                    NSPredicate(format: "sourceAppName CONTAINS[cd] %@", value),
+                    NSPredicate(format: "sourceBundleId CONTAINS[cd] %@", value)
+                ]))
+            case .host(let value):
+                predicates.append(NSCompoundPredicate(orPredicateWithSubpredicates: [
+                    NSPredicate(format: "linkHost ==[cd] %@", value),
+                    NSPredicate(format: "linkHost ENDSWITH[cd] %@", ".\(value)")
+                ]))
+            case .language(let rawValue):
+                predicates.append(NSPredicate(format: "codeLanguageRaw ==[cd] %@", rawValue))
+            case .pinned(let isPinned):
+                predicates.append(NSPredicate(format: "isPinned == %@", NSNumber(value: isPinned)))
+            }
+        }
+
+        guard !predicates.isEmpty else { return nil }
+        return NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+    }
+
+    private static func filter(from token: String) -> Filter? {
+        guard let separatorIndex = token.firstIndex(of: ":"), separatorIndex != token.startIndex else {
+            return nil
+        }
+
+        let key = token[..<separatorIndex].lowercased()
+        let valueStart = token.index(after: separatorIndex)
+        let value = token[valueStart...].trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return nil }
+
+        switch key {
+        case "type":
+            guard let rawValue = contentTypeRawValue(for: value) else { return nil }
+            return .contentType(rawValue)
+        case "app":
+            return .sourceApp(value)
+        case "host":
+            let normalized = value.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            guard !normalized.isEmpty else { return nil }
+            return .host(normalized)
+        case "lang":
+            return .language(value.lowercased())
+        case "pinned":
+            switch value.lowercased() {
+            case "true", "yes", "1": return .pinned(true)
+            case "false", "no", "0": return .pinned(false)
+            default: return nil
+            }
+        default:
+            return nil
+        }
+    }
+
+    private static func contentTypeRawValue(for value: String) -> String? {
+        switch value.lowercased() {
+        case "text": return ClipboardContentKind.text.rawValue
+        case "link", "links", "url": return ClipboardContentKind.link.rawValue
+        case "image", "images": return ClipboardContentKind.image.rawValue
+        case "code": return ClipboardContentKind.code.rawValue
+        case "file", "files": return ClipboardContentKind.files.rawValue
+        case "color", "colors": return ClipboardContentKind.colors.rawValue
+        case "other", "unknown": return ClipboardContentKind.unknown.rawValue
+        default: return nil
+        }
+    }
+
+    private static func tokenize(_ input: String) -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        var quote: Character?
+        var isEscaping = false
+
+        func appendCurrentToken() {
+            guard !current.isEmpty else { return }
+            tokens.append(current)
+            current = ""
+        }
+
+        for character in input {
+            if isEscaping {
+                current.append(character)
+                isEscaping = false
+                continue
+            }
+
+            if character == "\\", quote != nil {
+                isEscaping = true
+                continue
+            }
+
+            if character == "\"" || character == "'" {
+                if quote == nil {
+                    quote = character
+                    continue
+                }
+                if quote == character {
+                    quote = nil
+                    continue
+                }
+            }
+
+            if character.isWhitespace, quote == nil {
+                appendCurrentToken()
+            } else {
+                current.append(character)
+            }
+        }
+
+        if isEscaping {
+            current.append("\\")
+        }
+        appendCurrentToken()
+        return tokens
+    }
+}
+
 struct RetentionRule {
     let isEnabled: Bool
     let value: Int
@@ -570,15 +730,9 @@ extension ClipboardRecord {
             NSPredicate(format: "isIgnored == NO")
         ]
 
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            predicates.append(
-                NSCompoundPredicate(orPredicateWithSubpredicates: [
-                    NSPredicate(format: "displayText CONTAINS[cd] %@", trimmed),
-                    NSPredicate(format: "fullText CONTAINS[cd] %@", trimmed),
-                    NSPredicate(format: "sourceAppName CONTAINS[cd] %@", trimmed)
-                ])
-            )
+        let searchQuery = ClipboardSearchQuery(searchText)
+        if let searchPredicate = searchQuery.predicate {
+            predicates.append(searchPredicate)
         }
 
         switch categorySelection {

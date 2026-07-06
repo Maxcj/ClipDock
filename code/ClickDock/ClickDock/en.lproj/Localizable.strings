@@ -11,7 +11,7 @@
 "pinned" = "Pinned";
 "today" = "Today";
 "yesterday" = "Yesterday";
-"searchClipboard" = "Search clipboard";
+"searchClipboard" = "Search · type: app: host: lang: pinned:";
 "copy" = "Copy";
 "delete" = "Delete";
 "pin" = "Pin";
