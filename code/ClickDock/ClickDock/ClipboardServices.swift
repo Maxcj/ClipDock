@@ -548,8 +548,9 @@ final class ClipboardMonitor: ObservableObject {
         for fileURL in fileURLs {
             guard Self.isCacheableFileURL(fileURL) else { return nil }
             guard let fileSize = Self.fileSizeBytes(for: fileURL) else { return nil }
-            guard fileSize <= Self.maximumFileHistoryCopySizeBytes else { return nil }
+            guard fileSize <= Self.maximumSingleFileCopySizeBytes else { return nil }
             sourceSizes += fileSize
+            guard sourceSizes <= Self.maximumBatchFileCopySizeBytes else { return nil }
         }
 
         let folderURL = Self.fileAssetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -779,7 +780,8 @@ final class ClipboardMonitor: ObservableObject {
         return nil
     }
 
-    private static let maximumFileHistoryCopySizeBytes: Int64 = 50 * 1024 * 1024
+    private static let maximumSingleFileCopySizeBytes: Int64 = 50 * 1024 * 1024
+    private static let maximumBatchFileCopySizeBytes: Int64 = 200 * 1024 * 1024
 }
 
 struct SavedFileAssets {
