@@ -144,7 +144,7 @@ struct SimpleClipboardLayout {
     var detailActionHeight: CGFloat { s(44) }
     var detailTitleSize: CGFloat { s(32) }
     var detailSubtitleSize: CGFloat { s(15) }
-    var previewTextSize: CGFloat { s(42) }
+    var previewTextSize: CGFloat { s(26) }
     var detailButtonGap: CGFloat { s(12) }
     var heroImageHeight: CGFloat { s(320) }
     var rowTimeWidth: CGFloat { s(112) }
