@@ -233,7 +233,69 @@ enum ClipboardCodeLanguageDetector {
     }
 
     private static func isCSS(_ text: String) -> Bool {
-        text.contains("{") && text.contains("}") && text.contains(":") && text.contains(";")
+        guard text.contains("{"), text.contains("}") else { return false }
+
+        let selectorPattern = #"(?m)^\s*(?:[.#][A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\])(?:[.#][A-Za-z_-][A-Za-z0-9_-]*|:[A-Za-z-]+(?:\([^\)\n]*\))?|\[[^\]\n]+\]|\s+(?:[>+~]\s*)?(?:[.#]?[A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\]))*(?:\s*,\s*(?:[.#]?[A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\]))*\s*\{"#
+        guard text.range(of: selectorPattern, options: .regularExpression) != nil else {
+            return false
+        }
+
+        let propertyNames = [
+            "align-(?:content|items|self)",
+            "animation(?:-[a-z-]+)?",
+            "appearance",
+            "aspect-ratio",
+            "background(?:-[a-z-]+)?",
+            "border(?:-[a-z-]+)?",
+            "bottom",
+            "box-shadow",
+            "clear",
+            "color",
+            "column(?:-[a-z-]+)?",
+            "content",
+            "cursor",
+            "display",
+            "filter",
+            "flex(?:-[a-z-]+)?",
+            "float",
+            "font(?:-[a-z-]+)?",
+            "gap",
+            "grid(?:-[a-z-]+)?",
+            "height",
+            "inset",
+            "justify-(?:content|items|self)",
+            "left",
+            "line-height",
+            "margin(?:-[a-z-]+)?",
+            "max-(?:height|width)",
+            "min-(?:height|width)",
+            "object-(?:fit|position)",
+            "opacity",
+            "outline(?:-[a-z-]+)?",
+            "overflow(?:-[xy])?",
+            "padding(?:-[a-z-]+)?",
+            "pointer-events",
+            "position",
+            "resize",
+            "right",
+            "stroke(?:-[a-z-]+)?",
+            "table-layout",
+            "text-(?:align|decoration|overflow|transform)",
+            "top",
+            "transform",
+            "transition(?:-[a-z-]+)?",
+            "user-select",
+            "vertical-align",
+            "visibility",
+            "white-space",
+            "width",
+            "word-(?:break|spacing|wrap)",
+            "z-index"
+        ]
+        let declarationPattern = #"(?:\{|;)\s*(?:--[A-Za-z0-9_-]+|"#
+            + propertyNames.joined(separator: "|")
+            + #")\s*:\s*[^;{}]+;"#
+        return text.range(of: declarationPattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     private static func isPython(_ text: String) -> Bool {

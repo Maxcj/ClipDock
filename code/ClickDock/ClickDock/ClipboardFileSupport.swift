@@ -21,7 +21,7 @@ enum FileHistoryCopyStrategy: Int, CaseIterable, Identifiable {
 
 struct ClipboardFileCopyManifest: Codable, Equatable {
     static let fileName = "manifest.json"
-    static let currentSchemaVersion = 1
+    static let currentSchemaVersion = 2
 
     let schemaVersion: Int
     let copyStrategy: String
@@ -48,7 +48,10 @@ struct ClipboardFileCopyManifest: Codable, Equatable {
 
     struct File: Codable, Equatable {
         let sourcePath: String
+        let originalFileName: String
+        let originalFileExtension: String
         let copiedFileName: String
+        let copiedAt: Date
         let sizeBytes: Int64
     }
 }

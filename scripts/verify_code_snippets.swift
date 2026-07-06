@@ -56,6 +56,30 @@ struct VerifyCodeSnippets {
         """
         expect(ClipboardCodeLanguageDetector.detect(from: javaScriptSnippet) == .javascript, "javascript module stays javascript")
 
+        let cssSnippet = """
+        .card:hover {
+            display: flex;
+            background-color: #ffffff;
+        }
+        """
+        expect(ClipboardCodeLanguageDetector.detect(from: cssSnippet) == .css, "css selector and declarations detect")
+
+        let javaScriptObjectSnippet = """
+        const theme = {
+            color: "red",
+            display: "grid"
+        }
+        """
+        expect(ClipboardCodeLanguageDetector.detect(from: javaScriptObjectSnippet) != .css, "javascript object is not css")
+
+        let configSnippet = """
+        theme: {
+            color: primary;
+            display: grid;
+        }
+        """
+        expect(ClipboardCodeLanguageDetector.detect(from: configSnippet) != .css, "config fragment is not css")
+
         let markdown = ClipboardCodeActions.markdownCodeBlock("let a = 1", language: .swift)
         expect(markdown.contains("```swift"), "markdown language fence")
 

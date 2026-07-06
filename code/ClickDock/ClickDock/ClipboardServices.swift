@@ -545,8 +545,8 @@ final class ClipboardMonitor: ObservableObject {
         guard !fileURLs.isEmpty else { return nil }
 
         var sourceSizes: Int64 = 0
-        var manifestFiles: [ClipboardFileCopyManifest.File] = []
-        manifestFiles.reserveCapacity(fileURLs.count)
+        var sourceFileSizes: [Int64] = []
+        sourceFileSizes.reserveCapacity(fileURLs.count)
 
         for fileURL in fileURLs {
             guard Self.isCacheableFileURL(fileURL) else { return nil }
@@ -554,22 +554,29 @@ final class ClipboardMonitor: ObservableObject {
             guard fileSize <= Self.maximumSingleFileCopySizeBytes else { return nil }
             sourceSizes += fileSize
             guard sourceSizes <= Self.maximumBatchFileCopySizeBytes else { return nil }
-
-            let copiedFileName = "\(manifestFiles.count)-\(fileURL.lastPathComponent)"
-            manifestFiles.append(ClipboardFileCopyManifest.File(
-                sourcePath: fileURL.path,
-                copiedFileName: copiedFileName,
-                sizeBytes: fileSize
-            ))
+            sourceFileSizes.append(fileSize)
         }
 
         let folderURL = Self.fileAssetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-            for (sourceURL, manifestFile) in zip(fileURLs, manifestFiles) {
-                let destinationURL = folderURL.appendingPathComponent(manifestFile.copiedFileName)
+            var manifestFiles: [ClipboardFileCopyManifest.File] = []
+            manifestFiles.reserveCapacity(fileURLs.count)
+
+            for (index, pair) in zip(fileURLs, sourceFileSizes).enumerated() {
+                let (sourceURL, fileSize) = pair
+                let copiedFileName = "\(index)-\(sourceURL.lastPathComponent)"
+                let destinationURL = folderURL.appendingPathComponent(copiedFileName)
                 try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+                manifestFiles.append(ClipboardFileCopyManifest.File(
+                    sourcePath: sourceURL.path,
+                    originalFileName: sourceURL.lastPathComponent,
+                    originalFileExtension: sourceURL.pathExtension,
+                    copiedFileName: copiedFileName,
+                    copiedAt: Date(),
+                    sizeBytes: fileSize
+                ))
             }
 
             let manifest = ClipboardFileCopyManifest(files: manifestFiles)
