@@ -40,7 +40,6 @@ struct ClipboardDetailInspector: View {
                     }
                     detailButton(title: localizer.text(.delete), icon: "trash", action: onDelete, isDestructive: true)
                 }
-                .padding(.top, 8)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(localizer.text(.noSelection))
@@ -244,6 +243,10 @@ struct ClipboardDetailInspector: View {
             ForEach(rows.indices, id: \.self) { index in
                 ClipboardDetailMetaRow(title: rows[index].title, value: rows[index].value, layout: layout)
             }
+
+            if record.kind == .code {
+                ClipboardDetailMetaRow(title: localizer.text(.lines), value: "\(record.codeLineCount)", layout: layout)
+            }
         }
         .padding(.top, 2)
     }
@@ -265,8 +268,7 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
             rows.append((localizer.text(.path), record.imagePathText))
         case .code:
-            rows.append((localizer.text(.language), record.codeLanguage.title))
-            rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
+            break
         case .files:
             rows.append((localizer.text(.path), record.fileSubtitleText))
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))

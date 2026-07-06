@@ -100,6 +100,24 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+extension ClipboardCodeLanguage {
+    static let pickerCases: [ClipboardCodeLanguage] = [
+        .plain,
+        .swift,
+        .json,
+        .javascript,
+        .typescript,
+        .sql,
+        .shell,
+        .java,
+        .python,
+        .html,
+        .css,
+        .xml,
+        .yaml
+    ]
+}
+
 enum ClipboardCodeLanguageDetector {
     static func detect(from text: String) -> ClipboardCodeLanguage {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
