@@ -14,7 +14,7 @@
             <sparkle:shortVersionString>1.1.0-beta5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
             <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.1.0-beta5/1.1.0-beta5.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.1.0-beta5/ClipDock-1.1.0-beta5-macOS-universal.zip" length="5898189" type="application/octet-stream" sparkle:edSignature="coeV/fK2hxS3dooHmgi1l5yHTLzCZBbuyX29FsR+oSzGRYlDFMAHqZfBmLlfuB+WicH00rBWs0WXHY+fG/EiDw=="/>
+            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.1.0-beta5/ClipDock-1.1.0-beta5-macOS-universal.zip" length="0" type="application/octet-stream" sparkle:edSignature=""/>
         </item>
         <item>
             <title>1.0.0</title>
