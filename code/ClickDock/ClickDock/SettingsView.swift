@@ -608,32 +608,39 @@ struct SettingsView: View {
         case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
-                    settingsValueRow(
-                        iconName: "arrow.triangle.branch",
-                        title: localizer.text(.updateChannel),
-                        subtitle: localizer.text(.updateChannelSubtitle),
-                        isDimmed: !sparkleUpdateManager.isConfigured
-                    ) {
-                        Picker("", selection: updateChannelBinding) {
-                            ForEach(SparkleUpdateChannel.allCases) { channel in
-                                Text(localizer.text(channel.titleKey)).tag(channel)
+                    Group {
+                        settingsValueRow(
+                            iconName: "arrow.triangle.branch",
+                            title: localizer.text(.updateChannel),
+                            subtitle: localizer.text(.updateChannelSubtitle),
+                            isDimmed: !sparkleUpdateManager.isConfigured
+                        ) {
+                            Picker("", selection: updateChannelBinding) {
+                                ForEach(SparkleUpdateChannel.allCases) { channel in
+                                    Text(localizer.text(channel.titleKey)).tag(channel)
+                                }
                             }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 200)
+                            .disabled(!sparkleUpdateManager.isConfigured)
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: 200)
-                        .disabled(!sparkleUpdateManager.isConfigured)
+
+                        if let updateChannelNotice = sparkleUpdateManager.updateChannelNotice {
+                            Divider().padding(.leading, 52)
+                            settingsInlineMessage(updateChannelNotice)
+                        }
+
+                        Divider().padding(.leading, 52)
+
+                        settingsToggleRow(
+                            iconName: "clock.arrow.circlepath",
+                            title: localizer.text(.automaticCheckForUpdates),
+                            subtitle: localizer.text(.automaticCheckForUpdatesSubtitle),
+                            isOn: automaticCheckForUpdatesBinding,
+                            isDimmed: !sparkleUpdateManager.isConfigured
+                        )
                     }
-
-                    Divider().padding(.leading, 52)
-
-                    settingsToggleRow(
-                        iconName: "clock.arrow.circlepath",
-                        title: localizer.text(.automaticCheckForUpdates),
-                        subtitle: localizer.text(.automaticCheckForUpdatesSubtitle),
-                        isOn: automaticCheckForUpdatesBinding,
-                        isDimmed: !sparkleUpdateManager.isConfigured
-                    )
 
                     Divider().padding(.leading, 52)
 
@@ -673,10 +680,11 @@ struct SettingsView: View {
                         iconName: "safari",
                         title: localizer.text(.githubReleases),
                         subtitle: localizer.text(.githubReleasesSubtitle),
-                        buttonTitle: localizer.text(.open)
-                    ) {
-                        openURL(URL(string: "https://github.com/maxcj/ClipDock/releases")!)
-                    }
+                        buttonTitle: localizer.text(.open),
+                        action: {
+                            openURL(URL(string: "https://github.com/maxcj/ClipDock/releases")!)
+                        }
+                    )
 
                     if let ignoredVersion = sparkleUpdateManager.ignoredVersion {
                         Divider().padding(.leading, 52)
@@ -709,6 +717,7 @@ struct SettingsView: View {
             }
         }
     }
+
     @ViewBuilder
     private func settingsSidebarItem(tab: SettingsTab, isSelected: Bool) -> some View {
         HStack(spacing: 12) {

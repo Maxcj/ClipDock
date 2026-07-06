@@ -22,6 +22,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published private(set) var isUpdateCheckInProgress: Bool = false
     @Published private(set) var updateCheckInterval: TimeInterval
     @Published private(set) var selectedUpdateChannel: SparkleUpdateChannel
+    @Published private(set) var updateChannelNotice: String?
     private var didPerformStartupUpdateCheck = false
 
     var canCheckForUpdates: Bool {
@@ -86,6 +87,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         UserDefaults.standard.set(channel.rawValue, forKey: DefaultsKey.updateChannel)
         selectedUpdateChannel = channel
+        updateChannelNotice = Self.updateChannelNotice(for: channel)
 
         guard isConfigured else { return }
 
@@ -123,6 +125,12 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         updaterController.updater.updateCheckInterval = updateCheckInterval
         updaterController.startUpdater()
         isConfigured = true
+    }
+
+    private static func updateChannelNotice(for channel: SparkleUpdateChannel) -> String {
+        let localizer = AppLocalizer.current
+        let channelName = localizer.text(channel.titleKey)
+        return localizer.text(.updateChannelChangedNotice, channelName, channelName)
     }
 
     private var configuredFeedURLString: String? {

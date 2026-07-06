@@ -45,6 +45,7 @@
 "automaticCheckIntervalEvery2Weeks" = "每 2 周";
 "updateChannel" = "更新通道";
 "updateChannelSubtitle" = "选择正式版或 beta 版更新源";
+"updateChannelChangedNotice" = "已切换到%@通道。点击“检查更新”即可立即检查%@版本。";
 "releaseChannel" = "正式版";
 "betaChannel" = "Beta 版";
 "checkForUpdates" = "检查更新";

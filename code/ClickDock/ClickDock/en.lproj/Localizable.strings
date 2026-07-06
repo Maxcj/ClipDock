@@ -45,6 +45,7 @@
 "automaticCheckIntervalEvery2Weeks" = "Every 2 weeks";
 "updateChannel" = "Update channel";
 "updateChannelSubtitle" = "Choose the release feed or the beta feed";
+"updateChannelChangedNotice" = "Switched to the %@ channel. Click “Check for Updates” to check the %@ version right away.";
 "releaseChannel" = "Release";
 "betaChannel" = "Beta";
 "checkForUpdates" = "Check for Updates";

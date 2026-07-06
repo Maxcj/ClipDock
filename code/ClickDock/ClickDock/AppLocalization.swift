@@ -97,6 +97,7 @@ enum AppTextKey: String {
     case automaticCheckIntervalEvery2Weeks
     case updateChannel
     case updateChannelSubtitle
+    case updateChannelChangedNotice
     case releaseChannel
     case betaChannel
     case checkForUpdates
