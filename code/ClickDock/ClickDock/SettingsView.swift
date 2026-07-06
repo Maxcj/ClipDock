@@ -152,7 +152,6 @@ struct SettingsView: View {
             if retentionValue <= 0 {
                 retentionValue = 7
             }
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
         }
         .onChange(of: startAtLogin) { newValue in
             guard newValue != loginItemManager.isEnabled else { return }
@@ -1225,18 +1224,38 @@ final class StorageSummaryLoader: ObservableObject {
         isLoading = true
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            if recalculateCachedSizes {
-                ClipboardStorageCalculator.rebuildCachedSizes(context: context)
-                ClipboardStorageSummaryStore.recordUpdated()
+            guard let backgroundContext = Self.makeBackgroundContext(from: context) else {
+                DispatchQueue.main.async {
+                    guard let self, self.requestToken == token else { return }
+                    self.isLoading = false
+                }
+                return
             }
 
-            let computedSummary = ClipboardStorageCalculator.summary(context: context)
+            backgroundContext.perform {
+                if recalculateCachedSizes {
+                    ClipboardStorageCalculator.rebuildCachedSizes(context: backgroundContext)
+                    ClipboardStorageSummaryStore.recordUpdated()
+                }
 
-            DispatchQueue.main.async {
-                guard let self, self.requestToken == token else { return }
-                self.summary = computedSummary
-                self.isLoading = false
+                let computedSummary = ClipboardStorageCalculator.summary(context: backgroundContext)
+
+                DispatchQueue.main.async {
+                    guard let self, self.requestToken == token else { return }
+                    self.summary = computedSummary
+                    self.isLoading = false
+                }
             }
         }
+    }
+
+    private static func makeBackgroundContext(from context: NSManagedObjectContext) -> NSManagedObjectContext? {
+        guard let coordinator = context.persistentStoreCoordinator else { return nil }
+
+        let backgroundContext = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+        backgroundContext.persistentStoreCoordinator = coordinator
+        backgroundContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        backgroundContext.undoManager = nil
+        return backgroundContext
     }
 }

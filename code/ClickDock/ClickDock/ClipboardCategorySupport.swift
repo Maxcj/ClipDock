@@ -578,12 +578,16 @@ final class ClipboardCategoryManager {
 
     private static func nextCustomSortOrder(context: NSManagedObjectContext) -> Int32 {
         let request = NSFetchRequest<ClipboardCategory>(entityName: "ClipboardCategory")
-
         request.predicate = NSPredicate(format: "typeRaw == %@", ClipboardCategoryType.custom.rawValue)
+        request.sortDescriptors = [
+            NSSortDescriptor(key: "sortOrder", ascending: false),
+            NSSortDescriptor(key: "createdAt", ascending: false)
+        ]
+        request.fetchLimit = 1
 
-        let values = (try? context.fetch(request)) ?? []
-        let maxValue = max(values.map(\.sortOrder).max() ?? (customSortOrderBase - 10), customSortOrderBase - 10)
-        return maxValue + 10
+        let nextBase = customSortOrderBase - 10
+        let maxValue = (try? context.fetch(request).first?.sortOrder) ?? nextBase
+        return max(maxValue, nextBase) + 10
     }
 
     static func saveOrderedCategories(

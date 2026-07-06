@@ -28,11 +28,11 @@ struct ClipboardFileReferenceSet {
     }
 
     var existingOriginalURLs: [URL] {
-        originalURLs.filter { FileManager.default.fileExists(atPath: $0.path) }
+        resolvedOriginalURLs.existing
     }
 
     var missingOriginalURLs: [URL] {
-        originalURLs.filter { !FileManager.default.fileExists(atPath: $0.path) }
+        resolvedOriginalURLs.missing
     }
 
     var hasOriginalPaths: Bool {
@@ -48,8 +48,9 @@ struct ClipboardFileReferenceSet {
     }
 
     var preferredURLsForPasteboard: [URL] {
-        if !existingOriginalURLs.isEmpty {
-            return existingOriginalURLs
+        let originals = resolvedOriginalURLs.existing
+        if !originals.isEmpty {
+            return originals
         }
 
         return cachedURLs
@@ -60,7 +61,8 @@ struct ClipboardFileReferenceSet {
     }
 
     var displayPathText: String {
-        let displayURLs = !existingOriginalURLs.isEmpty ? existingOriginalURLs : cachedURLs
+        let originals = resolvedOriginalURLs.existing
+        let displayURLs = !originals.isEmpty ? originals : cachedURLs
         let paths = displayURLs.map(\.path)
         if !paths.isEmpty {
             return paths.joined(separator: "\n")
@@ -215,6 +217,28 @@ struct ClipboardFileReferenceSet {
         }
 
         return total > 0 ? total : nil
+    }
+
+    private var resolvedOriginalURLs: (existing: [URL], missing: [URL]) {
+        let urls = originalURLs
+        guard !urls.isEmpty else {
+            return ([], [])
+        }
+
+        var existing: [URL] = []
+        var missing: [URL] = []
+        existing.reserveCapacity(urls.count)
+        missing.reserveCapacity(urls.count)
+
+        for url in urls {
+            if FileManager.default.fileExists(atPath: url.path) {
+                existing.append(url)
+            } else {
+                missing.append(url)
+            }
+        }
+
+        return (existing, missing)
     }
 
     private static let byteCountFormatter: ByteCountFormatter = {

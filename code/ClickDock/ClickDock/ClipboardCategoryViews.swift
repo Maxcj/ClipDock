@@ -145,7 +145,6 @@ struct ClipboardCategorySettingsView: View {
             resetButtonRow
         }
         .onAppear {
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
             syncOrderedCategories()
         }
         .onChange(of: categoryOrderingSignature) { _ in
@@ -216,12 +215,7 @@ struct ClipboardCategorySettingsView: View {
     }
 
     private func syncOrderedCategories() {
-        orderedCategories = Array(categories).sorted {
-            if $0.sortOrder != $1.sortOrder {
-                return $0.sortOrder < $1.sortOrder
-            }
-            return ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast)
-        }
+        orderedCategories = Array(categories)
     }
 
     private func categoryRow(_ category: ClipboardCategory) -> some View {
