@@ -135,6 +135,8 @@
 "hidden" = "Hidden";
 "icon" = "Icon";
 "color" = "Color";
+"categoryNameAlreadyExists" = "A custom category with this name already exists.";
+"categorySaveFailed" = "Could not save the category. Please try again.";
 "save" = "Save";
 "cancel" = "Cancel";
 "done" = "Done";

@@ -180,6 +180,8 @@ enum AppTextKey: String {
     case hidden
     case icon
     case color
+    case categoryNameAlreadyExists
+    case categorySaveFailed
     case save
     case cancel
     case done

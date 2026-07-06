@@ -135,6 +135,8 @@
 "hidden" = "隐藏";
 "icon" = "图标";
 "color" = "颜色";
+"categoryNameAlreadyExists" = "已存在同名的自定义分类。";
+"categorySaveFailed" = "无法保存该分类，请稍后重试。";
 "save" = "保存";
 "cancel" = "取消";
 "done" = "完成";
