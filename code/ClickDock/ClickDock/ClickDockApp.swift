@@ -47,6 +47,10 @@ struct ClipDockApp: App {
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        if !UserDefaults.standard.bool(forKey: "clipboard.cachedSizeBytesMigrated") {
+            ClipboardStorageCalculator.rebuildCachedSizes(context: context)
+            UserDefaults.standard.set(true, forKey: "clipboard.cachedSizeBytesMigrated")
+        }
         let storageSummaryScheduler = StorageSummaryScheduler(container: PersistenceController.shared.container)
         _storageSummaryScheduler = StateObject(wrappedValue: storageSummaryScheduler)
         storageSummaryScheduler.start()
