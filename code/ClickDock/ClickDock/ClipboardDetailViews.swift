@@ -243,10 +243,6 @@ struct ClipboardDetailInspector: View {
             ForEach(rows.indices, id: \.self) { index in
                 ClipboardDetailMetaRow(title: rows[index].title, value: rows[index].value, layout: layout)
             }
-
-            if record.kind == .code {
-                ClipboardDetailMetaRow(title: localizer.text(.lines), value: "\(record.codeLineCount)", layout: layout)
-            }
         }
         .padding(.top, 2)
     }
@@ -268,7 +264,8 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.imageSize), record.imageFileSizeLabel))
             rows.append((localizer.text(.path), record.imagePathText))
         case .code:
-            break
+            rows.append((localizer.text(.language), record.codeLanguage.title))
+            rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
             rows.append((localizer.text(.path), record.fileSubtitleText))
             rows.append((localizer.text(.fileSize), record.fileSizeLabel))

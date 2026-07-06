@@ -10,7 +10,7 @@ struct ClipboardCodePane: View {
     @Environment(\.appLocalizer) private var localizer
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
-    let record: ClipboardRecord
+    @ObservedObject var record: ClipboardRecord
     @State private var copiedActionKey: String?
 
     var body: some View {
