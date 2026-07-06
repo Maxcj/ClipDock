@@ -265,6 +265,36 @@ final class ClipboardCategoryManager {
     static let maxCustomCategoriesPerRecord = 3
     private static let customSortOrderBase: Int32 = 1000
 
+    enum SaveCustomCategoryResult {
+        case saved
+        case duplicateName
+        case failed
+    }
+
+    private static func normalizedCustomCategoryName(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    private static func hasDuplicateCustomCategoryName(
+        _ name: String,
+        excluding categoryID: UUID? = nil,
+        context: NSManagedObjectContext
+    ) -> Bool {
+        let normalizedName = normalizedCustomCategoryName(name)
+        guard !normalizedName.isEmpty else { return false }
+
+        let request = NSFetchRequest<ClipboardCategory>(entityName: "ClipboardCategory")
+        request.predicate = NSPredicate(format: "typeRaw == %@", ClipboardCategoryType.custom.rawValue)
+        request.fetchBatchSize = 32
+
+        let categories = (try? context.fetch(request)) ?? []
+        return categories.contains { category in
+            guard category.id != categoryID else { return false }
+            return normalizedCustomCategoryName(category.name ?? "") == normalizedName
+        }
+    }
+
     static func bootstrapSystemCategories(context: NSManagedObjectContext) {
         context.performAndWait {
             do {
@@ -323,16 +353,21 @@ final class ClipboardCategoryManager {
         }
     }
 
-    @discardableResult
     static func createCustomCategory(
         name: String,
         iconName: String,
         colorHex: String,
         context: NSManagedObjectContext
-    ) -> ClipboardCategory? {
-        var result: ClipboardCategory?
+    ) -> SaveCustomCategoryResult {
+        var result: SaveCustomCategoryResult = .failed
 
         context.performAndWait {
+            guard !hasDuplicateCustomCategoryName(name, context: context) else {
+                NSLog("Failed to create custom category: duplicate name")
+                result = .duplicateName
+                return
+            }
+
             let category = ClipboardCategory(context: context)
             category.id = UUID()
             category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -347,9 +382,10 @@ final class ClipboardCategoryManager {
 
             do {
                 try context.save()
-                result = category
+                result = .saved
             } catch {
                 NSLog("Failed to create custom category: \(error.localizedDescription)")
+                result = .failed
             }
         }
 
@@ -363,9 +399,18 @@ final class ClipboardCategoryManager {
         colorHex: String,
         isVisible: Bool,
         context: NSManagedObjectContext
-    ) {
+    ) -> SaveCustomCategoryResult {
+        var result: SaveCustomCategoryResult = .failed
+
         context.performAndWait {
-            category.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !hasDuplicateCustomCategoryName(trimmedName, excluding: category.id, context: context) else {
+                NSLog("Failed to update clipboard category: duplicate name")
+                result = .duplicateName
+                return
+            }
+
+            category.name = trimmedName
             category.iconName = iconName
             category.colorHex = colorHex
             category.isVisible = isVisible
@@ -373,10 +418,14 @@ final class ClipboardCategoryManager {
 
             do {
                 try context.save()
+                result = .saved
             } catch {
                 NSLog("Failed to update clipboard category: \(error.localizedDescription)")
+                result = .failed
             }
         }
+
+        return result
     }
 
     static func toggleVisibility(_ category: ClipboardCategory, context: NSManagedObjectContext) {
