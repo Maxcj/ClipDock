@@ -789,9 +789,22 @@ struct SavedFileAssets {
     let cachedSizeBytes: Int64
 }
 
+private actor LinkMetadataFetchGate {
+    private var inFlightRecordIDs: Set<String> = []
+
+    func performIfAvailable(
+        for key: String,
+        operation: () async -> Void
+    ) async {
+        guard inFlightRecordIDs.insert(key).inserted else { return }
+        defer { inFlightRecordIDs.remove(key) }
+        await operation()
+    }
+}
+
 final class LinkMetadataManager {
     private let context: NSManagedObjectContext
-    private var inFlightRecordIDs: Set<String> = []
+    private let fetchGate = LinkMetadataFetchGate()
 
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -815,14 +828,13 @@ final class LinkMetadataManager {
     }
 
     func scheduleMetadataFetch(for recordID: NSManagedObjectID, url: URL) {
-        let key = recordID.uriRepresentation().absoluteString
-        guard inFlightRecordIDs.insert(key).inserted else { return }
-
         Task.detached(priority: .utility) { [weak self] in
-            let metadata = await LinkMetadataFetcher.fetch(from: url)
             guard let self else { return }
-            self.apply(metadata: metadata, for: recordID, url: url)
-            self.inFlightRecordIDs.remove(key)
+            let key = recordID.uriRepresentation().absoluteString
+            await self.fetchGate.performIfAvailable(for: key) {
+                let metadata = await LinkMetadataFetcher.fetch(from: url)
+                self.apply(metadata: metadata, for: recordID, url: url)
+            }
         }
     }
 
