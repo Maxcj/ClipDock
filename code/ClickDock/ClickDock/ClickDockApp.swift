@@ -91,6 +91,7 @@ struct ClipDockApp: App {
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(\.appLocalizer, localizer)
                 .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
+                .environmentObject(sparkleUpdateManager)
         } label: {
             Image("StatusBarIcon")
                 .renderingMode(.original)
@@ -159,30 +160,86 @@ final class LoginItemManager: ObservableObject {
 private struct StatusBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.appLocalizer) private var localizer
+    @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     private var appVersion: String { Bundle.main.appVersionString }
 
     var body: some View {
-        Text("Version \(appVersion)")
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
+        Button(action: {}) {
+            statusBarMenuRow(
+                title: appVersion,
+                systemImage: "info.circle",
+                tint: .secondary,
+                textFont: .system(size: 11)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(true)
 
         Divider()
 
-        Button(localizer.text(.showHideMainWindow)) {
+        Button {
             NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.showHideMainWindow),
+                systemImage: "sidebar.leading"
+            )
         }
 
-        Button(localizer.text(.settings)) {
+        Button {
             if !NSApp.isActive {
                 NSApp.activate(ignoringOtherApps: true)
             }
             openWindow(id: "settings")
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.settings),
+                systemImage: "gearshape"
+            )
         }
+
+        Button {
+            sparkleUpdateManager.checkForUpdates()
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.checkForUpdates),
+                systemImage: "arrow.clockwise"
+            )
+        }
+        .disabled(!sparkleUpdateManager.canCheckForUpdates || sparkleUpdateManager.isUpdateCheckInProgress)
 
         Divider()
 
-        Button(localizer.text(.quit)) {
+        Button {
             NSApplication.shared.terminate(nil)
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.quit),
+                systemImage: "power"
+            )
         }
+    }
+
+    @ViewBuilder
+    private func statusBarMenuRow(
+        title: String,
+        systemImage: String,
+        tint: Color = .primary,
+        textFont: Font = .body
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .frame(width: 14, alignment: .center)
+                .font(.system(size: 12, weight: .semibold))
+
+            Text(title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(textFont)
+        .foregroundStyle(tint)
+        .contentShape(Rectangle())
     }
 }
