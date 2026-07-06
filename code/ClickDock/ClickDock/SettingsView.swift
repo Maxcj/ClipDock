@@ -469,7 +469,8 @@ struct SettingsView: View {
                                     iconName: "tray.full",
                                     title: localizer.text(.storageTotalItems),
                                     subtitle: localizer.text(.storageTotalItemsSubtitle),
-                                    value: storageSummary.totalItemsValue
+                                    value: storageSummary.totalItemsValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -478,7 +479,8 @@ struct SettingsView: View {
                                     iconName: "text.alignleft",
                                     title: localizer.text(.storageTextItems),
                                     subtitle: localizer.text(.storageTextItemsSubtitle),
-                                    value: storageSummary.textItemsValue
+                                    value: storageSummary.textItemsValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -487,7 +489,8 @@ struct SettingsView: View {
                                     iconName: "photo.stack",
                                     title: localizer.text(.storageImages),
                                     subtitle: localizer.text(.storageImagesSubtitle),
-                                    value: storageSummary.imagesValue
+                                    value: storageSummary.imagesValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
                             }
 
@@ -496,7 +499,8 @@ struct SettingsView: View {
                                     iconName: "externaldrive",
                                     title: localizer.text(.storageFilesCache),
                                     subtitle: localizer.text(.storageFilesCacheSubtitle),
-                                    value: storageSummary.filesCacheValue
+                                    value: storageSummary.filesCacheValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -505,7 +509,8 @@ struct SettingsView: View {
                                     iconName: "globe.asia.australia",
                                     title: localizer.text(.storageLinkMetadata),
                                     subtitle: localizer.text(.storageLinkMetadataSubtitle),
-                                    value: storageSummary.linkMetadataValue
+                                    value: storageSummary.linkMetadataValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -514,7 +519,8 @@ struct SettingsView: View {
                                     iconName: "clock",
                                     title: localizer.text(.storageLastUpdated),
                                     subtitle: localizer.text(.storageLastUpdatedSubtitle),
-                                    value: storageSummaryLastUpdatedValue
+                                    value: storageSummaryLastUpdatedValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -524,7 +530,7 @@ struct SettingsView: View {
                                     title: localizer.text(.rescanStorageUsage),
                                     subtitle: localizer.text(.rescanStorageUsageSubtitle),
                                     buttonTitle: localizer.text(.rescan),
-                                    isDimmed: storageSummaryLoader.isLoading,
+                                    isDisabled: storageSummaryLoader.isLoading,
                                     action: {
                                         storageSummaryLoader.rebuild(context: viewContext)
                                     }
@@ -864,12 +870,13 @@ struct SettingsView: View {
         subtitle: String,
         buttonTitle: String,
         isDimmed: Bool = false,
+        isDisabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle, isDimmed: isDimmed) {
             Button(buttonTitle, action: action)
                 .buttonStyle(SettingsSecondaryButtonStyle())
-                .disabled(isDimmed)
+                .disabled(isDisabled)
         }
     }
 
@@ -878,13 +885,20 @@ struct SettingsView: View {
         iconName: String,
         title: String,
         subtitle: String,
-        value: String
+        value: String,
+        isLoading: Bool = false
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
-            Text(value)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(minWidth: 72, alignment: .trailing)
+            } else {
+                Text(value)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
         }
     }
 
@@ -1208,7 +1222,6 @@ final class StorageSummaryLoader: ObservableObject {
     private func load(context: NSManagedObjectContext, recalculateCachedSizes: Bool) {
         let token = UUID()
         requestToken = token
-        summary = nil
         isLoading = true
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
