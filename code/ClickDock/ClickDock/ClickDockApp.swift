@@ -84,7 +84,7 @@ struct ClipDockApp: App {
                 .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
         }
-        .defaultSize(width: 760, height: 520)
+        .defaultSize(width: 780, height: 560)
         .windowResizability(.contentSize)
 
         MenuBarExtra {

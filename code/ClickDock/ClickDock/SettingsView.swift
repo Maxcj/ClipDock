@@ -211,8 +211,7 @@ struct SettingsView: View {
         window.title = ""
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable])
-        window.styleMask.remove(.resizable)
+        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable])
         window.isMovableByWindowBackground = true
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -220,10 +219,10 @@ struct SettingsView: View {
         window.level = .normal
         window.collectionBehavior = [.fullScreenAuxiliary]
         window.animationBehavior = .utilityWindow
-        let fixedSize = NSSize(width: 760, height: 520)
-        window.setContentSize(fixedSize)
-        window.minSize = fixedSize
-        window.maxSize = fixedSize
+        let defaultSize = NSSize(width: 780, height: 560)
+        window.setContentSize(defaultSize)
+        window.minSize = NSSize(width: 760, height: 520)
+        window.maxSize = NSSize(width: 980, height: 760)
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
