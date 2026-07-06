@@ -47,6 +47,7 @@ struct ClipDockApp: App {
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        ClipboardCategoryManager.bootstrapSystemCategories(context: context)
         if !UserDefaults.standard.bool(forKey: "clipboard.cachedSizeBytesMigrated") {
             ClipboardStorageCalculator.rebuildCachedSizes(context: context)
             UserDefaults.standard.set(true, forKey: "clipboard.cachedSizeBytesMigrated")
@@ -91,7 +92,6 @@ struct ClipDockApp: App {
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environment(\.appLocalizer, localizer)
                 .environment(\.locale, Locale(identifier: localizer.language.localeIdentifier))
-                .environmentObject(sparkleUpdateManager)
         } label: {
             Image("StatusBarIcon")
                 .renderingMode(.original)
@@ -160,7 +160,6 @@ final class LoginItemManager: ObservableObject {
 private struct StatusBarMenuView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.appLocalizer) private var localizer
-    @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     private var appVersion: String { Bundle.main.appVersionString }
 
     var body: some View {
@@ -197,16 +196,6 @@ private struct StatusBarMenuView: View {
                 systemImage: "gearshape"
             )
         }
-
-        Button {
-            sparkleUpdateManager.checkForUpdates()
-        } label: {
-            statusBarMenuRow(
-                title: localizer.text(.checkForUpdates),
-                systemImage: "arrow.clockwise"
-            )
-        }
-        .disabled(!sparkleUpdateManager.canCheckForUpdates || sparkleUpdateManager.isUpdateCheckInProgress)
 
         Divider()
 
