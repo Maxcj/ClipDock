@@ -798,49 +798,109 @@ private struct LinkMetadata {
 }
 
 private enum LinkMetadataFetcher {
+    private static let requestTimeout: TimeInterval = 4.0
+    private static let htmlMaxBytes = 512 * 1024
+    private static let iconMaxBytes = 256 * 1024
+
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = requestTimeout
+        configuration.timeoutIntervalForResource = requestTimeout + 2.0
+        configuration.waitsForConnectivity = false
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        return URLSession(configuration: configuration)
+    }()
+
     static func fetch(from url: URL) async -> LinkMetadata? {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
             return nil
         }
 
+        let resolvedURL = url
+        let host = resolvedURL.host?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let htmlResult = await fetchHTML(from: url)
+        let title = htmlResult.flatMap { extractTitle(from: $0.html) }
+        let iconURL = htmlResult.flatMap { extractIconURL(from: $0.html, baseURL: $0.resolvedURL) }
+        let metadataHost = htmlResult?.resolvedURL.host?.trimmingCharacters(in: .whitespacesAndNewlines) ?? host
+
+        var iconData: Data?
+        if let iconURL {
+            iconData = await fetchIconData(from: iconURL)
+        }
+
+        if iconData == nil {
+            iconData = await fetchIconData(from: rootFaviconURL(for: htmlResult?.resolvedURL ?? url))
+        }
+
+        return LinkMetadata(
+            title: title,
+            host: metadataHost,
+            iconData: iconData
+        )
+    }
+
+    private static func fetchHTML(from url: URL) async -> (html: String, resolvedURL: URL)? {
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let request = URLRequest(url: url, timeoutInterval: requestTimeout)
+            let (bytes, response) = try await session.bytes(for: request)
             guard let httpResponse = response as? HTTPURLResponse,
-                  (200...399).contains(httpResponse.statusCode) else {
-                return LinkMetadata(title: nil, host: response.url?.host, iconData: nil)
+                  (200...399).contains(httpResponse.statusCode),
+                  httpResponse.mimeType?.lowercased() == "text/html" else {
+                return nil
             }
 
-            let resolvedURL = response.url ?? url
-            let html = string(from: data)
-            let title = extractTitle(from: html)
-            let iconURL = extractIconURL(from: html, baseURL: resolvedURL)
-
-            var iconData: Data?
-            if let iconURL {
-                iconData = try? await fetchIconData(from: iconURL)
+            if let contentLength = httpResponse.value(forHTTPHeaderField: "Content-Length").flatMap(Int.init),
+               contentLength > htmlMaxBytes {
+                return nil
             }
 
-            if iconData == nil {
-                iconData = try? await fetchIconData(from: rootFaviconURL(for: resolvedURL))
+            var data = Data()
+            data.reserveCapacity(min(htmlMaxBytes, 64 * 1024))
+
+            for try await byte in bytes {
+                data.append(byte)
+                if data.count > htmlMaxBytes {
+                    return nil
+                }
             }
 
-            return LinkMetadata(
-                title: title,
-                host: resolvedURL.host?.trimmingCharacters(in: .whitespacesAndNewlines),
-                iconData: iconData
-            )
+            return (string(from: data), response.url ?? url)
         } catch {
-            return LinkMetadata(title: nil, host: url.host?.trimmingCharacters(in: .whitespacesAndNewlines), iconData: nil)
+            return nil
         }
     }
 
-    private static func fetchIconData(from url: URL) async throws -> Data {
-        let (data, response) = try await URLSession.shared.data(from: url)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...399).contains(httpResponse.statusCode) else {
-            throw URLError(.badServerResponse)
+    private static func fetchIconData(from url: URL) async -> Data? {
+        do {
+            let request = URLRequest(url: url, timeoutInterval: requestTimeout)
+            let (bytes, response) = try await session.bytes(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...399).contains(httpResponse.statusCode),
+                  let mimeType = httpResponse.mimeType?.lowercased(),
+                  mimeType.hasPrefix("image/") else {
+                return nil
+            }
+
+            if let contentLength = httpResponse.value(forHTTPHeaderField: "Content-Length").flatMap(Int.init),
+               contentLength > iconMaxBytes {
+                return nil
+            }
+
+            var data = Data()
+            data.reserveCapacity(min(iconMaxBytes, 16 * 1024))
+
+            for try await byte in bytes {
+                data.append(byte)
+                if data.count > iconMaxBytes {
+                    return nil
+                }
+            }
+
+            return data
+        } catch {
+            return nil
         }
-        return data
     }
 
     private static func string(from data: Data) -> String {
