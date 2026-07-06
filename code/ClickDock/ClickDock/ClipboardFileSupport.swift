@@ -19,6 +19,40 @@ enum FileHistoryCopyStrategy: Int, CaseIterable, Identifiable {
     }
 }
 
+struct ClipboardFileCopyManifest: Codable, Equatable {
+    static let fileName = "manifest.json"
+    static let currentSchemaVersion = 1
+
+    let schemaVersion: Int
+    let copyStrategy: String
+    let createdAt: Date
+    let files: [File]
+
+    init(createdAt: Date = Date(), files: [File]) {
+        self.schemaVersion = Self.currentSchemaVersion
+        self.copyStrategy = "saveCopy"
+        self.createdAt = createdAt
+        self.files = files
+    }
+
+    @discardableResult
+    func write(to folderURL: URL) throws -> URL {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+
+        let manifestURL = folderURL.appendingPathComponent(Self.fileName, isDirectory: false)
+        try encoder.encode(self).write(to: manifestURL, options: .atomic)
+        return manifestURL
+    }
+
+    struct File: Codable, Equatable {
+        let sourcePath: String
+        let copiedFileName: String
+        let sizeBytes: Int64
+    }
+}
+
 struct ClipboardFileReferenceSet {
     let originalPathsText: String?
     let legacyCacheFolderPath: String?
@@ -157,7 +191,8 @@ struct ClipboardFileReferenceSet {
         }
 
         return contents.filter { url in
-            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
+            url.lastPathComponent != ClipboardFileCopyManifest.fileName
+                && (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
         }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 

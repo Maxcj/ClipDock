@@ -545,25 +545,38 @@ final class ClipboardMonitor: ObservableObject {
         guard !fileURLs.isEmpty else { return nil }
 
         var sourceSizes: Int64 = 0
+        var manifestFiles: [ClipboardFileCopyManifest.File] = []
+        manifestFiles.reserveCapacity(fileURLs.count)
+
         for fileURL in fileURLs {
             guard Self.isCacheableFileURL(fileURL) else { return nil }
             guard let fileSize = Self.fileSizeBytes(for: fileURL) else { return nil }
             guard fileSize <= Self.maximumSingleFileCopySizeBytes else { return nil }
             sourceSizes += fileSize
             guard sourceSizes <= Self.maximumBatchFileCopySizeBytes else { return nil }
+
+            let copiedFileName = "\(manifestFiles.count)-\(fileURL.lastPathComponent)"
+            manifestFiles.append(ClipboardFileCopyManifest.File(
+                sourcePath: fileURL.path,
+                copiedFileName: copiedFileName,
+                sizeBytes: fileSize
+            ))
         }
 
         let folderURL = Self.fileAssetFolderURL().appendingPathComponent(UUID().uuidString, isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
 
-            for (index, sourceURL) in fileURLs.enumerated() {
-                let destinationName = "\(index)-\(sourceURL.lastPathComponent)"
-                let destinationURL = folderURL.appendingPathComponent(destinationName)
+            for (sourceURL, manifestFile) in zip(fileURLs, manifestFiles) {
+                let destinationURL = folderURL.appendingPathComponent(manifestFile.copiedFileName)
                 try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
             }
 
-            return SavedFileAssets(folder: folderURL, cachedSizeBytes: sourceSizes)
+            let manifest = ClipboardFileCopyManifest(files: manifestFiles)
+            let manifestURL = try manifest.write(to: folderURL)
+            let manifestSize = Self.fileSizeBytes(for: manifestURL) ?? 0
+
+            return SavedFileAssets(folder: folderURL, cachedSizeBytes: sourceSizes + manifestSize)
         } catch {
             try? FileManager.default.removeItem(at: folderURL)
             NSLog("Failed to save clipboard files: \(error.localizedDescription)")
