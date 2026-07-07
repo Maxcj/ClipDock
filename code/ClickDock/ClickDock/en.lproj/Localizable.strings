@@ -42,6 +42,7 @@
 "pathOnlyNoCachedCopy" = "Path only, no cached copy";
 "cachedCopyAvailable" = "Cached copy available";
 "cachedCopyMissing" = "Cached copy missing";
+"previewImage" = "Preview";
 "updates" = "Updates";
 "updatesSubtitle" = "Check for new releases and manage ignored versions";
 "automaticCheckForUpdates" = "Automatically check for updates";

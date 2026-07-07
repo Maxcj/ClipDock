@@ -294,6 +294,7 @@ enum AppTextKey: String {
     case pathOnlyNoCachedCopy
     case cachedCopyAvailable
     case cachedCopyMissing
+    case previewImage
     case originalFileNoLongerExists
 }
 

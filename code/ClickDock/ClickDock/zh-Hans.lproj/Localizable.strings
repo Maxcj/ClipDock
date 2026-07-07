@@ -42,6 +42,7 @@
 "pathOnlyNoCachedCopy" = "仅保存路径，没有缓存副本";
 "cachedCopyAvailable" = "缓存副本可用";
 "cachedCopyMissing" = "缓存副本丢失";
+"previewImage" = "预览";
 "updates" = "更新";
 "updatesSubtitle" = "检查新版本并管理已忽略版本";
 "automaticCheckForUpdates" = "自动检查更新";
