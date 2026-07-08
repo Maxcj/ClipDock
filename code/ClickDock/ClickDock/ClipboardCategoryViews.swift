@@ -142,7 +142,7 @@ struct ClipboardCategorySettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             categoriesSection
-            resetButtonRow
+            resetSection
         }
         .onAppear {
             syncOrderedCategories()
@@ -288,14 +288,39 @@ struct ClipboardCategorySettingsView: View {
         .buttonStyle(.plain)
     }
 
-    private var resetButtonRow: some View {
-        HStack(spacing: 10) {
-            Button(localizer.text(.resetSystemCategories)) {
-                showResetAlert = true
-            }
-            .buttonStyle(SettingsSecondaryButtonStyle())
+    private var resetSection: some View {
+        settingsSection(
+            title: localizer.text(.resetSystemCategories),
+            subtitle: localizer.text(.resetSystemCategoriesMessage)
+        ) {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.red.opacity(0.12))
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.red)
+                }
+                .frame(width: 28, height: 28)
 
-            Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(localizer.text(.resetSystemCategories))
+                        .font(.system(size: 13, weight: .regular))
+                    Text(localizer.text(.resetSystemCategoriesMessage))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button(localizer.text(.reset)) {
+                    showResetAlert = true
+                }
+                .buttonStyle(SettingsActionButtonStyle(kind: .destructive))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
     }
 
