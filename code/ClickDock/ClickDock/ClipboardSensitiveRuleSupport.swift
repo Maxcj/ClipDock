@@ -146,6 +146,57 @@ struct ClipboardSensitiveRule: Identifiable, Codable, Hashable {
     }
 }
 
+final class ClipboardSensitiveRuleRegexCache {
+    static let shared = ClipboardSensitiveRuleRegexCache()
+
+    private enum Entry {
+        case valid(NSRegularExpression)
+        case invalid
+    }
+
+    private struct Key: Hashable {
+        let pattern: String
+        let optionsRawValue: UInt
+    }
+
+    private var entries: [Key: Entry] = [:]
+    private let lock = NSLock()
+
+    func regex(pattern: String, options: NSRegularExpression.Options) -> NSRegularExpression? {
+        let key = Key(pattern: pattern, optionsRawValue: options.rawValue)
+
+        lock.lock()
+        if let entry = entries[key] {
+            lock.unlock()
+            switch entry {
+            case .valid(let regex):
+                return regex
+            case .invalid:
+                return nil
+            }
+        }
+        lock.unlock()
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+            lock.lock()
+            entries[key] = .invalid
+            lock.unlock()
+            return nil
+        }
+
+        lock.lock()
+        entries[key] = .valid(regex)
+        lock.unlock()
+        return regex
+    }
+
+    func clear() {
+        lock.lock()
+        entries.removeAll(keepingCapacity: true)
+        lock.unlock()
+    }
+}
+
 enum ClipboardSensitiveRuleStore {
     static let storageKey = "clipboard.customSensitiveRules"
 
@@ -166,6 +217,7 @@ enum ClipboardSensitiveRuleStore {
         do {
             let data = try JSONEncoder().encode(rules)
             defaults.set(data, forKey: storageKey)
+            ClipboardSensitiveRuleRegexCache.shared.clear()
         } catch {
             NSLog("Failed to encode custom sensitive rules: \(error.localizedDescription)")
         }

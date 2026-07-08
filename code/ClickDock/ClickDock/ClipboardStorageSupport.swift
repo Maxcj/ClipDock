@@ -98,10 +98,10 @@ enum ClipboardStorageCalculator {
                 }
             case .files:
                 filesCacheItemCount += 1
-                if let legacyCacheFolderURL = snapshot.fileReferenceSet.legacyCacheFolderURL {
-                    let standardizedPath = legacyCacheFolderURL.standardizedFileURL.path
+                if let cachedFolderURL = snapshot.fileReferenceSet.cachedFolderURL {
+                    let standardizedPath = cachedFolderURL.standardizedFileURL.path
                     if seenLegacyFileCachePaths.insert(standardizedPath).inserted {
-                        filesCacheBytes += Int64(fileSize(at: legacyCacheFolderURL) ?? 0)
+                        filesCacheBytes += Int64(fileSize(at: cachedFolderURL) ?? 0)
                     }
                 }
             case .link:
@@ -258,8 +258,8 @@ enum ClipboardStorageCalculator {
         case .image:
             return cachedSizeBytes(forPaths: record.cachedImagePaths)
         case .files:
-            guard let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL else { return 0 }
-            return Int64(fileSize(at: legacyCacheFolderURL) ?? 0)
+            guard let cachedFolderURL = record.fileReferenceSet.cachedFolderURL else { return 0 }
+            return Int64(fileSize(at: cachedFolderURL) ?? 0)
         case .text, .link, .code, .colors, .unknown:
             return 0
         }

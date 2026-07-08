@@ -8,8 +8,9 @@ import AppKit
 
 struct ClipboardCodePane: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
-    let record: ClipboardRecord
+    @ObservedObject var record: ClipboardRecord
     @State private var copiedActionKey: String?
 
     var body: some View {
@@ -17,18 +18,36 @@ struct ClipboardCodePane: View {
 
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 10) {
-                HStack(spacing: 8) {
-                    Text(language.title)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(language.badgeColor)
-                    Text("\(record.codeLineCount) lines")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                Menu {
+                    ForEach(ClipboardCodeLanguage.pickerCases) { item in
+                        Button {
+                            updateCodeLanguage(item)
+                        } label: {
+                            HStack(spacing: 8) {
+                                if item == language {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+
+                                Text(item.title)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(language.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(language.badgeColor)
+                        Text("\(record.codeLineCount) lines")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(language.badgeColor.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(language.badgeColor.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 Spacer(minLength: 0)
 
@@ -94,6 +113,19 @@ struct ClipboardCodePane: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(Color.black.opacity(0.10), lineWidth: 1)
         )
+    }
+
+    private func updateCodeLanguage(_ newValue: ClipboardCodeLanguage) {
+        record.setValue(newValue.rawValue, forKey: "codeLanguageRaw")
+        saveContext()
+    }
+
+    private func saveContext() {
+        do {
+            try viewContext.save()
+        } catch {
+            NSLog("Failed to save code language change: \(error.localizedDescription)")
+        }
     }
 }
 

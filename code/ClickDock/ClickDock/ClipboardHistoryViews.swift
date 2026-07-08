@@ -119,9 +119,6 @@ struct ClipboardHistorySidebar: View {
             .padding(.top, 2)
         }
         .padding(layout.sidebarPadding)
-        .onAppear {
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
-        }
         .sheet(item: $categoryAssignmentTarget) { target in
             if let record = viewContext.object(with: target.objectID) as? ClipboardRecord {
                 ClipboardCategoryAssignmentView(record: record)
@@ -145,11 +142,24 @@ struct ClipboardHistorySidebar: View {
 
     private var groupedSections: [ClipboardHistorySection] {
         let calendar = Calendar.current
-        let orderedRecords = records.sorted(by: clipboardRecordDisplaysBefore)
-        let pinnedRecords = orderedRecords.filter(\.isPinned)
-        let unpinnedRecords = orderedRecords.filter { !$0.isPinned }
-        let dayKeys = Dictionary(grouping: unpinnedRecords, by: { calendar.startOfDay(for: $0.createdAt ?? Date()) })
-        let sortedDays = dayKeys.keys.sorted(by: >)
+        let orderedRecords = Array(records)
+        var pinnedRecords: [ClipboardRecord] = []
+        var dayBuckets: [Date: [ClipboardRecord]] = [:]
+
+        pinnedRecords.reserveCapacity(orderedRecords.count)
+        dayBuckets.reserveCapacity(orderedRecords.count)
+
+        for record in orderedRecords {
+            if record.isPinned {
+                pinnedRecords.append(record)
+                continue
+            }
+
+            let day = calendar.startOfDay(for: record.createdAt ?? Date())
+            dayBuckets[day, default: []].append(record)
+        }
+
+        let sortedDays = dayBuckets.keys.sorted(by: >)
 
         var sections: [ClipboardHistorySection] = []
 
@@ -165,7 +175,7 @@ struct ClipboardHistorySidebar: View {
         }
 
         sections.append(contentsOf: sortedDays.map { day in
-            let sectionRecords = dayKeys[day] ?? []
+            let sectionRecords = dayBuckets[day] ?? []
 
             return ClipboardHistorySection(
                 id: day,

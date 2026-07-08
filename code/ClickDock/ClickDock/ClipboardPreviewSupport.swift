@@ -7,6 +7,7 @@ import SwiftUI
 import AppKit
 
 struct AsyncDetailImageView: View {
+    @Environment(\.appLocalizer) private var localizer
     let imagePath: String?
     let initialImage: NSImage?
     let placeholderTitle: String
@@ -16,10 +17,92 @@ struct AsyncDetailImageView: View {
     let fallbackHeight: CGFloat
 
     @State private var image: NSImage?
+    @State private var originalImage: NSImage?
     @State private var isLoading = false
+    @State private var isHovering = false
     @State private var requestToken = UUID()
 
     var body: some View {
+        ZStack(alignment: .topTrailing) {
+            previewSurface
+
+            if previewImageForPresentation != nil {
+                Button {
+                    presentPreviewPanel()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(localizer.text(.previewImage))
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .foregroundStyle(.primary)
+                    .background(Color.white.opacity(isHovering ? 0.96 : 0.88))
+                    .clipShape(Capsule(style: .continuous))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
+                }
+                .buttonStyle(.plain)
+                .padding(12)
+                .opacity(isHovering ? 1 : 0)
+                .animation(.easeInOut(duration: 0.15), value: isHovering)
+                .accessibilityLabel(localizer.text(.previewImage))
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height ?? fallbackHeight)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .task(id: imagePath) {
+            image = nil
+            originalImage = nil
+
+            if let initialImage {
+                image = initialImage
+                originalImage = initialImage
+            }
+
+            let token = UUID()
+            requestToken = token
+
+            guard let imagePath, !imagePath.isEmpty else {
+                return
+            }
+
+            isLoading = true
+            defer { isLoading = false }
+
+            let loadedImages = await Task.detached(priority: .userInitiated) {
+                autoreleasepool {
+                    let original = ClipboardImageCache.shared.image(at: imagePath)
+                    let preview = ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize)
+                    return (preview, original)
+                }
+            }.value
+
+            guard !Task.isCancelled else { return }
+            guard token == requestToken else { return }
+            image = loadedImages.0 ?? loadedImages.1 ?? initialImage
+            originalImage = loadedImages.1 ?? initialImage
+        }
+    }
+
+    private var previewImageForPresentation: NSImage? {
+        originalImage ?? image ?? initialImage
+    }
+
+    private func presentPreviewPanel() {
+        guard let previewImage = previewImageForPresentation else { return }
+        ImagePreviewPanelController.shared.present(image: previewImage)
+    }
+
+    private var previewSurface: some View {
         Group {
             if let image {
                 Image(nsImage: image)
@@ -44,33 +127,6 @@ struct AsyncDetailImageView: View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .stroke(Color.white.opacity(0.18), lineWidth: 1)
         )
-        .task(id: imagePath) {
-            image = nil
-
-            if let initialImage {
-                image = initialImage
-            }
-
-            let token = UUID()
-            requestToken = token
-
-            guard let imagePath, !imagePath.isEmpty else {
-                return
-            }
-
-            isLoading = true
-            defer { isLoading = false }
-
-            let loadedImage = await Task.detached(priority: .userInitiated) {
-                autoreleasepool {
-                    ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize)
-                }
-            }.value
-
-            guard !Task.isCancelled else { return }
-            guard token == requestToken else { return }
-            image = loadedImage
-        }
     }
 
     private var placeholder: some View {
@@ -94,6 +150,94 @@ struct AsyncDetailImageView: View {
                 endPoint: .bottomTrailing
             )
         )
+    }
+}
+
+final class ImagePreviewPanelController: NSObject {
+    static let shared = ImagePreviewPanelController()
+
+    private var panel: NSPanel?
+    private var hostingController: NSHostingController<ImagePreviewPanelContent>?
+
+    func present(image: NSImage) {
+        if let panel, let hostingController {
+            hostingController.rootView = ImagePreviewPanelContent(
+                image: image,
+                onClose: { [weak self] in self?.dismiss() }
+            )
+            panel.setContentSize(Self.contentSize(for: image))
+            panel.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let rootView = ImagePreviewPanelContent(image: image, onClose: { [weak self] in self?.dismiss() })
+        let hostingController = NSHostingController(rootView: rootView)
+        let panel = NSPanel(
+            contentRect: NSRect(origin: .zero, size: Self.contentSize(for: image)),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        panel.contentViewController = hostingController
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isReleasedWhenClosed = false
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
+        panel.hidesOnDeactivate = false
+        panel.center()
+        panel.delegate = self
+        self.hostingController = hostingController
+        self.panel = panel
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func dismiss() {
+        panel?.orderOut(nil)
+        panel = nil
+        hostingController = nil
+    }
+
+    private static func contentSize(for image: NSImage) -> NSSize {
+        let imageWidth = max(1, image.size.width)
+        let imageHeight = max(1, image.size.height)
+        return NSSize(width: imageWidth, height: imageHeight)
+    }
+}
+
+extension ImagePreviewPanelController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        panel = nil
+        hostingController = nil
+    }
+}
+
+struct ImagePreviewPanelContent: View {
+    let image: NSImage
+    let onClose: () -> Void
+
+    var body: some View {
+        Image(nsImage: image)
+            .interpolation(.high)
+            .resizable()
+            .scaledToFit()
+            .frame(width: max(1, image.size.width), height: max(1, image.size.height))
+            .overlay(alignment: .topTrailing) {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .background(Color.black.opacity(0.55))
+                .foregroundStyle(.white)
+                .clipShape(Circle())
+                .padding(12)
+            }
+            .background(Color.black.opacity(0.92))
     }
 }
 

@@ -179,7 +179,7 @@ enum ClipboardPrivacyRules {
 
             case .regex:
                 let options: NSRegularExpression.Options = rule.isCaseSensitive ? [] : [.caseInsensitive]
-                guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+                guard let regex = ClipboardSensitiveRuleRegexCache.shared.regex(pattern: pattern, options: options) else {
                     continue
                 }
 

@@ -100,6 +100,24 @@ enum ClipboardCodeLanguage: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+extension ClipboardCodeLanguage {
+    static let pickerCases: [ClipboardCodeLanguage] = [
+        .plain,
+        .swift,
+        .json,
+        .javascript,
+        .typescript,
+        .sql,
+        .shell,
+        .java,
+        .python,
+        .html,
+        .css,
+        .xml,
+        .yaml
+    ]
+}
+
 enum ClipboardCodeLanguageDetector {
     static func detect(from text: String) -> ClipboardCodeLanguage {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -111,8 +129,8 @@ enum ClipboardCodeLanguageDetector {
         if isSQL(trimmed) { return .sql }
         if isSwift(trimmed) { return .swift }
         if isJava(trimmed) { return .java }
-        if isJavaScript(trimmed) { return .javascript }
         if isTypeScript(trimmed) { return .typescript }
+        if isJavaScript(trimmed) { return .javascript }
         if isShell(trimmed) { return .shell }
         if isCSS(trimmed) { return .css }
         if isPython(trimmed) { return .python }
@@ -184,20 +202,30 @@ enum ClipboardCodeLanguageDetector {
     }
 
     private static func isTypeScript(_ text: String) -> Bool {
-        let markers = [
-            "interface ",
-            "enum ",
-            "type ",
-            "export ",
-            "import ",
-            "from ",
-            ": string",
-            ": number",
-            "readonly ",
-            "implements ",
-            " as "
+        let declarationPatterns = [
+            #"(?m)^\s*(?:export\s+)?(?:declare\s+)?interface\s+[A-Za-z_$]"#,
+            #"(?m)^\s*(?:export\s+)?type\s+[A-Za-z_$][A-Za-z0-9_$]*\s*="#,
+            #"(?m)^\s*(?:export\s+)?(?:const\s+)?enum\s+[A-Za-z_$]"#,
+            #"(?m)^\s*(?:export\s+)?(?:declare\s+)?namespace\s+[A-Za-z_$]"#
         ]
-        return markers.reduce(0) { $0 + (text.contains($1) ? 1 : 0) } >= 2
+        if declarationPatterns.contains(where: { text.range(of: $0, options: .regularExpression) != nil }) {
+            return true
+        }
+
+        let typeSyntaxPatterns = [
+            #":\s*(?:string|number|boolean|unknown|any|never|void)(?:\[\])?\b"#,
+            #":\s*[A-Z][A-Za-z0-9_$]*(?:<[^>]+>)?(?:\[\])?\b"#,
+            #"\bas\s+(?:const|[A-Z][A-Za-z0-9_$]*(?:<[^>]+>)?)\b"#,
+            #"\b(?:keyof|satisfies|implements)\s+"#,
+            #"\breadonly\s+[A-Za-z_$]"#
+        ]
+        let hasTypeSyntax = typeSyntaxPatterns.contains {
+            text.range(of: $0, options: .regularExpression) != nil
+        }
+        guard hasTypeSyntax else { return false }
+
+        let codeMarkers = ["const ", "let ", "function ", "=>", "class ", "export ", "import "]
+        return codeMarkers.contains(where: text.contains)
     }
 
     private static func isShell(_ text: String) -> Bool {
@@ -205,7 +233,69 @@ enum ClipboardCodeLanguageDetector {
     }
 
     private static func isCSS(_ text: String) -> Bool {
-        text.contains("{") && text.contains("}") && text.contains(":") && text.contains(";")
+        guard text.contains("{"), text.contains("}") else { return false }
+
+        let selectorPattern = #"(?m)^\s*(?:[.#][A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\])(?:[.#][A-Za-z_-][A-Za-z0-9_-]*|:[A-Za-z-]+(?:\([^\)\n]*\))?|\[[^\]\n]+\]|\s+(?:[>+~]\s*)?(?:[.#]?[A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\]))*(?:\s*,\s*(?:[.#]?[A-Za-z_-][A-Za-z0-9_-]*|[a-z][a-z0-9-]*|\*|\[[^\]\n]+\]))*\s*\{"#
+        guard text.range(of: selectorPattern, options: .regularExpression) != nil else {
+            return false
+        }
+
+        let propertyNames = [
+            "align-(?:content|items|self)",
+            "animation(?:-[a-z-]+)?",
+            "appearance",
+            "aspect-ratio",
+            "background(?:-[a-z-]+)?",
+            "border(?:-[a-z-]+)?",
+            "bottom",
+            "box-shadow",
+            "clear",
+            "color",
+            "column(?:-[a-z-]+)?",
+            "content",
+            "cursor",
+            "display",
+            "filter",
+            "flex(?:-[a-z-]+)?",
+            "float",
+            "font(?:-[a-z-]+)?",
+            "gap",
+            "grid(?:-[a-z-]+)?",
+            "height",
+            "inset",
+            "justify-(?:content|items|self)",
+            "left",
+            "line-height",
+            "margin(?:-[a-z-]+)?",
+            "max-(?:height|width)",
+            "min-(?:height|width)",
+            "object-(?:fit|position)",
+            "opacity",
+            "outline(?:-[a-z-]+)?",
+            "overflow(?:-[xy])?",
+            "padding(?:-[a-z-]+)?",
+            "pointer-events",
+            "position",
+            "resize",
+            "right",
+            "stroke(?:-[a-z-]+)?",
+            "table-layout",
+            "text-(?:align|decoration|overflow|transform)",
+            "top",
+            "transform",
+            "transition(?:-[a-z-]+)?",
+            "user-select",
+            "vertical-align",
+            "visibility",
+            "white-space",
+            "width",
+            "word-(?:break|spacing|wrap)",
+            "z-index"
+        ]
+        let declarationPattern = #"(?:\{|;)\s*(?:--[A-Za-z0-9_-]+|"#
+            + propertyNames.joined(separator: "|")
+            + #")\s*:\s*[^;{}]+;"#
+        return text.range(of: declarationPattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     private static func isPython(_ text: String) -> Bool {

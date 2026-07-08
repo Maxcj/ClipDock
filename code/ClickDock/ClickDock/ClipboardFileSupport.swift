@@ -5,6 +5,68 @@
 
 import Foundation
 
+enum FileHistoryCopyStrategy: Int, CaseIterable, Identifiable {
+    case pathOnly = 0
+    case saveCopy = 1
+
+    var id: Int { rawValue }
+
+    var titleKey: AppTextKey {
+        switch self {
+        case .pathOnly: return .fileHistoryPathOnly
+        case .saveCopy: return .fileHistorySaveCopy
+        }
+    }
+}
+
+struct ClipboardFileCopyManifest: Codable, Equatable {
+    static let fileName = "manifest.json"
+    static let currentSchemaVersion = 2
+
+    let schemaVersion: Int
+    let copyStrategy: String
+    let createdAt: Date
+    let files: [File]
+
+    init(createdAt: Date = Date(), files: [File]) {
+        self.schemaVersion = Self.currentSchemaVersion
+        self.copyStrategy = "saveCopy"
+        self.createdAt = createdAt
+        self.files = files
+    }
+
+    @discardableResult
+    func write(to folderURL: URL) throws -> URL {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+
+        let manifestURL = folderURL.appendingPathComponent(Self.fileName, isDirectory: false)
+        try encoder.encode(self).write(to: manifestURL, options: .atomic)
+        return manifestURL
+    }
+
+    static func load(from folderURL: URL) -> ClipboardFileCopyManifest? {
+        let manifestURL = folderURL.appendingPathComponent(Self.fileName, isDirectory: false)
+        guard FileManager.default.fileExists(atPath: manifestURL.path) else { return nil }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        guard let data = try? Data(contentsOf: manifestURL) else { return nil }
+        return try? decoder.decode(Self.self, from: data)
+    }
+
+    struct File: Codable, Equatable {
+        let sourcePath: String
+        let originalFileName: String
+        let originalFileExtension: String
+        let copiedFileName: String
+        let copiedAt: Date
+        let sizeBytes: Int64
+    }
+}
+
 struct ClipboardFileReferenceSet {
     let originalPathsText: String?
     let legacyCacheFolderPath: String?
@@ -14,11 +76,11 @@ struct ClipboardFileReferenceSet {
     }
 
     var existingOriginalURLs: [URL] {
-        originalURLs.filter { FileManager.default.fileExists(atPath: $0.path) }
+        resolvedOriginalURLs.existing
     }
 
     var missingOriginalURLs: [URL] {
-        originalURLs.filter { !FileManager.default.fileExists(atPath: $0.path) }
+        resolvedOriginalURLs.missing
     }
 
     var hasOriginalPaths: Bool {
@@ -29,12 +91,73 @@ struct ClipboardFileReferenceSet {
         !missingOriginalURLs.isEmpty
     }
 
-    var preferredURLsForPasteboard: [URL] {
-        if !existingOriginalURLs.isEmpty {
-            return existingOriginalURLs
+    var hasCachedCopies: Bool {
+        !cachedURLs.isEmpty
+    }
+
+    var hasMissingCachedCopies: Bool {
+        if hasCachedFolderPath && cachedFolderURL == nil {
+            return true
         }
 
-        return legacyCachedURLs
+        if cachedFolderURL != nil && !hasCachedCopies {
+            return true
+        }
+
+        return !missingCachedManifestFiles.isEmpty
+    }
+
+    var originalFileStatusText: String {
+        if !hasOriginalPaths {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if missingOriginalURLs.isEmpty {
+            return AppLocalizer.current.text(.originalFileAvailable)
+        }
+
+        if hasCachedCopies {
+            return AppLocalizer.current.text(.originalFileMissingUsingCachedCopy)
+        }
+
+        return AppLocalizer.current.text(.originalFileMissing)
+    }
+
+    var cachedCopyStatusText: String {
+        if !hasCachedFolderPath {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if !hasCachedCopies || cachedFolderURL == nil || hasMissingCachedCopies {
+            return AppLocalizer.current.text(.cachedCopyMissing)
+        }
+
+        return AppLocalizer.current.text(.cachedCopyAvailable)
+    }
+
+    var overallStatusText: String {
+        if !hasOriginalPaths {
+            return AppLocalizer.current.text(.pathOnlyNoCachedCopy)
+        }
+
+        if missingOriginalURLs.isEmpty {
+            return AppLocalizer.current.text(.originalFileAvailable)
+        }
+
+        if hasCachedCopies {
+            return AppLocalizer.current.text(.originalFileMissingUsingCachedCopy)
+        }
+
+        return AppLocalizer.current.text(.originalFileMissing)
+    }
+
+    var preferredURLsForPasteboard: [URL] {
+        let originals = resolvedOriginalURLs.existing
+        if !originals.isEmpty {
+            return originals
+        }
+
+        return cachedURLs
     }
 
     var representativeURL: URL? {
@@ -42,12 +165,14 @@ struct ClipboardFileReferenceSet {
     }
 
     var displayPathText: String {
-        let paths = originalURLs.map(\.path)
+        let originals = resolvedOriginalURLs.existing
+        let displayURLs = !originals.isEmpty ? originals : cachedURLs
+        let paths = displayURLs.map(\.path)
         if !paths.isEmpty {
             return paths.joined(separator: "\n")
         }
 
-        return legacyCachedURLs.map(\.path).joined(separator: "\n")
+        return originalURLs.map(\.path).joined(separator: "\n")
     }
 
     var fileSizeLabel: String {
@@ -55,14 +180,18 @@ struct ClipboardFileReferenceSet {
             return label
         }
 
-        if let legacyCacheFolderURL {
-            return Self.fileSizeLabel(forPath: legacyCacheFolderURL.path)
+        if let label = Self.fileSizeLabel(for: cachedURLs), label != "-" {
+            return label
+        }
+
+        if let cachedFolderURL {
+            return Self.fileSizeLabel(forPath: cachedFolderURL.path)
         }
 
         return "-"
     }
 
-    var legacyCacheFolderURL: URL? {
+    var cachedFolderURL: URL? {
         guard let legacyCacheFolderPath,
               !legacyCacheFolderPath.isEmpty,
               !legacyCacheFolderPath.contains("\n") else {
@@ -70,16 +199,41 @@ struct ClipboardFileReferenceSet {
         }
 
         let url = URL(fileURLWithPath: legacyCacheFolderPath)
-        guard Self.isLegacyCacheFolder(url) else { return nil }
+        guard Self.isCachedAssetFolder(url) else { return nil }
 
         let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
         guard values?.isDirectory == true else { return nil }
         return url
     }
 
+    var legacyCacheFolderURL: URL? {
+        cachedFolderURL
+    }
+
+    var hasCachedFolderPath: Bool {
+        guard let legacyCacheFolderPath else { return false }
+        return !legacyCacheFolderPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var cachedURLs: [URL] {
+        guard let cachedFolderURL else { return [] }
+        return Self.fileURLs(in: cachedFolderURL) ?? []
+    }
+
     var legacyCachedURLs: [URL] {
-        guard let legacyCacheFolderURL else { return [] }
-        return Self.fileURLs(in: legacyCacheFolderURL) ?? []
+        cachedURLs
+    }
+
+    var cachedManifest: ClipboardFileCopyManifest? {
+        guard let cachedFolderURL else { return nil }
+        return ClipboardFileCopyManifest.load(from: cachedFolderURL)
+    }
+
+    var missingCachedManifestFiles: [ClipboardFileCopyManifest.File] {
+        guard let cachedManifest else { return [] }
+
+        let existingCopiedFileNames = Set(cachedURLs.map(\.lastPathComponent))
+        return cachedManifest.files.filter { !existingCopiedFileNames.contains($0.copiedFileName) }
     }
 
     static func urls(fromPathsText text: String?) -> [URL] {
@@ -97,17 +251,20 @@ struct ClipboardFileReferenceSet {
             }
     }
 
-    static func isLegacyCacheFolder(_ url: URL) -> Bool {
+    static func isCachedAssetFolder(_ url: URL) -> Bool {
         let path = url.standardizedFileURL.path
-        return path.hasPrefix(legacyCacheRootURL().standardizedFileURL.path)
+        return cachedAssetRootURLs().contains(where: { path.hasPrefix($0.standardizedFileURL.path) })
     }
 
-    private static func legacyCacheRootURL() -> URL {
+    private static func cachedAssetRootURLs() -> [URL] {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSTemporaryDirectory())
         let bundleName = Bundle.main.bundleIdentifier ?? "ClipDock"
-        return base.appendingPathComponent(bundleName, isDirectory: true)
-            .appendingPathComponent("ClipboardImages", isDirectory: true)
+        let bundleRoot = base.appendingPathComponent(bundleName, isDirectory: true)
+        return [
+            bundleRoot.appendingPathComponent("ClipboardAssets", isDirectory: true),
+            bundleRoot.appendingPathComponent("ClipboardImages", isDirectory: true)
+        ]
     }
 
     private static func fileURLs(in folderURL: URL) -> [URL]? {
@@ -121,7 +278,8 @@ struct ClipboardFileReferenceSet {
         }
 
         return contents.filter { url in
-            (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
+            url.lastPathComponent != ClipboardFileCopyManifest.fileName
+                && (try? url.resourceValues(forKeys: Set(keys)).isRegularFile) == true
         }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
@@ -181,6 +339,28 @@ struct ClipboardFileReferenceSet {
         }
 
         return total > 0 ? total : nil
+    }
+
+    private var resolvedOriginalURLs: (existing: [URL], missing: [URL]) {
+        let urls = originalURLs
+        guard !urls.isEmpty else {
+            return ([], [])
+        }
+
+        var existing: [URL] = []
+        var missing: [URL] = []
+        existing.reserveCapacity(urls.count)
+        missing.reserveCapacity(urls.count)
+
+        for url in urls {
+            if FileManager.default.fileExists(atPath: url.path) {
+                existing.append(url)
+            } else {
+                missing.append(url)
+            }
+        }
+
+        return (existing, missing)
     }
 
     private static let byteCountFormatter: ByteCountFormatter = {

@@ -145,7 +145,6 @@ struct ClipboardCategorySettingsView: View {
             resetButtonRow
         }
         .onAppear {
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
             syncOrderedCategories()
         }
         .onChange(of: categoryOrderingSignature) { _ in
@@ -216,12 +215,7 @@ struct ClipboardCategorySettingsView: View {
     }
 
     private func syncOrderedCategories() {
-        orderedCategories = Array(categories).sorted {
-            if $0.sortOrder != $1.sortOrder {
-                return $0.sortOrder < $1.sortOrder
-            }
-            return ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast)
-        }
+        orderedCategories = Array(categories)
     }
 
     private func categoryRow(_ category: ClipboardCategory) -> some View {
@@ -314,6 +308,7 @@ struct ClipboardCategoryEditorView: View {
 
     let category: ClipboardCategory?
     @State private var name: String = ""
+    @State private var nameValidationMessage: String?
     @State private var iconName: String = "tag"
     @State private var colorHex: String = "#3B82F6"
     @State private var selectedColor: Color = Color(hex: "#3B82F6") ?? .accentColor
@@ -328,6 +323,11 @@ struct ClipboardCategoryEditorView: View {
             VStack(alignment: .leading, spacing: 12) {
                 TextField(localizer.text(.categoryNamePlaceholder), text: $name)
                     .textFieldStyle(.roundedBorder)
+                if let nameValidationMessage {
+                    Text(nameValidationMessage)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
+                }
 
                 Toggle(localizer.text(.visible), isOn: $isVisible)
                     .toggleStyle(.switch)
@@ -414,6 +414,7 @@ struct ClipboardCategoryEditorView: View {
         .padding(22)
         .frame(width: 460)
         .onAppear {
+            nameValidationMessage = nil
             if let category {
                 name = category.name ?? category.resolvedName
                 iconName = category.iconName ?? category.resolvedIconName
@@ -442,29 +443,50 @@ struct ClipboardCategoryEditorView: View {
                     showingCustomColorSheet = false
                 }
             )
-            }
         }
+        .onChange(of: name) { _ in
+            nameValidationMessage = nil
+        }
+    }
 
     private func saveCategory() {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
         if let category {
-            ClipboardCategoryManager.update(
+            switch ClipboardCategoryManager.update(
                 category,
                 name: trimmedName,
                 iconName: iconName,
                 colorHex: colorHex,
                 isVisible: isVisible,
                 context: viewContext
-            )
+            ) {
+            case .saved:
+                break
+            case .duplicateName:
+                nameValidationMessage = localizer.text(.categoryNameAlreadyExists)
+                return
+            case .failed:
+                nameValidationMessage = localizer.text(.categorySaveFailed)
+                return
+            }
         } else {
-            _ = ClipboardCategoryManager.createCustomCategory(
+            switch ClipboardCategoryManager.createCustomCategory(
                 name: trimmedName,
                 iconName: iconName,
                 colorHex: colorHex,
                 context: viewContext
-            )
+            ) {
+            case .saved:
+                break
+            case .duplicateName:
+                nameValidationMessage = localizer.text(.categoryNameAlreadyExists)
+                return
+            case .failed:
+                nameValidationMessage = localizer.text(.categorySaveFailed)
+                return
+            }
         }
 
         dismiss()

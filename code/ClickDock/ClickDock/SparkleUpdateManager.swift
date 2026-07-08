@@ -11,9 +11,17 @@ import ObjectiveC.runtime
 final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
     private enum DefaultsKey {
         static let updateChannel = "sparkle.updateChannel"
-        static let ignoredVersion = "sparkle.ignoredVersion"
+        static let ignoredVersionLegacy = "sparkle.ignoredVersion"
         static let automaticallyChecksForUpdates = "sparkle.automaticallyChecksForUpdates"
         static let updateCheckInterval = "sparkle.updateCheckInterval"
+
+        static func ignoredVersionBuild(for channel: SparkleUpdateChannel) -> String {
+            "sparkle.ignoredVersion.\(channel.rawValue).build"
+        }
+
+        static func ignoredVersionDisplay(for channel: SparkleUpdateChannel) -> String {
+            "sparkle.ignoredVersion.\(channel.rawValue).display"
+        }
     }
 
     @Published private(set) var ignoredVersion: String?
@@ -22,6 +30,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     @Published private(set) var isUpdateCheckInProgress: Bool = false
     @Published private(set) var updateCheckInterval: TimeInterval
     @Published private(set) var selectedUpdateChannel: SparkleUpdateChannel
+    @Published private(set) var updateChannelNotice: String?
     private var didPerformStartupUpdateCheck = false
 
     var canCheckForUpdates: Bool {
@@ -38,13 +47,14 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
     override init() {
         Self.installSparkleLocalizationOverride()
-        ignoredVersion = UserDefaults.standard.string(forKey: DefaultsKey.ignoredVersion)
-            .flatMap { $0.isEmpty ? nil : $0 }
         automaticallyChecksForUpdates = UserDefaults.standard.object(forKey: DefaultsKey.automaticallyChecksForUpdates) as? Bool ?? false
         updateCheckInterval = UserDefaults.standard.object(forKey: DefaultsKey.updateCheckInterval) as? TimeInterval ?? 60 * 60 * 24
-        selectedUpdateChannel = SparkleUpdateChannel(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.updateChannel) ?? "") ?? .release
+        let selectedChannel = SparkleUpdateChannel(rawValue: UserDefaults.standard.string(forKey: DefaultsKey.updateChannel) ?? "") ?? .release
+        selectedUpdateChannel = selectedChannel
+        let migratedIgnoredVersion = Self.migrateLegacyIgnoredVersionIfNeeded(for: selectedChannel)
         super.init()
 
+        ignoredVersion = migratedIgnoredVersion ?? Self.ignoredVersionDisplay(for: selectedChannel)
         configureUpdater()
     }
 
@@ -59,7 +69,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     func clearIgnoredVersion() {
-        setIgnoredVersion(nil)
+        storeIgnoredVersion(versionString: nil, displayVersionString: nil, for: selectedUpdateChannel)
     }
 
     func setAutomaticallyChecksForUpdates(_ enabled: Bool) {
@@ -86,6 +96,8 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
 
         UserDefaults.standard.set(channel.rawValue, forKey: DefaultsKey.updateChannel)
         selectedUpdateChannel = channel
+        ignoredVersion = Self.ignoredVersionDisplay(for: channel)
+        updateChannelNotice = Self.updateChannelNotice(for: channel)
 
         guard isConfigured else { return }
 
@@ -101,11 +113,17 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         updaterController.updater.checkForUpdatesInBackground()
     }
 
-    func setIgnoredVersion(_ version: String?) {
-        let normalized = version?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let storedValue = normalized?.isEmpty == true ? nil : normalized
-        UserDefaults.standard.set(storedValue, forKey: DefaultsKey.ignoredVersion)
-        ignoredVersion = storedValue
+    func setIgnoredVersion(_ updateItem: SUAppcastItem?) {
+        guard let updateItem else {
+            storeIgnoredVersion(versionString: nil, displayVersionString: nil, for: selectedUpdateChannel)
+            return
+        }
+
+        storeIgnoredVersion(
+            versionString: updateItem.versionString,
+            displayVersionString: updateItem.displayVersionString,
+            for: selectedUpdateChannel
+        )
     }
 
     private func configureUpdater() {
@@ -125,6 +143,79 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
         isConfigured = true
     }
 
+    private static func updateChannelNotice(for channel: SparkleUpdateChannel) -> String {
+        let localizer = AppLocalizer.current
+        let channelName = localizer.text(channel.titleKey)
+        return localizer.text(.updateChannelChangedNotice, channelName, channelName)
+    }
+
+    private static func ignoredVersionRecord(for channel: SparkleUpdateChannel) -> (versionString: String, displayVersionString: String)? {
+        let versionString = UserDefaults.standard.string(forKey: DefaultsKey.ignoredVersionBuild(for: channel))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let displayVersionString = UserDefaults.standard.string(forKey: DefaultsKey.ignoredVersionDisplay(for: channel))?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !versionString.isEmpty || !displayVersionString.isEmpty else {
+            return nil
+        }
+
+        return (
+            versionString: versionString,
+            displayVersionString: displayVersionString.isEmpty ? versionString : displayVersionString
+        )
+    }
+
+    private static func ignoredVersionDisplay(for channel: SparkleUpdateChannel) -> String? {
+        ignoredVersionRecord(for: channel)?.displayVersionString
+    }
+
+    private static func migrateLegacyIgnoredVersionIfNeeded(for channel: SparkleUpdateChannel) -> String? {
+        let legacyKey = DefaultsKey.ignoredVersionLegacy
+        guard let legacyValue = UserDefaults.standard.string(forKey: legacyKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !legacyValue.isEmpty else {
+            return nil
+        }
+
+        guard Self.ignoredVersionRecord(for: channel) == nil else {
+            UserDefaults.standard.removeObject(forKey: legacyKey)
+            return nil
+        }
+
+        UserDefaults.standard.set(legacyValue, forKey: DefaultsKey.ignoredVersionBuild(for: channel))
+        UserDefaults.standard.set(legacyValue, forKey: DefaultsKey.ignoredVersionDisplay(for: channel))
+        UserDefaults.standard.removeObject(forKey: legacyKey)
+        return legacyValue
+    }
+
+    private func storeIgnoredVersion(
+        versionString: String?,
+        displayVersionString: String?,
+        for channel: SparkleUpdateChannel
+    ) {
+        let buildKey = DefaultsKey.ignoredVersionBuild(for: channel)
+        let displayKey = DefaultsKey.ignoredVersionDisplay(for: channel)
+
+        let normalizedVersion = versionString?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedDisplay = displayVersionString?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let normalizedVersion, !normalizedVersion.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: buildKey)
+            UserDefaults.standard.removeObject(forKey: displayKey)
+            if channel == selectedUpdateChannel {
+                ignoredVersion = nil
+            }
+            return
+        }
+
+        let finalDisplay = normalizedDisplay?.isEmpty == false ? (normalizedDisplay ?? normalizedVersion) : normalizedVersion
+        UserDefaults.standard.set(normalizedVersion, forKey: buildKey)
+        UserDefaults.standard.set(finalDisplay, forKey: displayKey)
+        if channel == selectedUpdateChannel {
+            ignoredVersion = finalDisplay
+        }
+    }
+
     private var configuredFeedURLString: String? {
         let feedURLString = selectedUpdateChannel.feedURLString.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         return feedURLString.isEmpty ? nil : feedURLString
@@ -135,14 +226,13 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     func updater(_ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck) throws {
-        guard let ignoredVersion,
-              !ignoredVersion.isEmpty else {
+        guard let ignoredVersion = Self.ignoredVersionRecord(for: selectedUpdateChannel) else {
             return
         }
 
         let versionString = updateItem.versionString.trimmingCharacters(in: .whitespacesAndNewlines)
         let displayVersionString = updateItem.displayVersionString.trimmingCharacters(in: .whitespacesAndNewlines)
-        let matchesIgnoredVersion = versionString == ignoredVersion || displayVersionString == ignoredVersion
+        let matchesIgnoredVersion = versionString == ignoredVersion.versionString || displayVersionString == ignoredVersion.displayVersionString
 
         if matchesIgnoredVersion {
             throw NSError(
@@ -156,7 +246,7 @@ final class SparkleUpdateManager: NSObject, ObservableObject, SPUUpdaterDelegate
     }
 
     func updater(_ updater: SPUUpdater, userDidSkipThisVersion updateItem: SUAppcastItem) {
-        setIgnoredVersion(updateItem.versionString)
+        setIgnoredVersion(updateItem)
     }
 
     func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor error: Error?) {

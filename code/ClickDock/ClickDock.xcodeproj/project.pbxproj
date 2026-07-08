@@ -64,7 +64,8 @@
 		C1E5F5EB2FE950D000571FED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C1E5F5EE2FE950D000571FED /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C1E5F5F02FE950D000571FED /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
-		C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClickDock.xcdatamodel; sourceTree = "<group>"; };
+		C1E5F5F32FE950D000571FED /* ClickDockV1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClickDockV1.xcdatamodel; sourceTree = "<group>"; };
+		E3F9C0A1B2D4E6F8091A2B3C /* ClickDockV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClickDockV2.xcdatamodel; sourceTree = "<group>"; };
 		C1E5F5F52FE950D000571FED /* ClickDock.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClickDock.entitlements; sourceTree = "<group>"; };
 		C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClipboardStorageSupport.swift; sourceTree = "<group>"; };
 		D91B6F752FF0000100A1B2C3 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -486,7 +487,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -501,7 +502,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1-beta5;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -517,7 +518,7 @@
 				CODE_SIGN_ENTITLEMENTS = ClickDock/ClickDock.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 22;
+				CURRENT_PROJECT_VERSION = 26;
 				DEVELOPMENT_ASSET_PATHS = "\"ClickDock/Preview Content\"";
 				DEVELOPMENT_TEAM = HR6NLXH3ZB;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -532,7 +533,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.1.1-beta5;
 				PRODUCT_BUNDLE_IDENTIFIER = cn.maxcj.ClipDock;
 				PRODUCT_NAME = ClipDock;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -612,8 +613,10 @@
 		C1E5F5F22FE950D000571FED /* ClickDock.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				C1E5F5F32FE950D000571FED /* ClickDock.xcdatamodel */,
+				C1E5F5F32FE950D000571FED /* ClickDockV1.xcdatamodel */,
+				E3F9C0A1B2D4E6F8091A2B3C /* ClickDockV2.xcdatamodel */,
 			);
+			currentVersion = E3F9C0A1B2D4E6F8091A2B3C /* ClickDockV2.xcdatamodel */;
 			path = ClickDock.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;

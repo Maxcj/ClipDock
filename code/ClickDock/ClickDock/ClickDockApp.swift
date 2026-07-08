@@ -33,6 +33,7 @@ struct ClipDockApp: App {
             "clipboard.autoHideAfterCopy": false,
             "clipboard.keepImages": true,
             "clipboard.keepFiles": false,
+            "clipboard.fileHistoryCopyStrategy": FileHistoryCopyStrategy.pathOnly.rawValue,
             "clipboard.retentionEnabled": true,
             "clipboard.retentionValue": 7,
             "clipboard.retentionUnit": RetentionUnit.day.rawValue,
@@ -46,6 +47,11 @@ struct ClipDockApp: App {
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
+        ClipboardCategoryManager.bootstrapSystemCategories(context: context)
+        if !UserDefaults.standard.bool(forKey: "clipboard.cachedSizeBytesMigrated") {
+            ClipboardStorageCalculator.rebuildCachedSizes(context: context)
+            UserDefaults.standard.set(true, forKey: "clipboard.cachedSizeBytesMigrated")
+        }
         let storageSummaryScheduler = StorageSummaryScheduler(container: PersistenceController.shared.container)
         _storageSummaryScheduler = StateObject(wrappedValue: storageSummaryScheduler)
         storageSummaryScheduler.start()
@@ -78,7 +84,7 @@ struct ClipDockApp: App {
                 .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
         }
-        .defaultSize(width: 760, height: 520)
+        .defaultSize(width: 780, height: 560)
         .windowResizability(.contentSize)
 
         MenuBarExtra {
@@ -157,27 +163,72 @@ private struct StatusBarMenuView: View {
     private var appVersion: String { Bundle.main.appVersionString }
 
     var body: some View {
-        Text("Version \(appVersion)")
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
+        Button(action: {}) {
+            statusBarMenuRow(
+                title: appVersion,
+                systemImage: "info.circle",
+                tint: .secondary,
+                textFont: .system(size: 11)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(true)
 
         Divider()
 
-        Button(localizer.text(.showHideMainWindow)) {
+        Button {
             NotificationCenter.default.post(name: .clipDockTogglePanelRequested, object: nil)
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.showHideMainWindow),
+                systemImage: "sidebar.leading"
+            )
         }
 
-        Button(localizer.text(.settings)) {
+        Button {
             if !NSApp.isActive {
                 NSApp.activate(ignoringOtherApps: true)
             }
             openWindow(id: "settings")
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.settings),
+                systemImage: "gearshape"
+            )
         }
 
         Divider()
 
-        Button(localizer.text(.quit)) {
+        Button {
             NSApplication.shared.terminate(nil)
+        } label: {
+            statusBarMenuRow(
+                title: localizer.text(.quit),
+                systemImage: "power"
+            )
         }
+    }
+
+    @ViewBuilder
+    private func statusBarMenuRow(
+        title: String,
+        systemImage: String,
+        tint: Color = .primary,
+        textFont: Font = .body
+    ) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .frame(width: 14, alignment: .center)
+                .font(.system(size: 12, weight: .semibold))
+
+            Text(title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .layoutPriority(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(textFont)
+        .foregroundStyle(tint)
+        .contentShape(Rectangle())
     }
 }

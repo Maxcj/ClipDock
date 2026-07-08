@@ -77,6 +77,10 @@ enum AppTextKey: String {
     case fileSize
     case keepFiles
     case keepFilesSubtitle
+    case fileHistoryCopyStrategy
+    case fileHistoryCopyStrategySubtitle
+    case fileHistoryPathOnly
+    case fileHistorySaveCopy
     case characters
     case type
     case excludeApp
@@ -93,6 +97,7 @@ enum AppTextKey: String {
     case automaticCheckIntervalEvery2Weeks
     case updateChannel
     case updateChannelSubtitle
+    case updateChannelChangedNotice
     case releaseChannel
     case betaChannel
     case checkForUpdates
@@ -175,6 +180,8 @@ enum AppTextKey: String {
     case hidden
     case icon
     case color
+    case categoryNameAlreadyExists
+    case categorySaveFailed
     case save
     case cancel
     case done
@@ -278,6 +285,16 @@ enum AppTextKey: String {
     case minifyJSON
     case copyOriginal
     case empty
+    case fileState
+    case originalFile
+    case cachedCopy
+    case originalFileAvailable
+    case originalFileMissingUsingCachedCopy
+    case originalFileMissing
+    case pathOnlyNoCachedCopy
+    case cachedCopyAvailable
+    case cachedCopyMissing
+    case previewImage
     case originalFileNoLongerExists
 }
 

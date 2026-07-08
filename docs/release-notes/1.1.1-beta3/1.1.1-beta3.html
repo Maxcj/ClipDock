@@ -40,25 +40,25 @@
   </head>
   <body>
     <h1>ClipDock 1.1.1-beta3</h1>
-    <p class="meta">Release notes for the Sparkle-powered update channel.</p>
+    <p class="meta">Release notes for the beta update channel.</p>
 
     <div class="card">
       <h2 class="section-title">本次更新</h2>
-      <p>ClipDock 1.1.1-beta3 进一步优化了 beta 更新体验，同时继续保留设置中的自定义敏感规则，方便快速调整隐私策略。</p>
+      <p>ClipDock 1.1.1-beta3 增强了剪贴板历史数据库的升级机制，为后续功能迭代建立清晰的数据模型版本基线。现有数据可以继续无感使用，未来的数据结构变化也能沿版本链更稳妥地迁移。</p>
       <ul>
-        <li>继续支持在设置中直接管理自定义敏感规则</li>
-        <li>保留关键词和正则两种规则类型，以及“包含”或“完全相等”的匹配方式</li>
-        <li>更新设置里的 Sparkle 用户流程入口更直接，便于测试标准更新界面</li>
+        <li>为剪贴板历史数据库建立明确的模型版本基线</li>
+        <li>现有数据库可直接兼容新版模型，无需手动处理</li>
+        <li>后续新增字段或关系时可更稳妥地迁移，降低升级后的数据风险</li>
       </ul>
     </div>
 
     <div class="card">
       <h2 class="section-title">What’s New</h2>
-      <p>ClipDock 1.1.1-beta3 improves the beta update experience and keeps the custom sensitive rules workflow available in Settings for quick privacy tuning.</p>
+      <p>ClipDock 1.1.1-beta3 strengthens the clipboard history database upgrade path with a clear model-version baseline for future features. Existing data continues to work without manual intervention, while future schema changes can migrate more safely through the version chain.</p>
       <ul>
-        <li>Custom sensitive rules remain available directly in Settings</li>
-        <li>Keyword and regex rule types are still supported, including contains and exact-match modes</li>
-        <li>The Sparkle user-flow entry in Settings is more direct when testing the standard update UI</li>
+        <li>Established a clear model-version baseline for the clipboard history database</li>
+        <li>Existing databases remain compatible with the new model without manual steps</li>
+        <li>Future fields and relationships can migrate more safely, reducing data risk during upgrades</li>
       </ul>
     </div>
   </body>

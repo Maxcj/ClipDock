@@ -62,7 +62,9 @@ struct SimpleClipboardWorkspaceView: View {
     }
 
     var body: some View {
-        let selectedRecord = currentSelectedRecord
+        let displayOrderedRecords = makeDisplayOrderedRecords()
+        let selectedRecord = currentSelectedRecord(from: displayOrderedRecords)
+        let navigationSelections = makeNavigationSelections()
         HStack(alignment: .top, spacing: layout.panelGap) {
             ClipboardHistorySidebar(
                 searchText: $searchText,
@@ -108,23 +110,6 @@ struct SimpleClipboardWorkspaceView: View {
         }
         .padding(layout.workspacePadding)
         .background(
-            KeyCommandInterceptor(
-                isSearchFocused: isSearchFieldFocused,
-                onUp: {
-                    moveRecordSelection(by: -1)
-                },
-                onDown: {
-                    moveRecordSelection(by: 1)
-                },
-                onLeft: {
-                    moveFilterSelection(by: -1)
-                },
-                onRight: {
-                    moveFilterSelection(by: 1)
-                }
-            )
-        )
-        .background(
             RoundedRectangle(cornerRadius: layout.workspaceCornerRadius, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .overlay(
@@ -133,30 +118,46 @@ struct SimpleClipboardWorkspaceView: View {
                 )
         )
         .onAppear {
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
-            syncSelection()
-            syncSelectedImageCachePaths()
+            syncSelection(using: displayOrderedRecords)
+            syncSelectedImageCachePaths(using: selectedRecord)
         }
         .onChange(of: categorySelection) { _ in
-            syncSelection()
+            syncSelection(using: displayOrderedRecords)
         }
         .onChange(of: records.count) { _ in
-            syncSelection()
+            syncSelection(using: displayOrderedRecords)
         }
         .onChange(of: searchText) { _ in
-            syncSelection()
+            syncSelection(using: displayOrderedRecords)
         }
         .onChange(of: selectedRecordID) { _ in
-            syncSelectedImageCachePaths()
+            syncSelectedImageCachePaths(using: selectedRecord)
         }
         .sheet(isPresented: $isShowingCategoryAssignment) {
-            if let selectedRecord = currentSelectedRecord {
+            if let selectedRecord {
                 ClipboardCategoryAssignmentView(record: selectedRecord)
             }
         }
+        .background(
+            KeyCommandInterceptor(
+                isSearchFocused: isSearchFieldFocused,
+                onUp: {
+                    moveRecordSelection(by: -1, using: displayOrderedRecords)
+                },
+                onDown: {
+                    moveRecordSelection(by: 1, using: displayOrderedRecords)
+                },
+                onLeft: {
+                    moveFilterSelection(by: -1, using: navigationSelections)
+                },
+                onRight: {
+                    moveFilterSelection(by: 1, using: navigationSelections)
+                }
+            )
+        )
     }
 
-    private var currentSelectedRecord: ClipboardRecord? {
+    private func currentSelectedRecord(from displayOrderedRecords: [ClipboardRecord]) -> ClipboardRecord? {
         if let selectedRecordID,
            let record = displayOrderedRecords.first(where: { $0.objectID == selectedRecordID }) {
             return record
@@ -164,13 +165,12 @@ struct SimpleClipboardWorkspaceView: View {
         return displayOrderedRecords.first
     }
 
-    private var displayOrderedRecords: [ClipboardRecord] {
-        records
+    private func makeDisplayOrderedRecords() -> [ClipboardRecord] {
+        Array(records)
             .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
-            .sorted(by: clipboardRecordDisplaysBefore)
     }
 
-    private func syncSelection() {
+    private func syncSelection(using displayOrderedRecords: [ClipboardRecord]) {
         guard !displayOrderedRecords.isEmpty else {
             selectedRecordID = nil
             return
@@ -184,20 +184,20 @@ struct SimpleClipboardWorkspaceView: View {
         selectedRecordID = displayOrderedRecords.first?.objectID
     }
 
-    private func syncSelectedImageCachePaths() {
+    private func syncSelectedImageCachePaths(using selectedRecord: ClipboardRecord?) {
         if !lastSelectedImageCachePaths.isEmpty {
             ClipboardImageCache.shared.remove(paths: lastSelectedImageCachePaths)
         }
-        lastSelectedImageCachePaths = currentSelectedRecord?.cachedImagePaths ?? []
+        lastSelectedImageCachePaths = selectedRecord?.cachedImagePaths ?? []
     }
 
-    private var navigationSelections: [ClipboardCategorySelection] {
+    private func makeNavigationSelections() -> [ClipboardCategorySelection] {
         categories
             .filter { $0.isVisible || $0.systemCategoryKey == .all }
             .compactMap(\.selection)
     }
 
-    private func moveRecordSelection(by offset: Int) {
+    private func moveRecordSelection(by offset: Int, using displayOrderedRecords: [ClipboardRecord]) {
         guard !displayOrderedRecords.isEmpty else { return }
 
         let currentIndex = displayOrderedRecords.firstIndex(where: { $0.objectID == selectedRecordID }) ?? displayOrderedRecords.startIndex
@@ -205,7 +205,7 @@ struct SimpleClipboardWorkspaceView: View {
         selectedRecordID = displayOrderedRecords[nextIndex].objectID
     }
 
-    private func moveFilterSelection(by offset: Int) {
+    private func moveFilterSelection(by offset: Int, using navigationSelections: [ClipboardCategorySelection]) {
         guard let currentIndex = navigationSelections.firstIndex(of: categorySelection) else { return }
 
         let nextIndex = min(
@@ -239,7 +239,7 @@ struct SimpleClipboardWorkspaceView: View {
             selectedRecordID = nil
         }
 
-        syncSelection()
+        syncSelection(using: makeDisplayOrderedRecords())
     }
 
     private func clearAll() {

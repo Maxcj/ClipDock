@@ -6,14 +6,10 @@
 //
 
 import SwiftUI
-import CoreData
 import AppKit
-import Combine
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
-    @EnvironmentObject private var storageSummaryScheduler: StorageSummaryScheduler
     @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @Environment(\.openWindow) private var openWindow
 
@@ -62,9 +58,6 @@ struct ContentView: View {
         )
         .task {
             clipboardMonitor.start()
-        }
-        .task {
-            storageSummaryScheduler.start()
         }
         .task {
             sparkleUpdateManager.performStartupUpdateCheckIfNeeded()

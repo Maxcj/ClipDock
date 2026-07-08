@@ -26,6 +26,7 @@ struct SettingsView: View {
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
     @AppStorage("clipboard.keepFiles") private var keepFiles = false
+    @AppStorage("clipboard.fileHistoryCopyStrategy") private var fileHistoryCopyStrategyRaw = FileHistoryCopyStrategy.pathOnly.rawValue
     @AppStorage("clipboard.retentionEnabled") private var retentionEnabled = true
     @AppStorage("clipboard.retentionValue") private var retentionValue = 7
     @AppStorage("clipboard.retentionUnit") private var retentionUnit = RetentionUnit.day.rawValue
@@ -56,6 +57,13 @@ struct SettingsView: View {
         Binding(
             get: { sparkleUpdateManager.selectedUpdateChannel },
             set: { sparkleUpdateManager.setUpdateChannel($0) }
+        )
+    }
+
+    private var fileHistoryCopyStrategyBinding: Binding<FileHistoryCopyStrategy> {
+        Binding(
+            get: { FileHistoryCopyStrategy(rawValue: fileHistoryCopyStrategyRaw) ?? .pathOnly },
+            set: { fileHistoryCopyStrategyRaw = $0.rawValue }
         )
     }
 
@@ -144,7 +152,6 @@ struct SettingsView: View {
             if retentionValue <= 0 {
                 retentionValue = 7
             }
-            ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
         }
         .onChange(of: startAtLogin) { newValue in
             guard newValue != loginItemManager.isEnabled else { return }
@@ -204,8 +211,7 @@ struct SettingsView: View {
         window.title = ""
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
-        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable])
-        window.styleMask.remove(.resizable)
+        window.styleMask.insert([.fullSizeContentView, .titled, .closable, .miniaturizable, .resizable])
         window.isMovableByWindowBackground = true
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -213,10 +219,10 @@ struct SettingsView: View {
         window.level = .normal
         window.collectionBehavior = [.fullScreenAuxiliary]
         window.animationBehavior = .utilityWindow
-        let fixedSize = NSSize(width: 760, height: 520)
-        window.setContentSize(fixedSize)
-        window.minSize = fixedSize
-        window.maxSize = fixedSize
+        let defaultSize = NSSize(width: 780, height: 560)
+        window.setContentSize(defaultSize)
+        window.minSize = NSSize(width: 760, height: 520)
+        window.maxSize = NSSize(width: 980, height: 760)
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
@@ -340,6 +346,25 @@ struct SettingsView: View {
                         subtitle: localizer.text(.keepFilesSubtitle),
                         isOn: $keepFiles
                     )
+
+                    Divider().padding(.leading, 52)
+
+                    settingsValueRow(
+                        iconName: "doc.on.doc",
+                        title: localizer.text(.fileHistoryCopyStrategy),
+                        subtitle: localizer.text(.fileHistoryCopyStrategySubtitle),
+                        isDimmed: !keepFiles
+                    ) {
+                        Picker("", selection: fileHistoryCopyStrategyBinding) {
+                            ForEach(FileHistoryCopyStrategy.allCases) { strategy in
+                                Text(localizer.text(strategy.titleKey)).tag(strategy)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 172)
+                        .disabled(!keepFiles)
+                    }
                 }
             }
         case .quickOpen:
@@ -442,7 +467,8 @@ struct SettingsView: View {
                                     iconName: "tray.full",
                                     title: localizer.text(.storageTotalItems),
                                     subtitle: localizer.text(.storageTotalItemsSubtitle),
-                                    value: storageSummary.totalItemsValue
+                                    value: storageSummary.totalItemsValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -451,7 +477,8 @@ struct SettingsView: View {
                                     iconName: "text.alignleft",
                                     title: localizer.text(.storageTextItems),
                                     subtitle: localizer.text(.storageTextItemsSubtitle),
-                                    value: storageSummary.textItemsValue
+                                    value: storageSummary.textItemsValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -460,7 +487,8 @@ struct SettingsView: View {
                                     iconName: "photo.stack",
                                     title: localizer.text(.storageImages),
                                     subtitle: localizer.text(.storageImagesSubtitle),
-                                    value: storageSummary.imagesValue
+                                    value: storageSummary.imagesValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
                             }
 
@@ -469,7 +497,8 @@ struct SettingsView: View {
                                     iconName: "externaldrive",
                                     title: localizer.text(.storageFilesCache),
                                     subtitle: localizer.text(.storageFilesCacheSubtitle),
-                                    value: storageSummary.filesCacheValue
+                                    value: storageSummary.filesCacheValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -478,7 +507,8 @@ struct SettingsView: View {
                                     iconName: "globe.asia.australia",
                                     title: localizer.text(.storageLinkMetadata),
                                     subtitle: localizer.text(.storageLinkMetadataSubtitle),
-                                    value: storageSummary.linkMetadataValue
+                                    value: storageSummary.linkMetadataValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -487,7 +517,8 @@ struct SettingsView: View {
                                     iconName: "clock",
                                     title: localizer.text(.storageLastUpdated),
                                     subtitle: localizer.text(.storageLastUpdatedSubtitle),
-                                    value: storageSummaryLastUpdatedValue
+                                    value: storageSummaryLastUpdatedValue,
+                                    isLoading: storageSummaryLoader.isLoading
                                 )
 
                                 Divider().padding(.leading, 52)
@@ -497,7 +528,7 @@ struct SettingsView: View {
                                     title: localizer.text(.rescanStorageUsage),
                                     subtitle: localizer.text(.rescanStorageUsageSubtitle),
                                     buttonTitle: localizer.text(.rescan),
-                                    isDimmed: storageSummaryLoader.isLoading,
+                                    isDisabled: storageSummaryLoader.isLoading,
                                     action: {
                                         storageSummaryLoader.rebuild(context: viewContext)
                                     }
@@ -581,32 +612,39 @@ struct SettingsView: View {
         case .about:
             VStack(alignment: .leading, spacing: layout.sectionSpacing) {
                 settingsSection(title: localizer.text(.updates), subtitle: localizer.text(.updatesSubtitle)) {
-                    settingsValueRow(
-                        iconName: "arrow.triangle.branch",
-                        title: localizer.text(.updateChannel),
-                        subtitle: localizer.text(.updateChannelSubtitle),
-                        isDimmed: !sparkleUpdateManager.isConfigured
-                    ) {
-                        Picker("", selection: updateChannelBinding) {
-                            ForEach(SparkleUpdateChannel.allCases) { channel in
-                                Text(localizer.text(channel.titleKey)).tag(channel)
+                    Group {
+                        settingsValueRow(
+                            iconName: "arrow.triangle.branch",
+                            title: localizer.text(.updateChannel),
+                            subtitle: localizer.text(.updateChannelSubtitle),
+                            isDimmed: !sparkleUpdateManager.isConfigured
+                        ) {
+                            Picker("", selection: updateChannelBinding) {
+                                ForEach(SparkleUpdateChannel.allCases) { channel in
+                                    Text(localizer.text(channel.titleKey)).tag(channel)
+                                }
                             }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .frame(width: 200)
+                            .disabled(!sparkleUpdateManager.isConfigured)
                         }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
-                        .frame(width: 200)
-                        .disabled(!sparkleUpdateManager.isConfigured)
+
+                        if let updateChannelNotice = sparkleUpdateManager.updateChannelNotice {
+                            Divider().padding(.leading, 52)
+                            settingsInlineMessage(updateChannelNotice)
+                        }
+
+                        Divider().padding(.leading, 52)
+
+                        settingsToggleRow(
+                            iconName: "clock.arrow.circlepath",
+                            title: localizer.text(.automaticCheckForUpdates),
+                            subtitle: localizer.text(.automaticCheckForUpdatesSubtitle),
+                            isOn: automaticCheckForUpdatesBinding,
+                            isDimmed: !sparkleUpdateManager.isConfigured
+                        )
                     }
-
-                    Divider().padding(.leading, 52)
-
-                    settingsToggleRow(
-                        iconName: "clock.arrow.circlepath",
-                        title: localizer.text(.automaticCheckForUpdates),
-                        subtitle: localizer.text(.automaticCheckForUpdatesSubtitle),
-                        isOn: automaticCheckForUpdatesBinding,
-                        isDimmed: !sparkleUpdateManager.isConfigured
-                    )
 
                     Divider().padding(.leading, 52)
 
@@ -646,10 +684,11 @@ struct SettingsView: View {
                         iconName: "safari",
                         title: localizer.text(.githubReleases),
                         subtitle: localizer.text(.githubReleasesSubtitle),
-                        buttonTitle: localizer.text(.open)
-                    ) {
-                        openURL(URL(string: "https://github.com/maxcj/ClipDock/releases")!)
-                    }
+                        buttonTitle: localizer.text(.open),
+                        action: {
+                            openURL(URL(string: "https://github.com/maxcj/ClipDock/releases")!)
+                        }
+                    )
 
                     if let ignoredVersion = sparkleUpdateManager.ignoredVersion {
                         Divider().padding(.leading, 52)
@@ -682,6 +721,7 @@ struct SettingsView: View {
             }
         }
     }
+
     @ViewBuilder
     private func settingsSidebarItem(tab: SettingsTab, isSelected: Bool) -> some View {
         HStack(spacing: 12) {
@@ -828,12 +868,13 @@ struct SettingsView: View {
         subtitle: String,
         buttonTitle: String,
         isDimmed: Bool = false,
+        isDisabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle, isDimmed: isDimmed) {
             Button(buttonTitle, action: action)
                 .buttonStyle(SettingsSecondaryButtonStyle())
-                .disabled(isDimmed)
+                .disabled(isDisabled)
         }
     }
 
@@ -842,13 +883,20 @@ struct SettingsView: View {
         iconName: String,
         title: String,
         subtitle: String,
-        value: String
+        value: String,
+        isLoading: Bool = false
     ) -> some View {
         SettingsPreferenceRow(iconName: iconName, title: title, subtitle: subtitle) {
-            Text(value)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(minWidth: 72, alignment: .trailing)
+            } else {
+                Text(value)
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
         }
     }
 
@@ -999,8 +1047,8 @@ struct SettingsView: View {
                         changed = true
                     }
                 case .files:
-                    if let legacyCacheFolderURL = record.fileReferenceSet.legacyCacheFolderURL {
-                        try? FileManager.default.removeItem(at: legacyCacheFolderURL)
+                    if let cachedFolderURL = record.fileReferenceSet.cachedFolderURL {
+                        try? FileManager.default.removeItem(at: cachedFolderURL)
                     }
                     if record.assetPathValue != nil {
                         record.assetPathValue = nil
@@ -1172,22 +1220,41 @@ final class StorageSummaryLoader: ObservableObject {
     private func load(context: NSManagedObjectContext, recalculateCachedSizes: Bool) {
         let token = UUID()
         requestToken = token
-        summary = nil
         isLoading = true
 
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            if recalculateCachedSizes {
-                ClipboardStorageCalculator.rebuildCachedSizes(context: context)
-                ClipboardStorageSummaryStore.recordUpdated()
+            guard let backgroundContext = Self.makeBackgroundContext(from: context) else {
+                DispatchQueue.main.async {
+                    guard let self, self.requestToken == token else { return }
+                    self.isLoading = false
+                }
+                return
             }
 
-            let computedSummary = ClipboardStorageCalculator.summary(context: context)
+            backgroundContext.perform {
+                if recalculateCachedSizes {
+                    ClipboardStorageCalculator.rebuildCachedSizes(context: backgroundContext)
+                    ClipboardStorageSummaryStore.recordUpdated()
+                }
 
-            DispatchQueue.main.async {
-                guard let self, self.requestToken == token else { return }
-                self.summary = computedSummary
-                self.isLoading = false
+                let computedSummary = ClipboardStorageCalculator.summary(context: backgroundContext)
+
+                DispatchQueue.main.async {
+                    guard let self, self.requestToken == token else { return }
+                    self.summary = computedSummary
+                    self.isLoading = false
+                }
             }
         }
+    }
+
+    private static func makeBackgroundContext(from context: NSManagedObjectContext) -> NSManagedObjectContext? {
+        guard let coordinator = context.persistentStoreCoordinator else { return nil }
+
+        let backgroundContext = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+        backgroundContext.persistentStoreCoordinator = coordinator
+        backgroundContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        backgroundContext.undoManager = nil
+        return backgroundContext
     }
 }
