@@ -56,6 +56,12 @@ if [[ ! -f "${release_notes_repo_path}" ]]; then
   exit 1
 fi
 
+if [[ -z "${sparkle_private_key}" ]]; then
+  echo "Missing SPARKLE_ED25519_PRIVATE_KEY." >&2
+  echo "Appcast generation requires a signed feed, so the private key must be available." >&2
+  exit 1
+fi
+
 cp "${archive_path}" "${staging_dir}/${archive_name}"
 cp "${release_notes_repo_path}" "${staging_dir}/${archive_name%.zip}.html"
 
@@ -71,16 +77,10 @@ generate_appcast_args=(
   -o "${appcast_path}"
 )
 
-if [[ -n "${sparkle_private_key}" ]]; then
-  printf '%s' "${sparkle_private_key}" | "${generate_appcast}" \
-    --ed-key-file - \
-    "${generate_appcast_args[@]}" \
-    "${staging_dir}"
-else
-  "${generate_appcast}" \
-    "${generate_appcast_args[@]}" \
-    "${staging_dir}"
-fi
+printf '%s' "${sparkle_private_key}" | "${generate_appcast}" \
+  --ed-key-file - \
+  "${generate_appcast_args[@]}" \
+  "${staging_dir}"
 
 release_notes_url="https://maxcj.github.io/ClipDock/release-notes/${version}/${version}.html"
 python3 - "${appcast_path}" "${release_notes_url}" "${version}" "${feed_title}" "${feed_description}" <<'PY'
@@ -126,6 +126,43 @@ if match:
 text = re.sub(r"(<title>)(.*?)(</title>)", lambda m: f"{m.group(1)}{feed_title}{m.group(3)}", text, count=1, flags=re.S)
 text = re.sub(r"(<description>)(.*?)(</description>)", lambda m: f"{m.group(1)}{feed_description}{m.group(3)}", text, count=1, flags=re.S)
 appcast_path.write_text(text)
+PY
+
+python3 - "${appcast_path}" "${version}" <<'PY'
+from pathlib import Path
+import sys
+import xml.etree.ElementTree as ET
+
+appcast_path = Path(sys.argv[1])
+expected_version = sys.argv[2]
+sparkle_ns = "http://www.andymatuschak.org/xml-namespaces/sparkle"
+
+tree = ET.parse(appcast_path)
+root = tree.getroot()
+channel = root.find("channel")
+if channel is None:
+    raise SystemExit("Appcast validation failed: missing channel element.")
+
+item = channel.find("item")
+if item is None:
+    raise SystemExit("Appcast validation failed: missing newest item.")
+
+title = (item.findtext("title") or "").strip()
+if title != expected_version:
+    raise SystemExit(f"Appcast validation failed: newest item title is {title!r}, expected {expected_version!r}.")
+
+enclosure = item.find("enclosure")
+if enclosure is None:
+    raise SystemExit("Appcast validation failed: missing enclosure in newest item.")
+
+length = (enclosure.attrib.get("length") or "").strip()
+signature = (enclosure.attrib.get(f"{{{sparkle_ns}}}edSignature") or "").strip()
+
+if not length.isdigit() or int(length) <= 0:
+    raise SystemExit("Appcast validation failed: newest enclosure length is missing or zero.")
+
+if not signature:
+    raise SystemExit("Appcast validation failed: newest enclosure signature is empty.")
 PY
 
 echo "Generated ${appcast_path}"
