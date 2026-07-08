@@ -117,6 +117,7 @@
 "dataManagementSubtitle" = "Use destructive actions carefully";
 "clearAllHistory" = "Clear all history";
 "clearAllHistorySubtitle" = "Permanently delete all clipboard history on this device";
+"clearAllHistoryMessage" = "This action cannot be undone. All clipboard records on this device will be permanently removed.";
 "clear" = "Clear";
 "storageSectionTitle" = "Storage";
 "storageSectionSubtitle" = "Current on-device clipboard storage usage";

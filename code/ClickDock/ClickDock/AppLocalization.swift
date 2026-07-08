@@ -146,6 +146,7 @@ enum AppTextKey: String {
     case dataManagementSubtitle
     case clearAllHistory
     case clearAllHistorySubtitle
+    case clearAllHistoryMessage
     case clear
     case storageSectionTitle
     case storageSectionSubtitle

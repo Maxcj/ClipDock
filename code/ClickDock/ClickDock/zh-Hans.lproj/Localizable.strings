@@ -117,6 +117,7 @@
 "dataManagementSubtitle" = "危险操作请谨慎使用";
 "clearAllHistory" = "清除所有历史记录";
 "clearAllHistorySubtitle" = "永久删除当前设备上的所有剪贴板历史";
+"clearAllHistoryMessage" = "此操作无法撤销。当前设备上的所有剪贴板记录将被永久删除。";
 "clear" = "清除";
 "storageSectionTitle" = "存储";
 "storageSectionSubtitle" = "当前设备上的剪贴板存储占用";

@@ -22,6 +22,7 @@ struct SettingsView: View {
     @State private var editingCustomSensitiveRule: ClipboardSensitiveRule?
     @State private var deleteCustomSensitiveRule: ClipboardSensitiveRule?
     @State private var showingCustomSensitiveRuleEditor = false
+    @State private var showingClearAllHistoryAlert = false
     @StateObject private var storageSummaryLoader = StorageSummaryLoader()
     @AppStorage("clipboard.startAtLogin") private var startAtLogin = false
     @AppStorage("clipboard.keepImages") private var keepImages = true
@@ -204,6 +205,14 @@ struct SettingsView: View {
             }
         } message: {
             Text(localizer.text(.deleteRuleMessage))
+        }
+        .alert(localizer.text(.clearAllHistory), isPresented: $showingClearAllHistoryAlert) {
+            Button(localizer.text(.cancel), role: .cancel) {}
+            Button(localizer.text(.clearAllHistory), role: .destructive) {
+                clearAllHistory()
+            }
+        } message: {
+            Text(localizer.text(.clearAllHistoryMessage))
         }
     }
 
@@ -602,7 +611,7 @@ struct SettingsView: View {
                         subtitle: localizer.text(.clearAllHistorySubtitle),
                         buttonTitle: localizer.text(.clear),
                         action: {
-                            clearAllHistory()
+                            showingClearAllHistoryAlert = true
                         }
                     )
                 }
