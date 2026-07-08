@@ -19,6 +19,15 @@ enum FileHistoryCopyStrategy: Int, CaseIterable, Identifiable {
     }
 }
 
+enum ClipboardFileCacheStatus: String, CaseIterable, Identifiable {
+    case pending
+    case cached
+    case failed
+    case skipped
+
+    var id: String { rawValue }
+}
+
 struct ClipboardFileCopyManifest: Codable, Equatable {
     static let fileName = "manifest.json"
     static let currentSchemaVersion = 2
@@ -371,4 +380,87 @@ struct ClipboardFileReferenceSet {
         formatter.isAdaptive = true
         return formatter
     }()
+}
+
+struct ClipboardFileStatus: Equatable {
+    enum OriginalStatus: Equatable {
+        case noOriginalPath
+        case available
+        case missingUsingCachedCopy
+        case missing
+    }
+
+    enum CachedStatus: Equatable {
+        case noCachedCopy
+        case available
+        case missing
+    }
+
+    let originalStatus: OriginalStatus
+    let cachedStatus: CachedStatus
+    let displayPathText: String
+    let fileSizeLabel: String
+    let missingCachedFileCount: Int
+}
+
+enum ClipboardFileStatusResolver {
+    static func resolve(_ referenceSet: ClipboardFileReferenceSet) -> ClipboardFileStatus {
+        let originalURLs = referenceSet.originalURLs
+        let missingOriginalURLs = referenceSet.missingOriginalURLs
+        let cachedFolderURL = referenceSet.cachedFolderURL
+        let cachedURLs = referenceSet.cachedURLs
+        let displayPathText = referenceSet.displayPathText
+        let fileSizeLabel = referenceSet.fileSizeLabel
+        let missingCachedFileCount = referenceSet.missingCachedManifestFiles.count
+
+        let originalStatus: ClipboardFileStatus.OriginalStatus
+        if originalURLs.isEmpty {
+            originalStatus = .noOriginalPath
+        } else if missingOriginalURLs.isEmpty {
+            originalStatus = .available
+        } else if !cachedURLs.isEmpty {
+            originalStatus = .missingUsingCachedCopy
+        } else {
+            originalStatus = .missing
+        }
+
+        let cachedStatus: ClipboardFileStatus.CachedStatus
+        if !referenceSet.hasCachedFolderPath {
+            cachedStatus = .noCachedCopy
+        } else if cachedFolderURL == nil || cachedURLs.isEmpty || missingCachedFileCount > 0 {
+            cachedStatus = .missing
+        } else {
+            cachedStatus = .available
+        }
+
+        return ClipboardFileStatus(
+            originalStatus: originalStatus,
+            cachedStatus: cachedStatus,
+            displayPathText: displayPathText,
+            fileSizeLabel: fileSizeLabel,
+            missingCachedFileCount: missingCachedFileCount
+        )
+    }
+}
+
+final class FileStatusCache {
+    static let shared = FileStatusCache()
+
+    private let cache = NSCache<NSString, FileStatusBox>()
+
+    func status(for key: String) -> ClipboardFileStatus? {
+        cache.object(forKey: key as NSString)?.value
+    }
+
+    func set(_ status: ClipboardFileStatus, for key: String) {
+        cache.setObject(FileStatusBox(status), forKey: key as NSString)
+    }
+}
+
+private final class FileStatusBox {
+    let value: ClipboardFileStatus
+
+    init(_ value: ClipboardFileStatus) {
+        self.value = value
+    }
 }

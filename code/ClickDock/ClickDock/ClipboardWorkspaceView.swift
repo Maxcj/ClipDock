@@ -22,6 +22,7 @@ struct SimpleClipboardWorkspaceView: View {
     private var categories: FetchedResults<ClipboardCategory>
 
     @Binding private var searchText: String
+    @Binding private var searchQuery: String
     @Binding private var categorySelection: ClipboardCategorySelection
     @Binding private var selectedRecordID: NSManagedObjectID?
     private let containerSize: CGSize
@@ -31,23 +32,28 @@ struct SimpleClipboardWorkspaceView: View {
     @State private var lastSelectedImageCachePaths: [String] = []
     @State private var isShowingCategoryAssignment = false
     private static let fetchBatchSize = 40
+    private let excludedBundleIdentifiersVersion: Int
 
     private var layout: SimpleClipboardLayout { SimpleClipboardLayout(containerSize: containerSize) }
 
     init(
         searchText: Binding<String>,
+        searchQuery: Binding<String>,
         categorySelection: Binding<ClipboardCategorySelection>,
         selectedRecordID: Binding<NSManagedObjectID?>,
         containerSize: CGSize,
+        excludedBundleIdentifiersVersion: Int,
         onOpenSettings: @escaping () -> Void
     ) {
         self._searchText = searchText
+        self._searchQuery = searchQuery
         self._categorySelection = categorySelection
         self._selectedRecordID = selectedRecordID
         self.containerSize = containerSize
+        self.excludedBundleIdentifiersVersion = excludedBundleIdentifiersVersion
         self.onOpenSettings = onOpenSettings
 
-        let predicate = ClipboardRecord.fetchPredicate(searchText: searchText.wrappedValue, categorySelection: categorySelection.wrappedValue)
+        let predicate = ClipboardRecord.fetchPredicate(searchText: searchQuery.wrappedValue, categorySelection: categorySelection.wrappedValue)
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
         request.sortDescriptors = [
             NSSortDescriptor(key: "isPinned", ascending: false),
@@ -127,7 +133,7 @@ struct SimpleClipboardWorkspaceView: View {
         .onChange(of: records.count) { _ in
             syncSelection(using: displayOrderedRecords)
         }
-        .onChange(of: searchText) { _ in
+        .onChange(of: searchQuery) { _ in
             syncSelection(using: displayOrderedRecords)
         }
         .onChange(of: selectedRecordID) { _ in
@@ -167,7 +173,6 @@ struct SimpleClipboardWorkspaceView: View {
 
     private func makeDisplayOrderedRecords() -> [ClipboardRecord] {
         Array(records)
-            .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
     }
 
     private func syncSelection(using displayOrderedRecords: [ClipboardRecord]) {
@@ -257,13 +262,11 @@ struct SimpleClipboardWorkspaceView: View {
             return
         }
 
-        var excluded = ClipboardPrivacyRules.bundleIdentifiers(
-            from: UserDefaults.standard.string(forKey: ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey) ?? ""
-        )
+        var excluded = ClipboardPrivacyRules.currentExcludedBundleIdentifiers()
         guard !excluded.contains(bundleIdentifier) else { return }
 
         excluded.append(bundleIdentifier)
-        UserDefaults.standard.set(ClipboardPrivacyRules.storageValue(from: excluded), forKey: ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey)
+        ClipboardPrivacyRules.setExcludedBundleIdentifiers(excluded)
 
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
         request.predicate = NSPredicate(format: "sourceBundleId == %@", bundleIdentifier)

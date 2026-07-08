@@ -1058,6 +1058,12 @@ struct SettingsView: View {
                         record.cachedSizeBytesValue = 0
                         changed = true
                     }
+                    if record.fileCacheStatusValue != ClipboardFileCacheStatus.skipped.rawValue {
+                        record.fileCacheStatusValue = ClipboardFileCacheStatus.skipped.rawValue
+                        record.fileCacheErrorValue = nil
+                        record.fileCacheUpdatedAtValue = Date()
+                        changed = true
+                    }
                 default:
                     continue
                 }
@@ -1142,7 +1148,7 @@ struct SettingsView: View {
     private func removeExcludedBundleIdentifier(_ bundleIdentifier: String) {
         var identifiers = excludedBundleIdentifiers
         identifiers.removeAll { $0 == bundleIdentifier }
-        excludedBundleIdentifiersStorage = ClipboardPrivacyRules.storageValue(from: identifiers)
+        ClipboardPrivacyRules.setExcludedBundleIdentifiers(identifiers)
     }
 
     @ViewBuilder

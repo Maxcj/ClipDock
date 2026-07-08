@@ -9,6 +9,7 @@ import AppKit
 struct ClipboardDetailInspector: View {
     @Environment(\.appLocalizer) private var localizer
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
+    @StateObject private var fileStatusLoader = FileStatusViewModel()
     let record: ClipboardRecord?
     let layout: SimpleClipboardLayout
     let onCopy: () -> Void
@@ -57,6 +58,17 @@ struct ClipboardDetailInspector: View {
         }
         .padding(.horizontal, layout.detailPaddingX)
         .padding(.vertical, layout.detailPaddingY)
+        .task(id: record?.fileStatusCacheKey) {
+            guard let record, record.kind == .files else {
+                fileStatusLoader.cancel()
+                return
+            }
+
+            fileStatusLoader.load(for: record)
+        }
+        .onDisappear {
+            fileStatusLoader.cancel()
+        }
     }
 
     private func header(for record: ClipboardRecord) -> some View {
@@ -130,6 +142,8 @@ struct ClipboardDetailInspector: View {
             return AnyView(
                 FileDetailPreview(
                     record: record,
+                    status: fileStatusLoader.status,
+                    isLoading: fileStatusLoader.isLoading,
                     subtitleFontSize: layout.detailSubtitleSize,
                     footerFontSize: layout.footerFontSize,
                     iconSize: 112,
@@ -203,35 +217,122 @@ struct ClipboardDetailInspector: View {
     }
 
     private func fileStateSection(for record: ClipboardRecord) -> some View {
-        let fileReferenceSet = record.fileReferenceSet
+        let status = fileStatusLoader.status
 
         return VStack(alignment: .leading, spacing: 10) {
             Text(localizer.text(.fileState))
                 .font(.system(size: layout.detailLabelSize, weight: .medium))
                 .foregroundStyle(.secondary)
 
-            VStack(spacing: 10) {
-                fileStateRow(
-                    title: localizer.text(.originalFile),
-                    value: record.fileOriginalStatusText,
-                    tint: fileReferenceSet.hasMissingOriginalFiles ? (fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? .orange : .red) : .green,
-                    symbolName: fileReferenceSet.hasMissingOriginalFiles ? (fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? "exclamationmark.triangle.fill" : "xmark.circle.fill") : "checkmark.circle.fill"
-                )
+            if let status {
+                VStack(spacing: 10) {
+                    fileStateRow(
+                        title: localizer.text(.originalFile),
+                        value: originalStatusText(for: status),
+                        tint: originalStatusTint(for: status),
+                        symbolName: originalStatusSymbolName(for: status)
+                    )
 
-                fileStateRow(
-                    title: localizer.text(.cachedCopy),
-                    value: record.fileCachedStatusText,
-                    tint: fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? .green : .red,
-                    symbolName: fileReferenceSet.hasCachedCopies && !fileReferenceSet.hasMissingCachedCopies ? "checkmark.circle.fill" : "xmark.circle.fill"
+                    fileStateRow(
+                        title: localizer.text(.cachedCopy),
+                        value: cachedStatusText(for: status),
+                        tint: cachedStatusTint(for: status),
+                        symbolName: cachedStatusSymbolName(for: status)
+                    )
+
+                    fileStateRow(
+                        title: localizer.text(.fileCacheStatus),
+                        value: record.fileCacheStatusText,
+                        tint: record.fileCacheStatusTint,
+                        symbolName: record.fileCacheStatusSymbolName
+                    )
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
                 )
+            } else if fileStatusLoader.isLoading {
+                loadingStateView
+            } else {
+                Text("File status unavailable")
+                    .font(.system(size: layout.detailSubtitleSize))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
             }
-            .padding(14)
-            .background(Color.white.opacity(0.14))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
+        }
+    }
+
+    private var loadingStateView: some View {
+        Text("Checking file status...")
+            .font(.system(size: layout.detailSubtitleSize))
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
+    }
+
+    private func originalStatusText(for status: ClipboardFileStatus) -> String {
+        switch status.originalStatus {
+        case .noOriginalPath:
+            return localizer.text(.pathOnlyNoCachedCopy)
+        case .available:
+            return localizer.text(.originalFileAvailable)
+        case .missingUsingCachedCopy:
+            return localizer.text(.originalFileMissingUsingCachedCopy)
+        case .missing:
+            return localizer.text(.originalFileMissing)
+        }
+    }
+
+    private func cachedStatusText(for status: ClipboardFileStatus) -> String {
+        switch status.cachedStatus {
+        case .noCachedCopy:
+            return localizer.text(.pathOnlyNoCachedCopy)
+        case .available:
+            return localizer.text(.cachedCopyAvailable)
+        case .missing:
+            return localizer.text(.cachedCopyMissing)
+        }
+    }
+
+    private func originalStatusTint(for status: ClipboardFileStatus) -> Color {
+        switch status.originalStatus {
+        case .available:
+            return .green
+        case .missingUsingCachedCopy:
+            return .orange
+        case .noOriginalPath, .missing:
+            return .red
+        }
+    }
+
+    private func cachedStatusTint(for status: ClipboardFileStatus) -> Color {
+        switch status.cachedStatus {
+        case .available:
+            return .green
+        case .noCachedCopy, .missing:
+            return .red
+        }
+    }
+
+    private func originalStatusSymbolName(for status: ClipboardFileStatus) -> String {
+        switch status.originalStatus {
+        case .available:
+            return "checkmark.circle.fill"
+        case .missingUsingCachedCopy:
+            return "exclamationmark.triangle.fill"
+        case .noOriginalPath, .missing:
+            return "xmark.circle.fill"
+        }
+    }
+
+    private func cachedStatusSymbolName(for status: ClipboardFileStatus) -> String {
+        switch status.cachedStatus {
+        case .available:
+            return "checkmark.circle.fill"
+        case .noCachedCopy, .missing:
+            return "xmark.circle.fill"
         }
     }
 
@@ -275,8 +376,16 @@ struct ClipboardDetailInspector: View {
             rows.append((localizer.text(.language), record.codeLanguage.title))
             rows.append((localizer.text(.lines), "\(record.codeLineCount)"))
         case .files:
-            rows.append((localizer.text(.path), record.fileSubtitleText))
-            rows.append((localizer.text(.fileSize), record.fileSizeLabel))
+            if let status = fileStatusLoader.status {
+                rows.append((localizer.text(.path), status.displayPathText.isEmpty ? originalStatusText(for: status) : status.displayPathText))
+                rows.append((localizer.text(.fileSize), status.fileSizeLabel))
+            } else if fileStatusLoader.isLoading {
+                rows.append((localizer.text(.path), "Checking file status..."))
+                rows.append((localizer.text(.fileSize), "-"))
+            } else {
+                rows.append((localizer.text(.path), "File status unavailable"))
+                rows.append((localizer.text(.fileSize), "-"))
+            }
         default:
             rows.append((localizer.text(.characters), "\(record.characterCount)"))
         }
@@ -331,6 +440,49 @@ struct ClipboardDetailMetaRow: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.vertical, 2)
+    }
+}
+
+@MainActor
+final class FileStatusViewModel: ObservableObject {
+    @Published private(set) var status: ClipboardFileStatus?
+    @Published private(set) var isLoading = false
+
+    private var currentTask: Task<Void, Never>?
+    private var currentCacheKey: String?
+
+    func load(for record: ClipboardRecord) {
+        let cacheKey = record.fileStatusCacheKey
+        currentCacheKey = cacheKey
+        currentTask?.cancel()
+
+        if let cached = FileStatusCache.shared.status(for: cacheKey) {
+            status = cached
+            isLoading = false
+            currentTask = nil
+            return
+        }
+
+        let referenceSet = record.fileReferenceSet
+        status = nil
+        isLoading = true
+
+        currentTask = Task.detached(priority: .utility) { [referenceSet, cacheKey] in
+            let resolved = ClipboardFileStatusResolver.resolve(referenceSet)
+            await MainActor.run { [weak self] in
+                guard let self, !Task.isCancelled, self.currentCacheKey == cacheKey else { return }
+                FileStatusCache.shared.set(resolved, for: cacheKey)
+                self.status = resolved
+                self.isLoading = false
+                self.currentTask = nil
+            }
+        }
+    }
+
+    func cancel() {
+        currentTask?.cancel()
+        currentTask = nil
+        isLoading = false
     }
 }
 

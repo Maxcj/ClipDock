@@ -2,24 +2,28 @@
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
     <entity name="ClipboardRecord" representedClassName="ClipboardRecord" syncable="YES" codeGenerationType="class">
         <attribute name="contentHash" optional="YES" attributeType="String"/>
-        <attribute name="contentTypeRaw" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="contentTypeRaw" optional="YES" attributeType="String" indexed="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" indexed="YES"/>
         <attribute name="displayText" optional="YES" attributeType="String"/>
         <attribute name="fullText" optional="YES" attributeType="String"/>
+        <attribute name="normalizedSearchText" optional="YES" attributeType="String" indexed="YES"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="imagePath" optional="YES" attributeType="String"/>
         <attribute name="cachedSizeBytes" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="assetPath" optional="YES" attributeType="String"/>
+        <attribute name="fileCacheError" optional="YES" attributeType="String"/>
+        <attribute name="fileCacheStatus" optional="YES" attributeType="String" indexed="YES"/>
+        <attribute name="fileCacheUpdatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="linkHost" optional="YES" attributeType="String"/>
         <attribute name="linkIconData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="linkMetadataCheckedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="linkTitle" optional="YES" attributeType="String"/>
         <attribute name="thumbnailPath" optional="YES" attributeType="String"/>
         <attribute name="isIgnored" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
-        <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
+        <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO" indexed="YES"/>
         <attribute name="lastUsedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="pinnedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="codeLanguageRaw" optional="YES" attributeType="String"/>
+        <attribute name="codeLanguageRaw" optional="YES" attributeType="String" indexed="YES"/>
         <attribute name="codeLineCountValue" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="colorHex" optional="YES" attributeType="String"/>
         <attribute name="colorRed" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
@@ -27,9 +31,9 @@
         <attribute name="colorBlue" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="colorAlpha" optional="NO" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="colorSourceFormat" optional="YES" attributeType="String"/>
-        <attribute name="sourceAppName" optional="YES" attributeType="String"/>
-        <attribute name="sourceBundleId" optional="YES" attributeType="String"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="sourceAppName" optional="YES" attributeType="String" indexed="YES"/>
+        <attribute name="sourceBundleId" optional="YES" attributeType="String" indexed="YES"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" indexed="YES"/>
         <attribute name="usageCount" optional="NO" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <relationship name="categoryLinks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClipboardRecordCategory" inverseName="record" inverseEntity="ClipboardRecordCategory"/>
     </entity>

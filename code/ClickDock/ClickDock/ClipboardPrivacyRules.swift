@@ -28,6 +28,7 @@ enum ClipboardPrivacyRules {
     }
 
     static let excludedBundleIdentifiersStorageKey = "clipboard.excludedSourceBundleIdentifiers"
+    static let excludedBundleIdentifiersVersionStorageKey = "clipboard.excludedSourceBundleIdentifiersVersion"
     static let ignoreVerificationCodesStorageKey = "clipboard.ignoreVerificationCodes"
     static let ignorePasswordsAndTokensStorageKey = "clipboard.ignorePasswordsAndTokens"
     static let ignorePrivateKeysStorageKey = "clipboard.ignorePrivateKeys"
@@ -53,8 +54,21 @@ enum ClipboardPrivacyRules {
         guard let bundleIdentifier, !bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return false
         }
-        let excluded = bundleIdentifiers(from: UserDefaults.standard.string(forKey: excludedBundleIdentifiersStorageKey) ?? "")
+        let excluded = currentExcludedBundleIdentifiers()
         return excluded.contains(bundleIdentifier)
+    }
+
+    static func currentExcludedBundleIdentifiers(defaults: UserDefaults = .standard) -> [String] {
+        bundleIdentifiers(from: defaults.string(forKey: excludedBundleIdentifiersStorageKey) ?? "")
+    }
+
+    static func setExcludedBundleIdentifiers(_ bundleIdentifiers: [String], defaults: UserDefaults = .standard) {
+        defaults.set(storageValue(from: bundleIdentifiers), forKey: excludedBundleIdentifiersStorageKey)
+        defaults.set(defaults.integer(forKey: excludedBundleIdentifiersVersionStorageKey) + 1, forKey: excludedBundleIdentifiersVersionStorageKey)
+    }
+
+    static func bumpExcludedBundleIdentifiersVersion(defaults: UserDefaults = .standard) {
+        defaults.set(defaults.integer(forKey: excludedBundleIdentifiersVersionStorageKey) + 1, forKey: excludedBundleIdentifiersVersionStorageKey)
     }
 
     static func displayName(for bundleIdentifier: String) -> String {

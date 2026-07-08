@@ -52,6 +52,10 @@ struct ClipDockApp: App {
             ClipboardStorageCalculator.rebuildCachedSizes(context: context)
             UserDefaults.standard.set(true, forKey: "clipboard.cachedSizeBytesMigrated")
         }
+        if !UserDefaults.standard.bool(forKey: "clipboard.searchIndexAndFileCacheMigrated") {
+            ClipboardStorageCalculator.backfillSearchIndexAndFileCacheState(context: context)
+            UserDefaults.standard.set(true, forKey: "clipboard.searchIndexAndFileCacheMigrated")
+        }
         let storageSummaryScheduler = StorageSummaryScheduler(container: PersistenceController.shared.container)
         _storageSummaryScheduler = StateObject(wrappedValue: storageSummaryScheduler)
         storageSummaryScheduler.start()

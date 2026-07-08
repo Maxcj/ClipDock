@@ -197,9 +197,7 @@ struct ClipboardDashboardView: View {
     }
 
     private var displayOrderedRecords: [ClipboardRecord] {
-        records
-            .filter { !ClipboardPrivacyRules.isExcluded(bundleIdentifier: $0.sourceBundleId) }
-            .sorted(by: clipboardRecordDisplaysBefore)
+        records.sorted(by: clipboardRecordDisplaysBefore)
     }
 
     private func copy(_ record: ClipboardRecord) {
@@ -237,13 +235,11 @@ struct ClipboardDashboardView: View {
             return
         }
 
-        var excluded = ClipboardPrivacyRules.bundleIdentifiers(
-            from: UserDefaults.standard.string(forKey: ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey) ?? ""
-        )
+        var excluded = ClipboardPrivacyRules.currentExcludedBundleIdentifiers()
         guard !excluded.contains(bundleIdentifier) else { return }
 
         excluded.append(bundleIdentifier)
-        UserDefaults.standard.set(ClipboardPrivacyRules.storageValue(from: excluded), forKey: ClipboardPrivacyRules.excludedBundleIdentifiersStorageKey)
+        ClipboardPrivacyRules.setExcludedBundleIdentifiers(excluded)
 
         let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
         request.predicate = NSPredicate(format: "sourceBundleId == %@", bundleIdentifier)
@@ -568,6 +564,8 @@ struct ClipboardHeroDetailPanel: View {
             } else if record.kind == .files {
                 FileDetailPreview(
                     record: record,
+                    status: nil,
+                    isLoading: false,
                     subtitleFontSize: layout.bodySize,
                     footerFontSize: layout.footerFontSize,
                     iconSize: 144,

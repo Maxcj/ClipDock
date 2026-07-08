@@ -13,11 +13,14 @@ struct ContentView: View {
     @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @Environment(\.openWindow) private var openWindow
 
-    @State private var searchText = ""
+    @State private var rawSearchText = ""
+    @State private var debouncedSearchText = ""
+    @State private var searchDebounceTask: Task<Void, Never>?
     @State private var categorySelection: ClipboardCategorySelection = .system(.all)
     @State private var selectedRecordID: NSManagedObjectID?
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
+    @AppStorage(ClipboardPrivacyRules.excludedBundleIdentifiersVersionStorageKey) private var excludedBundleIdentifiersVersion = 0
 
     var body: some View {
         GeometryReader { proxy in
@@ -25,10 +28,12 @@ struct ContentView: View {
 
             ZStack(alignment: .topLeading) {
                 SimpleClipboardWorkspaceView(
-                    searchText: $searchText,
+                    searchText: $rawSearchText,
+                    searchQuery: $debouncedSearchText,
                     categorySelection: $categorySelection,
                     selectedRecordID: $selectedRecordID,
                     containerSize: proxy.size,
+                    excludedBundleIdentifiersVersion: excludedBundleIdentifiersVersion,
                     onOpenSettings: {
                         activateAppIfNeeded()
                         openWindow(id: "settings")
@@ -62,7 +67,21 @@ struct ContentView: View {
         .task {
             sparkleUpdateManager.performStartupUpdateCheckIfNeeded()
         }
+        .onChange(of: rawSearchText) { newValue in
+            searchDebounceTask?.cancel()
+
+            let capturedValue = newValue
+            searchDebounceTask = Task {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    debouncedSearchText = capturedValue
+                }
+            }
+        }
         .onDisappear {
+            searchDebounceTask?.cancel()
             clipboardMonitor.stop()
         }
         .onReceive(NotificationCenter.default.publisher(for: .clipDockTogglePanelRequested)) { _ in

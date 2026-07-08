@@ -18,6 +18,7 @@ final class ClipboardMonitor: ObservableObject {
 
     private let context: NSManagedObjectContext
     private let linkMetadataManager: LinkMetadataManager
+    private let fileAssetCopyManager: FileAssetCopyManager
     private let processingQueue = DispatchQueue(label: "cn.maxcj.ClipDock.clipboard.processing", qos: .userInitiated)
     private var timer: Timer?
     private var cleanupTimer: Timer?
@@ -29,6 +30,7 @@ final class ClipboardMonitor: ObservableObject {
     init(context: NSManagedObjectContext) {
         self.context = context
         self.linkMetadataManager = LinkMetadataManager(context: context)
+        self.fileAssetCopyManager = FileAssetCopyManager(context: context)
     }
 
     func start() {
@@ -173,7 +175,8 @@ final class ClipboardMonitor: ObservableObject {
                         cachedSizeBytes: assets.cachedSizeBytes,
                         sourceAppName: appName,
                         sourceBundleId: bundleId,
-                        hash: Self.hash(kind: .image, data: imageData)
+                        hash: Self.hash(kind: .image, data: imageData),
+                        fileURLs: nil
                     ))
                 }
 
@@ -182,19 +185,18 @@ final class ClipboardMonitor: ObservableObject {
 
             guard keepsFileHistory else { return .dropped(reason: "file history disabled") }
 
-            let fileAssets = fileHistoryCopyStrategy == .saveCopy ? saveFileAssets(from: fileURLs) : nil
-
             return .snapshot(ClipboardSnapshot(
                 kind: .files,
                 displayText: names.joined(separator: ", "),
                 fullText: fullText,
                 imagePath: nil,
-                assetPath: fileAssets?.folder.path,
+                assetPath: nil,
                 thumbnailPath: nil,
-                cachedSizeBytes: fileAssets?.cachedSizeBytes ?? 0,
+                cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
-                hash: Self.hash(kind: .files, text: fullText)
+                hash: Self.hash(kind: .files, text: fullText),
+                fileURLs: fileHistoryCopyStrategy == .saveCopy ? fileURLs : nil
             ))
         }
 
@@ -212,8 +214,9 @@ final class ClipboardMonitor: ObservableObject {
                     cachedSizeBytes: assets.cachedSizeBytes,
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
-                    hash: Self.hash(kind: .image, data: assets.originalData)
-                ))
+                hash: Self.hash(kind: .image, data: assets.originalData),
+                fileURLs: nil
+            ))
             }
 
             return .dropped(reason: "failed to save image assets")
@@ -235,7 +238,8 @@ final class ClipboardMonitor: ObservableObject {
                 cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
-                hash: Self.hash(kind: .link, text: urlText)
+                hash: Self.hash(kind: .link, text: urlText),
+                fileURLs: nil
             ))
         }
 
@@ -268,7 +272,8 @@ final class ClipboardMonitor: ObservableObject {
                     cachedSizeBytes: 0,
                     sourceAppName: appName,
                     sourceBundleId: bundleId,
-                    hash: Self.hash(kind: kind, text: color.sourceText)
+                    hash: Self.hash(kind: kind, text: color.sourceText),
+                    fileURLs: nil
                 ))
             }
 
@@ -282,7 +287,8 @@ final class ClipboardMonitor: ObservableObject {
                 cachedSizeBytes: 0,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
-                hash: Self.hash(kind: kind, text: trimmed)
+                hash: Self.hash(kind: kind, text: trimmed),
+                fileURLs: nil
             ))
         }
 
@@ -374,6 +380,13 @@ final class ClipboardMonitor: ObservableObject {
                 }
 
                 try self.context.save()
+                if snapshot.kind == .files, snapshot.fileURLs != nil {
+                    self.fileAssetCopyManager.scheduleCopy(
+                        for: record.objectID,
+                        hash: snapshot.hash,
+                        fileURLs: snapshot.fileURLs ?? []
+                    )
+                }
                 self.pruneExpiredRecordsLocked()
                 if snapshot.kind == .link,
                    let url = ClipboardRecord.webURL(from: snapshot.fullText ?? snapshot.displayText),
@@ -410,6 +423,35 @@ final class ClipboardMonitor: ObservableObject {
         return try context.fetch(request)
     }
 
+    private static func normalizedSearchText(for snapshot: ClipboardSnapshot) -> String? {
+        var pieces: [String] = []
+
+        let displayText = snapshot.displayText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !displayText.isEmpty {
+            pieces.append(displayText)
+        }
+
+        if let sourceAppName = snapshot.sourceAppName?.trimmingCharacters(in: .whitespacesAndNewlines), !sourceAppName.isEmpty {
+            pieces.append(sourceAppName)
+        }
+
+        if let sourceBundleId = snapshot.sourceBundleId?.trimmingCharacters(in: .whitespacesAndNewlines), !sourceBundleId.isEmpty {
+            pieces.append(sourceBundleId)
+        }
+
+        if snapshot.kind == .files,
+           let fullText = snapshot.fullText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !fullText.isEmpty {
+            pieces.append(fullText)
+        }
+
+        if let fileURLs = snapshot.fileURLs, !fileURLs.isEmpty {
+            pieces.append(contentsOf: fileURLs.map(\.path))
+        }
+
+        return pieces.isEmpty ? nil : pieces.joined(separator: " ").lowercased()
+    }
+
     private static func preferredDuplicateOrder(_ lhs: ClipboardRecord, _ rhs: ClipboardRecord) -> Bool {
         if lhs.isPinned != rhs.isPinned {
             return lhs.isPinned && !rhs.isPinned
@@ -438,6 +480,7 @@ final class ClipboardMonitor: ObservableObject {
         record.sourceAppName = snapshot.sourceAppName
         record.sourceBundleId = snapshot.sourceBundleId
         record.contentHash = snapshot.hash
+        record.normalizedSearchTextValue = Self.normalizedSearchText(for: snapshot)
 
         if snapshot.kind == .code {
             let codeText = snapshot.fullText ?? snapshot.displayText
@@ -447,6 +490,22 @@ final class ClipboardMonitor: ObservableObject {
         } else {
             record.setValue(nil, forKey: "codeLanguageRaw")
             record.setValue(0, forKey: "codeLineCountValue")
+        }
+
+        if snapshot.kind == .files {
+            if snapshot.fileURLs != nil {
+                record.fileCacheStatusValue = ClipboardFileCacheStatus.pending.rawValue
+                record.fileCacheErrorValue = nil
+                record.fileCacheUpdatedAtValue = Date()
+            } else {
+                record.fileCacheStatusValue = ClipboardFileCacheStatus.skipped.rawValue
+                record.fileCacheErrorValue = nil
+                record.fileCacheUpdatedAtValue = Date()
+            }
+        } else {
+            record.fileCacheStatusValue = nil
+            record.fileCacheErrorValue = nil
+            record.fileCacheUpdatedAtValue = nil
         }
 
         if snapshot.kind == .colors,
@@ -541,19 +600,29 @@ final class ClipboardMonitor: ObservableObject {
         }
     }
 
-    private func saveFileAssets(from fileURLs: [URL]) -> SavedFileAssets? {
-        guard !fileURLs.isEmpty else { return nil }
+    fileprivate static func saveFileAssets(from fileURLs: [URL]) throws -> SavedFileAssets {
+        guard !fileURLs.isEmpty else {
+            throw NSError(domain: "ClipDock.FileAssets", code: 1, userInfo: [NSLocalizedDescriptionKey: "No file URLs provided"])
+        }
 
         var sourceSizes: Int64 = 0
         var sourceFileSizes: [Int64] = []
         sourceFileSizes.reserveCapacity(fileURLs.count)
 
         for fileURL in fileURLs {
-            guard Self.isCacheableFileURL(fileURL) else { return nil }
-            guard let fileSize = Self.fileSizeBytes(for: fileURL) else { return nil }
-            guard fileSize <= Self.maximumSingleFileCopySizeBytes else { return nil }
+            guard Self.isCacheableFileURL(fileURL) else {
+                throw NSError(domain: "ClipDock.FileAssets", code: 2, userInfo: [NSLocalizedDescriptionKey: "Uncacheable file URL"])
+            }
+            guard let fileSize = Self.fileSizeBytes(for: fileURL) else {
+                throw NSError(domain: "ClipDock.FileAssets", code: 3, userInfo: [NSLocalizedDescriptionKey: "Missing file size"])
+            }
+            guard fileSize <= Self.maximumSingleFileCopySizeBytes else {
+                throw NSError(domain: "ClipDock.FileAssets", code: 4, userInfo: [NSLocalizedDescriptionKey: "Single file exceeds copy limit"])
+            }
             sourceSizes += fileSize
-            guard sourceSizes <= Self.maximumBatchFileCopySizeBytes else { return nil }
+            guard sourceSizes <= Self.maximumBatchFileCopySizeBytes else {
+                throw NSError(domain: "ClipDock.FileAssets", code: 5, userInfo: [NSLocalizedDescriptionKey: "Batch exceeds copy limit"])
+            }
             sourceFileSizes.append(fileSize)
         }
 
@@ -586,8 +655,7 @@ final class ClipboardMonitor: ObservableObject {
             return SavedFileAssets(folder: folderURL, cachedSizeBytes: sourceSizes + manifestSize)
         } catch {
             try? FileManager.default.removeItem(at: folderURL)
-            NSLog("Failed to save clipboard files: \(error.localizedDescription)")
-            return nil
+            throw error
         }
     }
 
@@ -890,6 +958,88 @@ final class LinkMetadataManager {
                 try self.context.save()
             } catch {
                 NSLog("Failed to save link metadata: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+private actor FileAssetCopyGate {
+    private var inFlightKeys: Set<String> = []
+
+    func performIfAvailable(
+        for key: String,
+        operation: () async -> Void
+    ) async {
+        guard inFlightKeys.insert(key).inserted else { return }
+        defer { inFlightKeys.remove(key) }
+        await operation()
+    }
+}
+
+final class FileAssetCopyManager {
+    private let context: NSManagedObjectContext
+    private let gate = FileAssetCopyGate()
+
+    init(context: NSManagedObjectContext) {
+        self.context = context
+    }
+
+    func scheduleCopy(for recordID: NSManagedObjectID, hash: String, fileURLs: [URL]) {
+        guard !fileURLs.isEmpty else { return }
+
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self else { return }
+            let key = recordID.uriRepresentation().absoluteString + "|" + hash
+            await self.gate.performIfAvailable(for: key) {
+                do {
+                    let assets = try ClipboardMonitor.saveFileAssets(from: fileURLs)
+                    self.apply(assets: assets, for: recordID, hash: hash)
+                } catch {
+                    self.applyFailure(error, for: recordID, hash: hash)
+                }
+            }
+        }
+    }
+
+    private func apply(assets: SavedFileAssets, for recordID: NSManagedObjectID, hash: String) {
+        context.perform {
+            guard let record = try? self.context.existingObject(with: recordID) as? ClipboardRecord,
+                  record.kind == .files,
+                  record.contentHash == hash else {
+                try? FileManager.default.removeItem(at: assets.folder)
+                return
+            }
+
+            record.assetPathValue = assets.folder.path
+            record.cachedSizeBytesValue = assets.cachedSizeBytes
+            record.fileCacheStatusValue = ClipboardFileCacheStatus.cached.rawValue
+            record.fileCacheErrorValue = nil
+            record.fileCacheUpdatedAtValue = Date()
+
+            do {
+                try self.context.save()
+            } catch {
+                NSLog("Failed to save file asset copy completion: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func applyFailure(_ error: Error, for recordID: NSManagedObjectID, hash: String) {
+        context.perform {
+            guard let record = try? self.context.existingObject(with: recordID) as? ClipboardRecord,
+                  record.kind == .files,
+                  record.contentHash == hash else {
+                return
+            }
+
+            record.fileCacheStatusValue = ClipboardFileCacheStatus.failed.rawValue
+            record.fileCacheErrorValue = error.localizedDescription
+            record.fileCacheUpdatedAtValue = Date()
+
+            do {
+                try self.context.save()
+            } catch {
+                NSLog("Failed to save file asset copy failure: \(error.localizedDescription)")
             }
         }
     }

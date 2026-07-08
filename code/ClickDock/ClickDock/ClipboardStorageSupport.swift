@@ -209,6 +209,43 @@ enum ClipboardStorageCalculator {
         }
     }
 
+    static func backfillSearchIndexAndFileCacheState(context: NSManagedObjectContext) {
+        context.performAndWait {
+            let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
+            request.fetchBatchSize = 32
+
+            guard let records = try? context.fetch(request) else { return }
+
+            var didChange = false
+            for record in records {
+                if let normalizedSearchText = normalizedSearchText(for: record),
+                   record.normalizedSearchTextValue != normalizedSearchText {
+                    record.normalizedSearchTextValue = normalizedSearchText
+                    didChange = true
+                }
+
+                guard record.kind == .files else { continue }
+
+                if record.fileCacheStatusValue == nil || record.fileCacheStatusValue?.isEmpty == true {
+                    if record.fileReferenceSet.cachedFolderURL != nil {
+                        record.fileCacheStatusValue = ClipboardFileCacheStatus.cached.rawValue
+                    } else if record.assetPathValue == nil {
+                        record.fileCacheStatusValue = ClipboardFileCacheStatus.skipped.rawValue
+                    } else {
+                        record.fileCacheStatusValue = ClipboardFileCacheStatus.failed.rawValue
+                        record.fileCacheErrorValue = "Cached folder missing"
+                    }
+                    record.fileCacheUpdatedAtValue = Date()
+                    didChange = true
+                }
+            }
+
+            if didChange {
+                try? context.save()
+            }
+        }
+    }
+
     private static func fileSize(atPath path: String) -> Int? {
         fileSize(at: URL(fileURLWithPath: path))
     }
@@ -274,6 +311,46 @@ enum ClipboardStorageCalculator {
         }
 
         return total
+    }
+
+    private static func normalizedSearchText(for record: ClipboardRecord) -> String? {
+        var pieces: [String] = []
+
+        let displayText = (record.displayText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !displayText.isEmpty {
+            pieces.append(displayText)
+        }
+
+        let fullText = (record.fullText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fullText.isEmpty {
+            pieces.append(fullText)
+        }
+
+        let sourceAppName = (record.sourceAppName ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sourceAppName.isEmpty {
+            pieces.append(sourceAppName)
+        }
+
+        let sourceBundleId = (record.sourceBundleId ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !sourceBundleId.isEmpty {
+            pieces.append(sourceBundleId)
+        }
+
+        if let linkHost = record.linkHostValue?.trimmingCharacters(in: .whitespacesAndNewlines), !linkHost.isEmpty {
+            pieces.append(linkHost)
+        }
+
+        if let codeLanguageRaw = record.codeLanguageRawValue?.trimmingCharacters(in: .whitespacesAndNewlines), !codeLanguageRaw.isEmpty {
+            pieces.append(codeLanguageRaw)
+        }
+
+        if record.kind == .files {
+            if !fullText.isEmpty {
+                pieces.append(fullText)
+            }
+        }
+
+        return pieces.isEmpty ? nil : pieces.joined(separator: " ").lowercased()
     }
 
     private static func int64Value(_ value: Any?) -> Int64 {

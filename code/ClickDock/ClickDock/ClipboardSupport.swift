@@ -41,11 +41,10 @@ struct ClipboardSearchQuery: Equatable {
         var predicates: [NSPredicate] = []
 
         if !text.isEmpty {
-            predicates.append(NSCompoundPredicate(orPredicateWithSubpredicates: [
-                NSPredicate(format: "displayText CONTAINS[cd] %@", text),
-                NSPredicate(format: "fullText CONTAINS[cd] %@", text),
-                NSPredicate(format: "sourceAppName CONTAINS[cd] %@", text)
-            ]))
+            predicates.append(NSPredicate(format: "normalizedSearchText CONTAINS[cd] %@", text))
+            if text.count >= 2 {
+                predicates.append(NSPredicate(format: "fullText CONTAINS[cd] %@", text))
+            }
         }
 
         for filter in filters {
@@ -550,6 +549,69 @@ extension ClipboardRecord {
         return fileReferenceSet.cachedCopyStatusText
     }
 
+    var fileCacheStatusText: String {
+        guard kind == .files else { return "" }
+
+        guard let rawValue = fileCacheStatusValue,
+              let status = ClipboardFileCacheStatus(rawValue: rawValue) else {
+            return AppLocalizer.current.text(.fileCacheSkipped)
+        }
+
+        switch status {
+        case .pending:
+            return AppLocalizer.current.text(.fileCachePending)
+        case .cached:
+            return AppLocalizer.current.text(.fileCacheCached)
+        case .failed:
+            if let fileCacheErrorValue, !fileCacheErrorValue.isEmpty {
+                return AppLocalizer.current.text(.fileCacheFailedWithReason, fileCacheErrorValue)
+            }
+            return AppLocalizer.current.text(.fileCacheFailed)
+        case .skipped:
+            return AppLocalizer.current.text(.fileCacheSkipped)
+        }
+    }
+
+    var fileCacheStatusSymbolName: String {
+        guard kind == .files else { return "circle" }
+
+        guard let rawValue = fileCacheStatusValue,
+              let status = ClipboardFileCacheStatus(rawValue: rawValue) else {
+            return "arrow.triangle.2.circlepath"
+        }
+
+        switch status {
+        case .pending:
+            return "arrow.triangle.2.circlepath"
+        case .cached:
+            return "checkmark.circle.fill"
+        case .failed:
+            return "xmark.octagon.fill"
+        case .skipped:
+            return "minus.circle"
+        }
+    }
+
+    var fileCacheStatusTint: Color {
+        guard kind == .files else { return .secondary }
+
+        guard let rawValue = fileCacheStatusValue,
+              let status = ClipboardFileCacheStatus(rawValue: rawValue) else {
+            return .secondary
+        }
+
+        switch status {
+        case .pending:
+            return .orange
+        case .cached:
+            return .green
+        case .failed:
+            return .red
+        case .skipped:
+            return .secondary
+        }
+    }
+
     var fileSubtitleText: String {
         guard kind == .files else { return "" }
 
@@ -581,6 +643,36 @@ extension ClipboardRecord {
 
     var fileReferenceSet: ClipboardFileReferenceSet {
         ClipboardFileReferenceSet(originalPathsText: fullText, legacyCacheFolderPath: assetPathValue)
+    }
+
+    var fileStatusCacheKey: String {
+        let updatedAtToken = updatedAt?.timeIntervalSince1970.description ?? "0"
+        let cachedSizeToken = cachedSizeBytesValue.description
+        let assetPathToken = assetPathValue ?? ""
+        let fileCacheStatusToken = fileCacheStatusValue ?? ""
+        let fileCacheUpdatedAtToken = fileCacheUpdatedAtValue?.timeIntervalSince1970.description ?? "0"
+        let fullTextToken = String(fullText?.hashValue ?? 0)
+        return [objectID.uriRepresentation().absoluteString, updatedAtToken, cachedSizeToken, assetPathToken, fileCacheStatusToken, fileCacheUpdatedAtToken, fullTextToken].joined(separator: "|")
+    }
+
+    var fileCacheStatusValue: String? {
+        get { value(forKey: "fileCacheStatus") as? String }
+        set { setValue(newValue, forKey: "fileCacheStatus") }
+    }
+
+    var fileCacheErrorValue: String? {
+        get { value(forKey: "fileCacheError") as? String }
+        set { setValue(newValue, forKey: "fileCacheError") }
+    }
+
+    var fileCacheUpdatedAtValue: Date? {
+        get { value(forKey: "fileCacheUpdatedAt") as? Date }
+        set { setValue(newValue, forKey: "fileCacheUpdatedAt") }
+    }
+
+    var normalizedSearchTextValue: String? {
+        get { value(forKey: "normalizedSearchText") as? String }
+        set { setValue(newValue, forKey: "normalizedSearchText") }
     }
 
     var characterCount: Int {
@@ -734,6 +826,11 @@ extension ClipboardRecord {
         var predicates: [NSPredicate] = [
             NSPredicate(format: "isIgnored == NO")
         ]
+
+        let excludedBundleIdentifiers = ClipboardPrivacyRules.currentExcludedBundleIdentifiers()
+        if !excludedBundleIdentifiers.isEmpty {
+            predicates.append(NSPredicate(format: "NOT (sourceBundleId IN %@)", excludedBundleIdentifiers))
+        }
 
         let searchQuery = ClipboardSearchQuery(searchText)
         if let searchPredicate = searchQuery.predicate {
@@ -1105,6 +1202,7 @@ struct ClipboardSnapshot {
     let sourceAppName: String?
     let sourceBundleId: String?
     let hash: String
+    let fileURLs: [URL]?
 }
 
 struct SavedImageAssets {
@@ -1157,6 +1255,11 @@ extension ClipboardRecord {
     var linkHostValue: String? {
         get { linkHost }
         set { linkHost = newValue }
+    }
+
+    var codeLanguageRawValue: String? {
+        get { value(forKey: "codeLanguageRaw") as? String }
+        set { setValue(newValue, forKey: "codeLanguageRaw") }
     }
 
     var linkTitleValue: String? {

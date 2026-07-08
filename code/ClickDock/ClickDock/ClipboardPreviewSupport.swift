@@ -17,7 +17,6 @@ struct AsyncDetailImageView: View {
     let fallbackHeight: CGFloat
 
     @State private var image: NSImage?
-    @State private var originalImage: NSImage?
     @State private var isLoading = false
     @State private var isHovering = false
     @State private var requestToken = UUID()
@@ -61,11 +60,9 @@ struct AsyncDetailImageView: View {
         }
         .task(id: imagePath) {
             image = nil
-            originalImage = nil
 
             if let initialImage {
                 image = initialImage
-                originalImage = initialImage
             }
 
             let token = UUID()
@@ -78,28 +75,38 @@ struct AsyncDetailImageView: View {
             isLoading = true
             defer { isLoading = false }
 
-            let loadedImages = await Task.detached(priority: .userInitiated) {
+            let previewImage = await Task.detached(priority: .userInitiated) {
                 autoreleasepool {
-                    let original = ClipboardImageCache.shared.image(at: imagePath)
-                    let preview = ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize)
-                    return (preview, original)
+                    ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPixelSize)
                 }
             }.value
 
             guard !Task.isCancelled else { return }
             guard token == requestToken else { return }
-            image = loadedImages.0 ?? loadedImages.1 ?? initialImage
-            originalImage = loadedImages.1 ?? initialImage
+            image = previewImage ?? initialImage
         }
     }
 
     private var previewImageForPresentation: NSImage? {
-        originalImage ?? image ?? initialImage
+        image ?? initialImage
     }
 
     private func presentPreviewPanel() {
-        guard let previewImage = previewImageForPresentation else { return }
-        ImagePreviewPanelController.shared.present(image: previewImage)
+        guard let imagePath, !imagePath.isEmpty else {
+            if let previewImage = previewImageForPresentation {
+                ImagePreviewPanelController.shared.present(image: previewImage)
+            }
+            return
+        }
+
+        Task.detached(priority: .userInitiated) {
+            let originalImage = ClipboardImageCache.shared.image(at: imagePath)
+            await MainActor.run {
+                if let originalImage {
+                    ImagePreviewPanelController.shared.present(image: originalImage)
+                }
+            }
+        }
     }
 
     private var previewSurface: some View {
@@ -202,9 +209,14 @@ final class ImagePreviewPanelController: NSObject {
     }
 
     private static func contentSize(for image: NSImage) -> NSSize {
+        let screenFrame = NSScreen.main?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let maxWidth = screenFrame.width * 0.82
+        let maxHeight = screenFrame.height * 0.82
         let imageWidth = max(1, image.size.width)
         let imageHeight = max(1, image.size.height)
-        return NSSize(width: imageWidth, height: imageHeight)
+        let scale = min(maxWidth / imageWidth, maxHeight / imageHeight, 1)
+        return NSSize(width: imageWidth * scale, height: imageHeight * scale)
     }
 }
 
@@ -224,7 +236,7 @@ struct ImagePreviewPanelContent: View {
             .interpolation(.high)
             .resizable()
             .scaledToFit()
-            .frame(width: max(1, image.size.width), height: max(1, image.size.height))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .topTrailing) {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -244,6 +256,8 @@ struct ImagePreviewPanelContent: View {
 struct FileDetailPreview: View {
     @Environment(\.appLocalizer) private var localizer
     let record: ClipboardRecord
+    let status: ClipboardFileStatus?
+    let isLoading: Bool
     let subtitleFontSize: CGFloat
     let footerFontSize: CGFloat
     let iconSize: CGFloat
@@ -259,14 +273,18 @@ struct FileDetailPreview: View {
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(3)
 
-                Text(record.fileSubtitleText)
+                Text(subtitleText)
                     .font(.system(size: subtitleFontSize))
                     .foregroundStyle(.secondary)
 
                 if record.kind == .files {
-                    Text(record.fileSizeLabel)
+                    Text(fileSizeText)
                         .font(.system(size: footerFontSize, weight: .medium))
                         .foregroundStyle(.secondary)
+
+                    Text(record.fileCacheStatusText)
+                        .font(.system(size: footerFontSize, weight: .medium))
+                        .foregroundStyle(record.fileCacheStatusTint)
                 }
 
                 Spacer(minLength: 0)
@@ -275,6 +293,25 @@ struct FileDetailPreview: View {
             Spacer(minLength: 0)
         }
         .frame(height: height, alignment: .center)
+    }
+
+    private var subtitleText: String {
+        if let status {
+            if !status.displayPathText.isEmpty {
+                return status.displayPathText
+            }
+            return status.originalStatusText(localizer: localizer)
+        }
+
+        return isLoading ? "Checking file status..." : "-"
+    }
+
+    private var fileSizeText: String {
+        if let status {
+            return status.fileSizeLabel
+        }
+
+        return isLoading ? "..." : "-"
     }
 
     @ViewBuilder
@@ -302,6 +339,21 @@ struct FileDetailPreview: View {
                         .font(.system(size: iconSize * 0.38, weight: .regular))
                         .foregroundStyle(record.kind.accent)
                 )
+        }
+    }
+}
+
+private extension ClipboardFileStatus {
+    func originalStatusText(localizer: AppLocalizer) -> String {
+        switch originalStatus {
+        case .noOriginalPath:
+            return localizer.text(.pathOnlyNoCachedCopy)
+        case .available:
+            return localizer.text(.originalFileAvailable)
+        case .missingUsingCachedCopy:
+            return localizer.text(.originalFileMissingUsingCachedCopy)
+        case .missing:
+            return localizer.text(.originalFileMissing)
         }
     }
 }

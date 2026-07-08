@@ -288,6 +288,12 @@ enum AppTextKey: String {
     case fileState
     case originalFile
     case cachedCopy
+    case fileCacheStatus
+    case fileCachePending
+    case fileCacheCached
+    case fileCacheFailed
+    case fileCacheFailedWithReason
+    case fileCacheSkipped
     case originalFileAvailable
     case originalFileMissingUsingCachedCopy
     case originalFileMissing

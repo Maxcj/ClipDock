@@ -36,6 +36,12 @@
 "fileState" = "文件状态";
 "originalFile" = "原始文件";
 "cachedCopy" = "缓存副本";
+"fileCacheStatus" = "缓存状态";
+"fileCachePending" = "正在缓存…";
+"fileCacheCached" = "已缓存";
+"fileCacheFailed" = "缓存失败";
+"fileCacheFailedWithReason" = "缓存失败：%@";
+"fileCacheSkipped" = "未缓存";
 "originalFileAvailable" = "原始文件可用";
 "originalFileMissingUsingCachedCopy" = "原始文件已丢失，正在使用缓存副本";
 "originalFileMissing" = "原始文件已丢失";

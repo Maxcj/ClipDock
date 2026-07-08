@@ -36,6 +36,12 @@
 "fileState" = "File State";
 "originalFile" = "Original File";
 "cachedCopy" = "Cached Copy";
+"fileCacheStatus" = "Cache Status";
+"fileCachePending" = "Caching...";
+"fileCacheCached" = "Cached";
+"fileCacheFailed" = "Cache failed";
+"fileCacheFailedWithReason" = "Cache failed: %@";
+"fileCacheSkipped" = "Not cached";
 "originalFileAvailable" = "Original file available";
 "originalFileMissingUsingCachedCopy" = "Original file is missing, using cached copy";
 "originalFileMissing" = "Original file is missing";

@@ -73,6 +73,7 @@ struct HighlighterCodeView: NSViewRepresentable {
     }
 
     final class Coordinator {
+        private static let maxHighlightedCharacterCount = 20_000
         private let highlighter: Highlighter?
         private weak var textView: NSTextView?
         private weak var scrollView: NSScrollView?
@@ -98,11 +99,23 @@ struct HighlighterCodeView: NSViewRepresentable {
         func render(text: String, language: ClipboardCodeLanguage, lineCount: Int) {
             guard let textView else { return }
 
-            let signature = "\(language.rawValue)\u{0}\(text)"
+            let signature = "\(language.rawValue)-\(text.count)-\(text.hashValue)"
             guard signature != lastSignature else {
                 return
             }
             lastSignature = signature
+
+            if language == .plain || text.count > Self.maxHighlightedCharacterCount {
+                textView.string = text
+                textView.textContainer?.containerSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+                textView.frame = NSRect(origin: .zero, size: textView.fittingSize)
+                textView.scrollRangeToVisible(NSRange(location: 0, length: 0))
+
+                if let ruler = scrollView?.verticalRulerView as? CodeLineNumberRulerView {
+                    ruler.update(lineCount: lineCount)
+                }
+                return
+            }
 
             let rendered = highlighter?.highlight(text, as: language.highlighterLanguageIdentifier) ?? NSAttributedString(string: text)
             textView.textStorage?.setAttributedString(rendered)
