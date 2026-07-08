@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClipDock 1.2.0-beta2 Release Notes</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px 40px;
+        color: #1f2937;
+        background: #ffffff;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      .meta {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 20px 24px;
+        background: #fafafa;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ClipDock 1.2.0-beta2</h1>
+    <p class="meta">Release notes for the beta update channel.</p>
+
+    <div class="card">
+      <h2 class="section-title">本次更新</h2>
+      <p>ClipDock 1.2.0-beta2 是一个跟进版 beta，继续保持这条性能导向的工作流优化。文件副本仍然会在后台异步保存并显示清晰状态，搜索在更大的历史量下更顺滑，预览更轻量，而危险设置操作也更清楚。</p>
+      <ul>
+        <li>文件副本继续采用后台异步保存，并保留 <code>pending / cached / failed / skipped</code> 状态</li>
+        <li>搜索继续使用归一化索引和输入 debounce，在更大的历史量下更顺滑</li>
+        <li>图片详情页仍然不会提前加载原图，预览面板也会自动适配屏幕尺寸</li>
+        <li>代码高亮在超长内容上会自动降级为纯文本，减少详情页卡顿</li>
+        <li>设置中的“重置系统分类”和“清除所有历史记录”都保持更清晰的操作样式</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">What’s New</h2>
+      <p>ClipDock 1.2.0-beta2 is a follow-up beta cut that keeps the performance-focused workflow improvements in place. File copies still save in the background with clear cache states, search remains smoother on larger histories, previews stay lighter, and destructive settings actions are presented more clearly.</p>
+      <ul>
+        <li>File copies still save in the background and expose <code>pending / cached / failed / skipped</code> states</li>
+        <li>Search continues to use normalized indexing plus input debounce, which keeps large histories smoother</li>
+        <li>The image detail view still avoids loading the original image up front, and the preview panel remains screen-aware</li>
+        <li>Code highlighting still falls back to plain text for very long content, reducing detail-page stutter</li>
+        <li>The “Reset System Categories” and “Clear All History” actions keep their clearer, safer presentation</li>
+      </ul>
+    </div>
+  </body>
+</html>
