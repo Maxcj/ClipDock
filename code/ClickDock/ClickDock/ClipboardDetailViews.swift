@@ -118,62 +118,13 @@ struct ClipboardDetailInspector: View {
             )
         case .link:
             return AnyView(
-                VStack(alignment: .leading, spacing: 14) {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.18))
-                        .overlay(
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(alignment: .center, spacing: 10) {
-                                    if let icon = record.websiteIconImage {
-                                        Image(nsImage: icon)
-                                            .resizable()
-                                            .interpolation(.high)
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 22, height: 22)
-                                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                                    } else if let icon = record.sourceAppIcon {
-                                        Image(nsImage: icon)
-                                            .resizable()
-                                            .interpolation(.high)
-                                            .aspectRatio(contentMode: .fit)
-                                            .frame(width: 22, height: 22)
-                                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                                    } else {
-                                        Image(systemName: "globe")
-                                            .font(.system(size: 19, weight: .semibold))
-                                            .foregroundStyle(record.kind.accent)
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(record.previewSubtitle)
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .lineLimit(1)
-                                        if let host = record.linkHostLabel {
-                                            Text(host)
-                                                .font(.system(size: 13))
-                                                .foregroundStyle(.secondary)
-                                                .lineLimit(1)
-                                        }
-                                    }
-
-                                    Spacer()
-                                }
-
-                                Text(record.previewTitle)
-                                    .font(.system(size: 26, weight: .semibold))
-                                    .lineLimit(4)
-
-                                Text(record.detailText)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            .padding(20)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                        )
-                        .frame(height: 220)
-                }
-                .textSelection(.enabled)
+                LinkDetailPreview(
+                    record: record,
+                    subtitleFontSize: layout.detailSubtitleSize,
+                    footerFontSize: layout.footerFontSize,
+                    iconSize: 112,
+                    height: 240
+                )
             )
         case .files:
             return AnyView(
