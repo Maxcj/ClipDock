@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClipDock 1.2.0 Release Notes</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px 40px;
+        color: #1f2937;
+        background: #ffffff;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      .meta {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 20px 24px;
+        background: #fafafa;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ClipDock 1.2.0</h1>
+    <p class="meta">Release notes for the stable update channel.</p>
+
+    <div class="card">
+      <h2 class="section-title">本次更新</h2>
+      <p>ClipDock 1.2.0 把这一轮 beta 中打磨完成的性能、预览和安全交互改进正式带给所有用户。大历史量搜索更顺滑，文件副本会在后台保存并显示清晰状态，预览和代码详情更轻量，设置里的高风险操作也更明确。</p>
+      <ul>
+        <li>文件副本改为后台异步保存，并显示 <code>pending / cached / failed / skipped</code> 等状态</li>
+        <li>搜索增加归一化索引和输入 debounce，在更大的历史记录中响应更稳定</li>
+        <li>图片详情页避免提前加载原图，预览面板会根据屏幕尺寸自动调整</li>
+        <li>超长代码内容会自动降级为纯文本显示，减少详情页卡顿</li>
+        <li>“重置系统分类”和“清除所有历史记录”使用更清晰的操作样式与确认流程</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">What’s New</h2>
+      <p>ClipDock 1.2.0 brings the performance, preview, and safer workflow refinements from this beta cycle to the stable update channel. Large history search feels smoother, file copies now save in the background with visible cache states, preview and code detail views are lighter, and higher-risk settings actions are clearer before they run.</p>
+      <ul>
+        <li>File copies now save in the background and report <code>pending / cached / failed / skipped</code> states</li>
+        <li>Search uses normalized indexing plus input debounce, keeping larger histories more responsive</li>
+        <li>The image detail view avoids loading the original image up front, and the preview panel adapts to screen size</li>
+        <li>Very long code content automatically falls back to plain text to reduce stutter in the detail view</li>
+        <li>“Reset System Categories” and “Clear All History” now use clearer action styling and confirmation flow</li>
+      </ul>
+    </div>
+  </body>
+</html>
