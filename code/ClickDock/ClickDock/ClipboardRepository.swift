@@ -21,7 +21,7 @@ final class ClipboardRepository {
 
                 if let canonicalRecord = deduplicator.preferredRecord(from: existingRecords) {
                     record = canonicalRecord
-                    self.update(record, with: snapshot)
+                    self.update(record, with: snapshot, isDuplicateCapture: true)
 
                     for duplicate in existingRecords where duplicate.objectID != canonicalRecord.objectID {
                         removeCachedAssets(for: duplicate)
@@ -30,12 +30,13 @@ final class ClipboardRepository {
                 } else {
                     record = ClipboardRecord(context: self.context)
                     record.id = UUID()
-                    record.createdAt = Date()
-                    record.lastUsedAt = nil
+                    let now = Date()
+                    record.createdAt = now
+                    record.lastUsedAt = now
                     record.isPinned = false
                     record.isIgnored = false
                     record.usageCount = 0
-                    self.update(record, with: snapshot)
+                    self.update(record, with: snapshot, isDuplicateCapture: false)
                 }
 
                 try self.context.save()
@@ -69,9 +70,14 @@ final class ClipboardRepository {
         return try context.fetch(request)
     }
 
-    private func update(_ record: ClipboardRecord, with snapshot: ClipboardSnapshot) {
+    private func update(_ record: ClipboardRecord, with snapshot: ClipboardSnapshot, isDuplicateCapture: Bool) {
         let previousKind = record.kind
-        record.updatedAt = Date()
+        let now = Date()
+        record.updatedAt = now
+        if isDuplicateCapture {
+            record.lastUsedAt = now
+            record.usageCount += 1
+        }
         record.contentTypeRaw = snapshot.kind.rawValue
         record.displayText = snapshot.displayText
         record.fullText = snapshot.fullText
@@ -646,4 +652,3 @@ extension Notification.Name {
     static let clipDockTogglePanelRequested = Notification.Name("clipDockTogglePanelRequested")
     static let clipDockHidePanelRequested = Notification.Name("clipDockHidePanelRequested")
 }
-

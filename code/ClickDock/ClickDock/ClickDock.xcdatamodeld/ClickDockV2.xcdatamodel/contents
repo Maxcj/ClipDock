@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
     <entity name="ClipboardRecord" representedClassName="ClipboardRecord" syncable="YES" codeGenerationType="class">
-        <attribute name="contentHash" optional="YES" attributeType="String"/>
+        <attribute name="contentHash" optional="YES" attributeType="String" indexed="YES"/>
         <attribute name="contentTypeRaw" optional="YES" attributeType="String" indexed="YES"/>
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" indexed="YES"/>
         <attribute name="displayText" optional="YES" attributeType="String"/>
@@ -21,7 +21,7 @@
         <attribute name="thumbnailPath" optional="YES" attributeType="String"/>
         <attribute name="isIgnored" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO"/>
         <attribute name="isPinned" optional="NO" attributeType="Boolean" usesScalarValueType="YES" defaultValueString="NO" indexed="YES"/>
-        <attribute name="lastUsedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lastUsedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" indexed="YES"/>
         <attribute name="pinnedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="codeLanguageRaw" optional="YES" attributeType="String" indexed="YES"/>
         <attribute name="codeLineCountValue" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>

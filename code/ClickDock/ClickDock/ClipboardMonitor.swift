@@ -18,7 +18,6 @@ final class ClipboardMonitor: ObservableObject {
     private var timer: Timer?
     private var cleanupTimer: Timer?
     private var lastChangeCount: Int = -1
-    private var lastRecordedHash: String?
     private var suppressionChangeCount: Int?
     private var isProcessingSnapshot = false
 
@@ -33,7 +32,6 @@ final class ClipboardMonitor: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
-        lastRecordedHash = fetchLatestHash()
         lastChangeCount = NSPasteboard.general.changeCount
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.65, repeats: true) { [weak self] _ in
@@ -131,11 +129,6 @@ final class ClipboardMonitor: ObservableObject {
             return
         }
 
-        if snapshot.hash == lastRecordedHash {
-            logClipboardDrop("duplicate content")
-            return
-        }
-
         repository.upsert(
             snapshot: snapshot,
             deduplicator: ClipboardDeduplicator(),
@@ -143,24 +136,12 @@ final class ClipboardMonitor: ObservableObject {
             linkMetadataManager: linkMetadataManager,
             cleanupService: cleanupService
         )
-        lastRecordedHash = snapshot.hash
     }
 
     private func logClipboardDrop(_ reason: String) {
         let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "-"
         let bundleId = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "-"
         NSLog("Clipboard not recorded: \(reason) | app=\(appName) | bundle=\(bundleId)")
-    }
-
-    private func fetchLatestHash() -> String? {
-        let request = NSFetchRequest<ClipboardRecord>(entityName: "ClipboardRecord")
-        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-        request.fetchLimit = 1
-        do {
-            return try context.fetch(request).first?.contentHash
-        } catch {
-            return nil
-        }
     }
 
     private func markSuppression(changeCount: Int) {

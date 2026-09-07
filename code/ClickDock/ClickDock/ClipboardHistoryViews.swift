@@ -155,7 +155,7 @@ struct ClipboardHistorySidebar: View {
                 continue
             }
 
-            let day = calendar.startOfDay(for: record.createdAt ?? Date())
+            let day = calendar.startOfDay(for: record.lastUsedAt ?? record.createdAt ?? Date())
             dayBuckets[day, default: []].append(record)
         }
 

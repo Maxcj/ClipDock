@@ -58,6 +58,7 @@ struct SimpleClipboardWorkspaceView: View {
         request.sortDescriptors = [
             NSSortDescriptor(key: "isPinned", ascending: false),
             NSSortDescriptor(key: "pinnedAt", ascending: false),
+            NSSortDescriptor(key: "lastUsedAt", ascending: false),
             NSSortDescriptor(key: "createdAt", ascending: false),
             NSSortDescriptor(key: "updatedAt", ascending: false)
         ]
