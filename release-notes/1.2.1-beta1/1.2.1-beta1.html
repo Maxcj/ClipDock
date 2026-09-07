@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ClipDock 1.2.1-beta1 Release Notes</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        max-width: 760px;
+        margin: 40px auto;
+        padding: 0 20px 40px;
+        color: #1f2937;
+        background: #ffffff;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      .meta {
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+      .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 20px 24px;
+        background: #fafafa;
+        margin-bottom: 20px;
+      }
+      .section-title {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>ClipDock 1.2.1-beta1</h1>
+    <p class="meta">Release notes for the beta update channel.</p>
+
+    <div class="card">
+      <h2 class="section-title">本次更新</h2>
+      <p>ClipDock 1.2.1-beta1 聚焦剪贴板历史的稳定性和图片预览体验。监控逻辑被拆分为更清晰的服务层，重复复制会把已有内容重新置顶，图片文件预览也更适合处理大文件。</p>
+      <ul>
+        <li>拆分剪贴板监听、捕获、分类、去重、存储、清理和图片处理职责，后续维护更清晰</li>
+        <li>重复复制已有内容时不再新增重复记录，而是更新使用时间并回到列表顶部</li>
+        <li>为内容 hash 和最近使用时间增加数据库索引，让查重和排序更可靠</li>
+        <li>从文件复制图片时使用 ImageIO 生成受限尺寸预览，避免大图片一次性读入内存</li>
+        <li>图片预览第一次点击即可打开，并在屏幕可见区域居中显示</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">What’s New</h2>
+      <p>ClipDock 1.2.1-beta1 focuses on clipboard history reliability and a smoother image preview experience. The monitor has been split into clearer services, duplicate copies now promote existing items, and image file previews are safer for large files.</p>
+      <ul>
+        <li>Split clipboard monitoring, capture, classification, deduplication, storage, cleanup, and image handling into clearer responsibilities</li>
+        <li>Recopying existing content no longer creates duplicate records; it updates the usage time and moves the item back to the top</li>
+        <li>Added database indexes for content hashes and recent usage times to make deduplication and ordering more reliable</li>
+        <li>Image files copied from disk now use ImageIO to create bounded previews instead of loading the whole file into memory</li>
+        <li>Image previews open on the first click and stay centered within the visible screen</li>
+      </ul>
+    </div>
+  </body>
+</html>

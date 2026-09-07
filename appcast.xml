@@ -6,17 +6,6 @@
         <description>ClipDock release feed for Sparkle automatic updates.</description>
         <language>en</language>
         <item>
-            <title>1.2.0</title>
-            <pubDate>Sun, 06 Sep 2026 15:06:16 +0000</pubDate>
-            <link>https://github.com/maxcj/ClipDock</link>
-            <sparkle:fullReleaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.0/1.2.0.html</sparkle:fullReleaseNotesLink>
-            <sparkle:version>30</sparkle:version>
-            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>13.2</sparkle:minimumSystemVersion>
-            <sparkle:releaseNotesLink>https://maxcj.github.io/ClipDock/release-notes/1.2.0/1.2.0.html</sparkle:releaseNotesLink>
-            <enclosure url="https://github.com/maxcj/ClipDock/releases/download/v1.2.0/ClipDock-1.2.0-macOS-universal.zip" length="6201388" type="application/octet-stream" sparkle:edSignature="4LG0aNc/qusR83h00KFjrYIYzYphp4LERQ3eCIiY7PV/LZtFGPj9vNnZYBlWVbnew5Nzy4LvrG1n0RKyScVsDw=="/>
-        </item>
-        <item>
             <title>1.1.0</title>
             <pubDate>Mon, 06 Jul 2026 03:35:29 +0000</pubDate>
             <link>https://github.com/maxcj/ClipDock</link>
