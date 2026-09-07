@@ -25,7 +25,7 @@ struct AsyncDetailImageView: View {
         ZStack(alignment: .topTrailing) {
             previewSurface
 
-            if previewImageForPresentation != nil {
+            if canPresentImage {
                 Button {
                     presentPreviewPanel()
                 } label: {
@@ -57,6 +57,11 @@ struct AsyncDetailImageView: View {
         .frame(height: height ?? fallbackHeight)
         .onHover { hovering in
             isHovering = hovering
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard canPresentImage else { return }
+            presentPreviewPanel()
         }
         .task(id: imagePath) {
             image = nil
@@ -91,19 +96,27 @@ struct AsyncDetailImageView: View {
         image ?? initialImage
     }
 
+    private var canPresentImage: Bool {
+        previewImageForPresentation != nil || imagePath?.isEmpty == false
+    }
+
     private func presentPreviewPanel() {
+        let fallbackImage = previewImageForPresentation
+
+        if let fallbackImage {
+            ImagePreviewPanelController.shared.present(image: fallbackImage)
+        }
+
         guard let imagePath, !imagePath.isEmpty else {
-            if let previewImage = previewImageForPresentation {
-                ImagePreviewPanelController.shared.present(image: previewImage)
-            }
             return
         }
 
+        let maxPreviewPixelSize = max(1_200, min(NSScreen.main?.visibleFrame.width ?? 1_440, NSScreen.main?.visibleFrame.height ?? 900) * 2)
         Task.detached(priority: .userInitiated) {
-            let originalImage = ClipboardImageCache.shared.image(at: imagePath)
+            let previewImage = ClipboardImageCache.shared.downsampledImage(at: imagePath, maxPixelSize: maxPreviewPixelSize)
             await MainActor.run {
-                if let originalImage {
-                    ImagePreviewPanelController.shared.present(image: originalImage)
+                if let previewImage {
+                    ImagePreviewPanelController.shared.present(image: previewImage)
                 }
             }
         }
@@ -172,7 +185,9 @@ final class ImagePreviewPanelController: NSObject {
                 image: image,
                 onClose: { [weak self] in self?.dismiss() }
             )
-            panel.setContentSize(Self.contentSize(for: image))
+            let contentSize = Self.contentSize(for: image)
+            panel.setContentSize(contentSize)
+            Self.center(panel, contentSize: contentSize)
             panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -180,8 +195,9 @@ final class ImagePreviewPanelController: NSObject {
 
         let rootView = ImagePreviewPanelContent(image: image, onClose: { [weak self] in self?.dismiss() })
         let hostingController = NSHostingController(rootView: rootView)
+        let contentSize = Self.contentSize(for: image)
         let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: Self.contentSize(for: image)),
+            contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -194,7 +210,7 @@ final class ImagePreviewPanelController: NSObject {
         panel.level = .floating
         panel.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
         panel.hidesOnDeactivate = false
-        panel.center()
+        Self.center(panel, contentSize: contentSize)
         panel.delegate = self
         self.hostingController = hostingController
         self.panel = panel
@@ -217,6 +233,19 @@ final class ImagePreviewPanelController: NSObject {
         let imageHeight = max(1, image.size.height)
         let scale = min(maxWidth / imageWidth, maxHeight / imageHeight, 1)
         return NSSize(width: imageWidth * scale, height: imageHeight * scale)
+    }
+
+    private static func center(_ panel: NSPanel, contentSize: NSSize) {
+        let screenFrame = panel.screen?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let frameSize = panel.frameRect(forContentRect: NSRect(origin: .zero, size: contentSize)).size
+        let origin = NSPoint(
+            x: screenFrame.midX - frameSize.width / 2,
+            y: screenFrame.midY - frameSize.height / 2
+        )
+        let centeredFrame = NSRect(origin: origin, size: frameSize)
+        panel.setFrame(centeredFrame, display: true)
     }
 }
 

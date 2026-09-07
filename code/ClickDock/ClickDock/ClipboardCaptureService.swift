@@ -63,9 +63,7 @@ final class ClipboardCaptureService {
 
         if isSingleImageFile {
             guard keepsImageHistory else { return .dropped(reason: "image history disabled") }
-            guard let imageData = try? Data(contentsOf: fileURLs[0]),
-                  let image = NSImage(data: imageData) ?? NSImage(contentsOf: fileURLs[0]),
-                  let assets = imageService.saveImageAssets(from: image) else {
+            guard let assets = imageService.saveImageAssets(fromFileAt: fileURLs[0]) else {
                 return .dropped(reason: "failed to save image assets")
             }
 
@@ -79,7 +77,7 @@ final class ClipboardCaptureService {
                 cachedSizeBytes: assets.cachedSizeBytes,
                 sourceAppName: appName,
                 sourceBundleId: bundleId,
-                hash: classifier.hash(kind: .image, data: imageData),
+                hash: classifier.hash(kind: .image, data: imageService.fingerprintData(forFileAt: fileURLs[0])),
                 fileURLs: nil
             ))
         }
