@@ -17,9 +17,10 @@ final class ClipboardMonitor: ObservableObject {
     private let processingQueue = DispatchQueue(label: "cn.maxcj.ClipDock.clipboard.processing", qos: .userInitiated)
     private var timer: Timer?
     private var cleanupTimer: Timer?
-    private var lastChangeCount: Int = -1
+    private var observedChangeCount: Int = -1
     private var suppressionChangeCount: Int?
-    private var isProcessingSnapshot = false
+    private var isProcessing = false
+    private var hasPendingChange = false
 
     init(context: NSManagedObjectContext) {
         self.context = context
@@ -32,7 +33,7 @@ final class ClipboardMonitor: ObservableObject {
 
     func start() {
         guard timer == nil else { return }
-        lastChangeCount = NSPasteboard.general.changeCount
+        observedChangeCount = NSPasteboard.general.changeCount
 
         timer = Timer.scheduledTimer(withTimeInterval: 0.65, repeats: true) { [weak self] _ in
             self?.poll()
@@ -96,11 +97,21 @@ final class ClipboardMonitor: ObservableObject {
     }
 
     private func poll() {
-        guard !isProcessingSnapshot else { return }
         let pasteboard = NSPasteboard.general
-        guard pasteboard.changeCount != lastChangeCount else { return }
-        lastChangeCount = pasteboard.changeCount
-        isProcessingSnapshot = true
+        guard pasteboard.changeCount != observedChangeCount else { return }
+
+        observedChangeCount = pasteboard.changeCount
+        hasPendingChange = true
+        processPendingChangeIfNeeded()
+    }
+
+    private func processPendingChangeIfNeeded() {
+        guard !isProcessing, hasPendingChange else { return }
+
+        hasPendingChange = false
+        isProcessing = true
+        let pasteboard = NSPasteboard.general
+        let capturedChangeCount = observedChangeCount
 
         processingQueue.async { [weak self] in
             guard let self else { return }
@@ -109,21 +120,24 @@ final class ClipboardMonitor: ObservableObject {
 
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
-                    defer { self.isProcessingSnapshot = false }
+                    defer {
+                        self.isProcessing = false
+                        self.processPendingChangeIfNeeded()
+                    }
 
                     switch outcome {
                     case .dropped(let reason):
                         self.logClipboardDrop(reason)
                     case .snapshot(let snapshot):
-                        self.storeIfNeeded(snapshot, pasteboard: pasteboard)
+                        self.storeIfNeeded(snapshot, capturedChangeCount: capturedChangeCount)
                     }
                 }
             }
         }
     }
 
-    private func storeIfNeeded(_ snapshot: ClipboardSnapshot, pasteboard: NSPasteboard) {
-        if let suppressionChangeCount, pasteboard.changeCount == suppressionChangeCount {
+    private func storeIfNeeded(_ snapshot: ClipboardSnapshot, capturedChangeCount: Int) {
+        if let suppressionChangeCount, capturedChangeCount == suppressionChangeCount {
             self.suppressionChangeCount = nil
             logClipboardDrop("suppressed self-copy")
             return

@@ -180,6 +180,10 @@
 "ignorePrivateKeysSubtitle" = "Skip PEM blocks and other clipboard content containing private keys";
 "ignoreLongSensitiveText" = "Ignore long sensitive text";
 "ignoreLongSensitiveTextSubtitle" = "Skip long clipboard text that looks like secret configuration or credential dumps";
+"linkMetadataPrivacy" = "Link Metadata";
+"linkMetadataPrivacySubtitle" = "ClipDock can access copied links to cache website titles and favicons";
+"allowPrivateNetworkLinkMetadata" = "Allow local network links";
+"allowPrivateNetworkLinkMetadataSubtitle" = "Permit metadata requests for localhost, .local, .internal, and private IP addresses";
 "customSensitiveRules" = "Custom Sensitive Rules";
 "customSensitiveRulesSubtitle" = "Add your own keyword or regex rules to skip sensitive clipboard content";
 "manage" = "Manage";

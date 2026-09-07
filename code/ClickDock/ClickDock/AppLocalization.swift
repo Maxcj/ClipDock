@@ -209,6 +209,10 @@ enum AppTextKey: String {
     case ignorePrivateKeysSubtitle
     case ignoreLongSensitiveText
     case ignoreLongSensitiveTextSubtitle
+    case linkMetadataPrivacy
+    case linkMetadataPrivacySubtitle
+    case allowPrivateNetworkLinkMetadata
+    case allowPrivateNetworkLinkMetadataSubtitle
     case customSensitiveRules
     case customSensitiveRulesSubtitle
     case manage

@@ -37,6 +37,7 @@ struct SettingsView: View {
     @AppStorage(ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey) private var ignorePasswordsAndTokens = false
     @AppStorage(ClipboardPrivacyRules.ignorePrivateKeysStorageKey) private var ignorePrivateKeys = false
     @AppStorage(ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey) private var ignoreLongSensitiveText = false
+    @AppStorage(LinkMetadataPrivacyPolicy.allowPrivateNetworkStorageKey) private var allowPrivateNetworkLinkMetadata = false
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
     @AppStorage(ClipboardStorageSummaryStore.lastUpdatedAtDefaultsKey) private var storageSummaryLastUpdatedAt = 0.0
 
@@ -417,6 +418,15 @@ struct SettingsView: View {
                         title: localizer.text(.ignoreLongSensitiveText),
                         subtitle: localizer.text(.ignoreLongSensitiveTextSubtitle),
                         isOn: $ignoreLongSensitiveText
+                    )
+                }
+
+                settingsSection(title: localizer.text(.linkMetadataPrivacy), subtitle: localizer.text(.linkMetadataPrivacySubtitle)) {
+                    settingsToggleRow(
+                        iconName: "network",
+                        title: localizer.text(.allowPrivateNetworkLinkMetadata),
+                        subtitle: localizer.text(.allowPrivateNetworkLinkMetadataSubtitle),
+                        isOn: $allowPrivateNetworkLinkMetadata
                     )
                 }
 

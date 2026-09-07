@@ -180,6 +180,10 @@
 "ignorePrivateKeysSubtitle" = "跳过包含 PEM 私钥块或 private key 的剪贴板内容";
 "ignoreLongSensitiveText" = "忽略较长的敏感文本";
 "ignoreLongSensitiveTextSubtitle" = "跳过看起来像密钥配置或凭据导出的长文本";
+"linkMetadataPrivacy" = "链接元数据";
+"linkMetadataPrivacySubtitle" = "ClipDock 会访问复制的链接，以缓存网站标题和 favicon";
+"allowPrivateNetworkLinkMetadata" = "允许本地网络链接";
+"allowPrivateNetworkLinkMetadataSubtitle" = "允许为 localhost、.local、.internal 和私有 IP 地址请求元数据";
 "customSensitiveRules" = "自定义敏感规则";
 "customSensitiveRulesSubtitle" = "添加你自己的关键词或正则规则，跳过敏感剪贴板内容";
 "manage" = "管理";

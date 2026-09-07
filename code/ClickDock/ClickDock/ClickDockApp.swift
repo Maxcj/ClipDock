@@ -27,8 +27,9 @@ struct ClipDockApp: App {
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
 
     init() {
-        let context = PersistenceController.shared.container.viewContext
-        _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: context))
+        let viewContext = PersistenceController.shared.container.viewContext
+        let clipboardContext = PersistenceController.shared.newBackgroundContext()
+        _clipboardMonitor = StateObject(wrappedValue: ClipboardMonitor(context: clipboardContext))
         UserDefaults.standard.register(defaults: [
             "clipboard.autoHideAfterCopy": false,
             "clipboard.keepImages": true,
@@ -43,17 +44,18 @@ struct ClipDockApp: App {
             ClipboardPrivacyRules.ignoreVerificationCodesStorageKey: false,
             ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey: false,
             ClipboardPrivacyRules.ignorePrivateKeysStorageKey: false,
-            ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey: false
+            ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey: false,
+            LinkMetadataPrivacyPolicy.allowPrivateNetworkStorageKey: false
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
-        ClipboardCategoryManager.bootstrapSystemCategories(context: context)
+        ClipboardCategoryManager.bootstrapSystemCategories(context: viewContext)
         if !UserDefaults.standard.bool(forKey: "clipboard.cachedSizeBytesMigrated") {
-            ClipboardStorageCalculator.rebuildCachedSizes(context: context)
+            ClipboardStorageCalculator.rebuildCachedSizes(context: viewContext)
             UserDefaults.standard.set(true, forKey: "clipboard.cachedSizeBytesMigrated")
         }
         if !UserDefaults.standard.bool(forKey: "clipboard.searchIndexAndFileCacheMigrated") {
-            ClipboardStorageCalculator.backfillSearchIndexAndFileCacheState(context: context)
+            ClipboardStorageCalculator.backfillSearchIndexAndFileCacheState(context: viewContext)
             UserDefaults.standard.set(true, forKey: "clipboard.searchIndexAndFileCacheMigrated")
         }
         let storageSummaryScheduler = StorageSummaryScheduler(container: PersistenceController.shared.container)

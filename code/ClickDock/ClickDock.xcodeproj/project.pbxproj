@@ -18,6 +18,10 @@
 		860000000000000000000005 /* ClipboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860000000000000000000015 /* ClipboardRepository.swift */; };
 		860000000000000000000006 /* ClipboardCleanupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860000000000000000000016 /* ClipboardCleanupService.swift */; };
 		860000000000000000000007 /* ClipboardImageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860000000000000000000017 /* ClipboardImageService.swift */; };
+		860000000000000000000008 /* LinkMetadataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860000000000000000000018 /* LinkMetadataManager.swift */; };
+		860000000000000000000009 /* LinkMetadataFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 860000000000000000000019 /* LinkMetadataFetcher.swift */; };
+		86000000000000000000000A /* ClipboardFileAssetCopyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86000000000000000000001A /* ClipboardFileAssetCopyManager.swift */; };
+		86000000000000000000000B /* ClipboardNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86000000000000000000001B /* ClipboardNotifications.swift */; };
 		A10000000000000000000004 /* SparkleUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* SparkleUpdateManager.swift */; };
 		A10000000000000000000005 /* SparkleUpdateTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* SparkleUpdateTypes.swift */; };
 		A20000000000000000000002 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A20000000000000000000003 /* Sparkle */; };
@@ -62,6 +66,10 @@
 		860000000000000000000015 /* ClipboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardRepository.swift; sourceTree = "<group>"; };
 		860000000000000000000016 /* ClipboardCleanupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardCleanupService.swift; sourceTree = "<group>"; };
 		860000000000000000000017 /* ClipboardImageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardImageService.swift; sourceTree = "<group>"; };
+		860000000000000000000018 /* LinkMetadataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkMetadataManager.swift; sourceTree = "<group>"; };
+		860000000000000000000019 /* LinkMetadataFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkMetadataFetcher.swift; sourceTree = "<group>"; };
+		86000000000000000000001A /* ClipboardFileAssetCopyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardFileAssetCopyManager.swift; sourceTree = "<group>"; };
+		86000000000000000000001B /* ClipboardNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardNotifications.swift; sourceTree = "<group>"; };
 		A10000000000000000000001 /* SparkleUpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdateManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000006 /* SparkleUpdateTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdateTypes.swift; sourceTree = "<group>"; };
 		A30000000000000000000002 /* ClipboardColorSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardColorSupport.swift; sourceTree = "<group>"; };
@@ -175,8 +183,12 @@
 				860000000000000000000013 /* ClipboardClassifier.swift */,
 				860000000000000000000014 /* ClipboardDeduplicator.swift */,
 				860000000000000000000015 /* ClipboardRepository.swift */,
+				86000000000000000000001A /* ClipboardFileAssetCopyManager.swift */,
+				860000000000000000000018 /* LinkMetadataManager.swift */,
+				860000000000000000000019 /* LinkMetadataFetcher.swift */,
 				860000000000000000000016 /* ClipboardCleanupService.swift */,
 				860000000000000000000017 /* ClipboardImageService.swift */,
+				86000000000000000000001B /* ClipboardNotifications.swift */,
 				C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */,
 				E89D7F26BA4E6CEA2B2A1D69 /* ClipboardFileSupport.swift */,
 				9B5C9AA8C6D9DBC11E249859 /* ClipboardPrivacyRules.swift */,
@@ -348,8 +360,12 @@
 				860000000000000000000003 /* ClipboardClassifier.swift in Sources */,
 				860000000000000000000004 /* ClipboardDeduplicator.swift in Sources */,
 				860000000000000000000005 /* ClipboardRepository.swift in Sources */,
+				86000000000000000000000A /* ClipboardFileAssetCopyManager.swift in Sources */,
+				860000000000000000000008 /* LinkMetadataManager.swift in Sources */,
+				860000000000000000000009 /* LinkMetadataFetcher.swift in Sources */,
 				860000000000000000000006 /* ClipboardCleanupService.swift in Sources */,
 				860000000000000000000007 /* ClipboardImageService.swift in Sources */,
+				86000000000000000000000B /* ClipboardNotifications.swift in Sources */,
 				D93A11052FF2000100A1B2C3 /* ClipboardSupport.swift in Sources */,
 				D93A11032FF2000100A1B2C3 /* WindowSupport.swift in Sources */,
 				D93A11012FF2000100A1B2C3 /* AppLocalization.swift in Sources */,
