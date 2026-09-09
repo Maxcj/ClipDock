@@ -74,6 +74,38 @@ Requirements:
 
 Open `code/ClipDock/ClipDock.xcodeproj` in Xcode and build the `ClipDock` scheme.
 
+### Windows Edition
+
+The Windows MVP lives in `windows/` and follows the architecture in `code/ClipDock Windows 平台开发指南.md`.
+
+Requirements:
+
+- Windows 11 x64
+- Visual Studio with WinUI 3 / Windows App SDK workloads
+- .NET 10 SDK
+
+Build and test:
+
+```powershell
+dotnet restore windows/ClipDock.sln
+dotnet build windows/ClipDock.sln --configuration Release
+dotnet test windows/ClipDock.sln --configuration Release
+```
+
+Package:
+
+```powershell
+pwsh scripts/publish-windows.ps1 -Runtime win-x64 -Configuration Release
+```
+
+On macOS or Linux, use:
+
+```bash
+scripts/publish-windows.sh win-x64 Release
+```
+
+The package output is written to `dist/windows/win-x64`.
+
 ## Release Notes
 
 Release notes for published versions live under:
@@ -82,7 +114,9 @@ Release notes for published versions live under:
 
 ## Project Structure
 
-- `code/ClipDock/ClipDock/` application source
+- `code/ClipDock/ClipDock/` macOS application source
+- `windows/` Windows Edition solution
+- `specs/` cross-platform behavior specs
 - `docs/` GitHub Pages assets and appcast feed
 - `scripts/` helper scripts for release publishing
 - `icon/` app icon source assets

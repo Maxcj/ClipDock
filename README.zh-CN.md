@@ -72,6 +72,38 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 
 在 Xcode 中打开 `code/ClipDock/ClipDock.xcodeproj`，然后构建 `ClipDock` scheme。
 
+### Windows Edition
+
+Windows MVP 位于 `windows/`，架构遵循 `code/ClipDock Windows 平台开发指南.md`。
+
+要求：
+
+- Windows 11 x64
+- 安装 WinUI 3 / Windows App SDK 工作负载的 Visual Studio
+- .NET 10 SDK
+
+构建与测试：
+
+```powershell
+dotnet restore windows/ClipDock.sln
+dotnet build windows/ClipDock.sln --configuration Release
+dotnet test windows/ClipDock.sln --configuration Release
+```
+
+打包：
+
+```powershell
+pwsh scripts/publish-windows.ps1 -Runtime win-x64 -Configuration Release
+```
+
+在 macOS 或 Linux 上使用：
+
+```bash
+scripts/publish-windows.sh win-x64 Release
+```
+
+打包产物会输出到 `dist/windows/win-x64`。
+
 ## 发布说明
 
 已发布版本的说明存放在：
@@ -80,7 +112,9 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 
 ## 项目结构
 
-- `code/ClipDock/ClipDock/` 应用源码
+- `code/ClipDock/ClipDock/` macOS 应用源码
+- `windows/` Windows Edition 解决方案
+- `specs/` 跨平台行为规范
 - `docs/` GitHub Pages 资源和 appcast 订阅文件
 - `scripts/` 发布相关辅助脚本
 - `icon/` 应用图标源文件

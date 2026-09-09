@@ -66,3 +66,11 @@ fastlane/test_output
 
 # Local packaging outputs
 dist/
+
+# .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.dotnet/

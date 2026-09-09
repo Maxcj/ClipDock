@@ -1,0 +1,39 @@
+name: Windows Build
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore windows/ClipDock.sln
+
+      - name: Build
+        run: dotnet build windows/ClipDock.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test windows/ClipDock.sln --configuration Release --no-build
+
+      - name: Publish win-x64 package
+        run: pwsh scripts/publish-windows.ps1 -Runtime win-x64 -Configuration Release
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ClipDock-Windows-win-x64
+          path: dist/windows/win-x64
