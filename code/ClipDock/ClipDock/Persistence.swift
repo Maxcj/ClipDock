@@ -17,7 +17,7 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "ClickDock")
+        container = NSPersistentContainer(name: "ClipDock")
         if inMemory {
             container.persistentStoreDescriptions.first!.url = URL(fileURLWithPath: "/dev/null")
         }

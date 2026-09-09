@@ -814,10 +814,10 @@ categoryRule
 发布前开始使用 versioned CoreData model：
 
 ```txt
-ClickDock.xcdatamodeld
-├── ClickDock_v1.xcdatamodel
-├── ClickDock_v2.xcdatamodel
-└── current version = ClickDock_v2
+ClipDock.xcdatamodeld
+├── ClipDock_v1.xcdatamodel
+├── ClipDock_v2.xcdatamodel
+└── current version = ClipDock_v2
 ```
 
 并保留轻量迁移配置：

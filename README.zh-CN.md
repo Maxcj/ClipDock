@@ -70,7 +70,7 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 - macOS 13.2 或更高版本
 - Xcode 14.3 或更高版本
 
-在 Xcode 中打开 `code/ClickDock/ClickDock.xcodeproj`，然后构建 `ClickDock` scheme。
+在 Xcode 中打开 `code/ClipDock/ClipDock.xcodeproj`，然后构建 `ClipDock` scheme。
 
 ## 发布说明
 
@@ -80,7 +80,7 @@ ClipDock 使用 [Sparkle](https://sparkle-project.org/) 提供自动更新能力
 
 ## 项目结构
 
-- `code/ClickDock/ClickDock/` 应用源码
+- `code/ClipDock/ClipDock/` 应用源码
 - `docs/` GitHub Pages 资源和 appcast 订阅文件
 - `scripts/` 发布相关辅助脚本
 - `icon/` 应用图标源文件
