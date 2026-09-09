@@ -3,8 +3,8 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-project_path="${repo_root}/code/ClickDock/ClickDock.xcodeproj"
-scheme="ClickDock"
+project_path="${repo_root}/code/ClipDock/ClipDock.xcodeproj"
+scheme="ClipDock"
 configuration="Release"
 derived_data_path="${repo_root}/.build-release"
 dist_dir="${repo_root}/dist"

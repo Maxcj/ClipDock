@@ -72,7 +72,7 @@ Requirements:
 - macOS 13.2 or later
 - Xcode 14.3 or later
 
-Open `code/ClickDock/ClickDock.xcodeproj` in Xcode and build the `ClickDock` scheme.
+Open `code/ClipDock/ClipDock.xcodeproj` in Xcode and build the `ClipDock` scheme.
 
 ## Release Notes
 
@@ -82,7 +82,7 @@ Release notes for published versions live under:
 
 ## Project Structure
 
-- `code/ClickDock/ClickDock/` application source
+- `code/ClipDock/ClipDock/` application source
 - `docs/` GitHub Pages assets and appcast feed
 - `scripts/` helper scripts for release publishing
 - `icon/` app icon source assets

@@ -1,6 +1,6 @@
 //
 //  KeyboardShortcutsSupport.swift
-//  ClickDock
+//  ClipDock
 //
 
 import SwiftUI
