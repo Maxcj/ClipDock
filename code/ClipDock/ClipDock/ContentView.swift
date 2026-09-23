@@ -12,6 +12,7 @@ struct ContentView: View {
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var rawSearchText = ""
     @State private var debouncedSearchText = ""
@@ -21,6 +22,7 @@ struct ContentView: View {
     @State private var hasConfiguredWindow = false
     @State private var windowRef: NSWindow?
     @AppStorage(ClipboardPrivacyRules.excludedBundleIdentifiersVersionStorageKey) private var excludedBundleIdentifiersVersion = 0
+    @AppStorage(AppAppearancePreference.storageKey) private var appearancePreference = AppAppearancePreference.system.rawValue
 
     var body: some View {
         GeometryReader { proxy in
@@ -45,8 +47,12 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
                 ZStack {
-                    Rectangle().fill(.ultraThinMaterial)
-                    Rectangle().fill(Color.white.opacity(0.18))
+                    if colorScheme == .dark {
+                        Rectangle().fill(windowInactiveBackgroundColor)
+                    } else {
+                        Rectangle().fill(.ultraThinMaterial)
+                        Rectangle().fill(windowOverlayColor)
+                    }
                 }
             )
             .ignoresSafeArea()
@@ -59,6 +65,7 @@ struct ContentView: View {
                 guard !hasConfiguredWindow else { return }
                 hasConfiguredWindow = true
                 configureFloatingWindow(window)
+                applyAppearance(to: window)
             }
         )
         .task {
@@ -90,6 +97,17 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .clipDockHidePanelRequested)) { _ in
             hideMainWindow()
         }
+        .onChange(of: appearancePreference) { _ in
+            syncFloatingWindowAppearance()
+        }
+    }
+
+    private var windowOverlayColor: Color {
+        Color.white.opacity(0.18)
+    }
+
+    private var windowInactiveBackgroundColor: Color {
+        Color(nsColor: NSColor(calibratedWhite: 0.18, alpha: 1.0))
     }
 
     private func configureFloatingWindow(_ window: NSWindow) {
@@ -121,6 +139,23 @@ struct ContentView: View {
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
+    }
+
+    private func syncFloatingWindowAppearance() {
+        guard let window = windowRef else { return }
+        applyAppearance(to: window)
+    }
+
+    private func applyAppearance(to window: NSWindow) {
+        let preference = AppAppearancePreference.resolve(from: appearancePreference)
+        switch preference {
+        case .system:
+            window.appearance = nil
+        case .light:
+            window.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            window.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     private func toggleMainWindowVisibility() {

@@ -8,6 +8,7 @@ import AppKit
 
 struct ClipboardDetailInspector: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     @StateObject private var fileStatusLoader = FileStatusViewModel()
     let record: ClipboardRecord?
@@ -26,7 +27,7 @@ struct ClipboardDetailInspector: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
                 Divider()
-                    .overlay(Color.black.opacity(0.06))
+                    .overlay(detailDividerColor)
 
                 if record.kind == .files {
                     fileStateSection(for: record)
@@ -78,12 +79,12 @@ struct ClipboardDetailInspector: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.sourceAppDisplayName)
                     .font(.system(size: layout.detailLabelSize, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(detailPrimaryTextColor)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(record.kind.title)
                     .font(.system(size: layout.footerFontSize))
-                    .foregroundStyle(record.kind.accent)
+                    .foregroundStyle(detailAccentColor(for: record))
             }
 
             Spacer()
@@ -101,15 +102,16 @@ struct ClipboardDetailInspector: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06), lineWidth: 1)
                 )
         } else {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(record.kind.accent.opacity(0.12))
+                .opacity(colorScheme == .dark ? 0.82 : 1.0)
                 .overlay(
                     Image(systemName: record.kind == .link ? "globe" : "app.dashed")
                         .font(.system(size: 18, weight: .regular))
-                        .foregroundStyle(record.kind.accent)
+                        .foregroundStyle(detailAccentColor(for: record))
                 )
                 .frame(width: size, height: size)
         }
@@ -196,12 +198,12 @@ struct ClipboardDetailInspector: View {
             .frame(height: layout.heroImageHeight)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(0.16))
+                    .fill(detailImageBackgroundColor)
             )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.18), lineWidth: 1)
             )
     }
 
@@ -248,11 +250,11 @@ struct ClipboardDetailInspector: View {
                     )
                 }
                 .padding(14)
-                .background(Color.white.opacity(0.14))
+                .background(detailPanelBackgroundColor)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                        .stroke(detailBorderColor, lineWidth: 1)
                 )
             } else if fileStatusLoader.isLoading {
                 loadingStateView
@@ -351,7 +353,7 @@ struct ClipboardDetailInspector: View {
 
             Text(value)
                 .font(.system(size: layout.detailValueSize, weight: .medium))
-                .foregroundStyle(.primary)
+                .foregroundStyle(detailPrimaryTextColor)
                 .multilineTextAlignment(.trailing)
         }
     }
@@ -402,24 +404,58 @@ struct ClipboardDetailInspector: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .font(.system(size: layout.detailButtonSize, weight: .medium))
-            .foregroundStyle(isDestructive ? Color.red : .primary)
+            .foregroundStyle(isDestructive ? destructiveButtonTextColor : detailPrimaryTextColor)
             .frame(maxWidth: .infinity)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
             .allowsTightening(true)
             .frame(height: layout.detailActionHeight)
-            .background(Color.white.opacity(0.20))
+            .background(detailButtonBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(detailBorderColor, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
     }
+
+    private var detailDividerColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+    }
+
+    private var detailPanelBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.14)
+    }
+
+    private var detailButtonBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.20)
+    }
+
+    private var detailImageBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.16)
+    }
+
+    private var detailBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var detailPrimaryTextColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.88) : Color.primary
+    }
+
+    private func detailAccentColor(for record: ClipboardRecord) -> Color {
+        colorScheme == .dark ? record.kind.accent.opacity(0.78) : record.kind.accent
+    }
+
+    private var destructiveButtonTextColor: Color {
+        colorScheme == .dark ? Color.red.opacity(0.62) : Color.red
+    }
 }
 
 struct ClipboardDetailMetaRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     let value: String
     let layout: SimpleClipboardLayout
@@ -435,7 +471,7 @@ struct ClipboardDetailMetaRow: View {
 
             Text(value)
                 .font(.system(size: layout.detailValueSize, weight: .medium))
-                .foregroundStyle(.primary)
+                .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.88) : Color.primary)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -487,6 +523,8 @@ final class FileStatusViewModel: ObservableObject {
 }
 
 struct SimpleFilterChip: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     let symbolName: String
     let accentColor: Color
@@ -502,21 +540,25 @@ struct SimpleFilterChip: View {
                 .fixedSize(horizontal: true, vertical: false)
         }
         .font(.system(size: layout.chipTextSize, weight: isSelected ? .semibold : .medium))
-        .foregroundStyle(accentColor)
+        .foregroundStyle(displayAccentColor)
         .padding(.horizontal, layout.chipPaddingX)
         .padding(.vertical, layout.chipVerticalPadding)
         .fixedSize(horizontal: true, vertical: false)
-        .background(isSelected ? AnyShapeStyle(accentColor.opacity(0.10)) : AnyShapeStyle(Color.clear))
+        .background(isSelected ? AnyShapeStyle(displayAccentColor.opacity(colorScheme == .dark ? 0.12 : 0.10)) : AnyShapeStyle(Color.clear))
         .clipShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous))
         .overlay(
             Group {
                 if isSelected {
                     RoundedRectangle(cornerRadius: layout.chipCornerRadius, style: .continuous)
-                        .stroke(accentColor.opacity(0.26), lineWidth: 1)
+                        .stroke(displayAccentColor.opacity(colorScheme == .dark ? 0.20 : 0.26), lineWidth: 1)
                 }
             }
         )
         .shadow(color: isSelected ? Color.black.opacity(0.03) : .clear, radius: 2, x: 0, y: 1)
+    }
+
+    private var displayAccentColor: Color {
+        colorScheme == .dark ? accentColor.opacity(0.78) : accentColor
     }
 }

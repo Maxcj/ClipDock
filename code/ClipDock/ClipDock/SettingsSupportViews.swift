@@ -120,6 +120,8 @@ struct SettingsCloseOverlay: View {
 }
 
 struct SettingsPreferenceRow<Accessory: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let iconName: String
     let title: String
     let subtitle: String
@@ -148,7 +150,7 @@ struct SettingsPreferenceRow<Accessory: View>: View {
         HStack(alignment: .center, spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.black.opacity(isDimmed ? 0.02 : 0.04))
+                    .fill(Color.primary.opacity(isDimmed ? 0.02 : 0.04))
 
                 Image(systemName: iconName)
                     .font(.system(size: 15, weight: .regular))
@@ -229,21 +231,32 @@ struct DestructivePillButtonStyle: ButtonStyle {
 }
 
 struct SettingsSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 12, weight: .medium))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.white.opacity(configuration.isPressed ? 0.56 : 0.80))
+            .background(secondaryButtonBackground(isPressed: configuration.isPressed))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.primary.opacity(colorScheme == .dark ? 0.16 : 0.08), lineWidth: 1)
             )
+    }
+
+    private func secondaryButtonBackground(isPressed: Bool) -> Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(isPressed ? 0.10 : 0.16)
+        }
+        return Color.white.opacity(isPressed ? 0.56 : 0.80)
     }
 }
 
 struct SettingsTabCard<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let content: Content
 
     init(@ViewBuilder content: () -> Content) {
@@ -261,11 +274,11 @@ struct SettingsTabCard<Content: View>: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(Color.white.opacity(0.16))
+                        .fill(colorScheme == .dark ? Color.black.opacity(0.10) : Color.white.opacity(0.16))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(Color.white.opacity(0.34), lineWidth: 1)
+                        .stroke(Color.white.opacity(colorScheme == .dark ? 0.12 : 0.34), lineWidth: 1)
                 )
         )
         .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)

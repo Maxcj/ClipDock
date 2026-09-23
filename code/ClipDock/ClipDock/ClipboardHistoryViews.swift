@@ -10,6 +10,7 @@ import AppKit
 struct ClipboardHistorySidebar: View {
     @Environment(\.appLocalizer) private var localizer
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var searchText: String
     @Binding var categorySelection: ClipboardCategorySelection
     let activeSelection: ClipboardCategorySelection
@@ -67,7 +68,7 @@ struct ClipboardHistorySidebar: View {
                             HStack(spacing: 0) {
                                 Text(verbatim: section.title)
                                     .font(.system(size: layout.sectionLabelSize, weight: .medium))
-                                    .foregroundColor(Color.black.opacity(0.54))
+                                    .foregroundColor(sectionLabelColor)
 
                                 Spacer(minLength: 0)
                             }
@@ -236,10 +237,10 @@ struct ClipboardHistorySidebar: View {
         .frame(height: layout.searchHeight)
         .background(
             RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                .fill(Color.white.opacity(0.26))
+                .fill(controlBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                        .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                        .stroke(controlBorderColor, lineWidth: 1)
                 )
         )
     }
@@ -254,10 +255,10 @@ struct ClipboardHistorySidebar: View {
                 .frame(width: layout.searchHeight, height: layout.searchHeight)
                 .background(
                     RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.18))
+                        .fill(controlBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: layout.searchCornerRadius, style: .continuous)
-                                .stroke(Color.black.opacity(0.07), lineWidth: 1)
+                                .stroke(controlBorderColor, lineWidth: 1)
                         )
                 )
         }
@@ -294,10 +295,23 @@ struct ClipboardHistorySidebar: View {
         return formatter
     }()
 
+    private var sectionLabelColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.54) : Color.black.opacity(0.54)
+    }
+
+    private var controlBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.07)
+    }
+
+    private var controlBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.26)
+    }
+
 }
 
 struct ClipboardHistoryRow: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.colorScheme) private var colorScheme
     let record: ClipboardRecord
     let isSelected: Bool
     let layout: SimpleClipboardLayout
@@ -349,7 +363,7 @@ struct ClipboardHistoryRow: View {
             Button(action: onTogglePin) {
                 Image(systemName: record.isPinned ? "pin.fill" : "pin")
                     .font(.system(size: layout.rowActionIconSize, weight: .semibold))
-                    .foregroundStyle(record.isPinned ? record.kind.accent : .secondary)
+                    .foregroundStyle(record.isPinned ? rowAccentColor : .secondary)
                     .frame(width: layout.rowActionSize, height: layout.rowActionSize)
                     .padding(.trailing, layout.rowPaddingX)
             }
@@ -359,11 +373,11 @@ struct ClipboardHistoryRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .circular)
-                .fill(isSelected ? Color(red: 0.91, green: 0.95, blue: 1.0).opacity(0.64) : Color.white.opacity(0.12))
+                .fill(rowBackgroundColor)
                 .overlay(
                     RoundedRectangle(cornerRadius: layout.rowCornerRadius, style: .circular)
                         .strokeBorder(
-                            isSelected ? Color(red: 0.24, green: 0.54, blue: 0.99).opacity(0.88) : Color.black.opacity(0.05),
+                            rowBorderColor,
                             lineWidth: 1
                         )
                 )
@@ -394,12 +408,12 @@ struct ClipboardHistoryRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(record.previewTitle)
                     .font(.system(size: layout.rowTitleSize, weight: .medium))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(rowTitleColor)
                     .lineLimit(2)
 
                 Text(record.rowSubtitle)
                     .font(.system(size: layout.rowSubtitleSize))
-                    .foregroundStyle(record.kind == .link ? record.kind.accent : .secondary)
+                    .foregroundStyle(record.kind == .link ? rowAccentColor : rowSecondaryTextColor)
                     .lineLimit(1)
             }
 
@@ -417,7 +431,7 @@ struct ClipboardHistoryRow: View {
 
                 Text(record.sourceAppDisplayName)
                     .font(.system(size: layout.rowMetaSize + 1, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(rowSecondaryTextColor)
                     .lineLimit(1)
             }
 
@@ -426,7 +440,7 @@ struct ClipboardHistoryRow: View {
             HStack(spacing: 10) {
                 Text(record.historyRowTimeLabel)
                     .font(.system(size: layout.rowMetaSize + 1))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(rowSecondaryTextColor)
                     .lineLimit(1)
                     .frame(width: layout.rowTimeWidth, alignment: .trailing)
 
@@ -436,11 +450,11 @@ struct ClipboardHistoryRow: View {
                     } else {
                         Image(systemName: record.kind.symbolName)
                             .font(.system(size: layout.rowTagSize, weight: .semibold))
-                            .foregroundStyle(record.kind.accent)
+                            .foregroundStyle(rowAccentColor)
 
                         Text(record.kind.title)
                             .font(.system(size: layout.rowTagSize, weight: .medium))
-                            .foregroundStyle(record.kind.accent)
+                            .foregroundStyle(rowAccentColor)
                             .lineLimit(1)
                     }
                 }
@@ -458,7 +472,7 @@ struct ClipboardHistoryRow: View {
             websiteThumbnail(icon)
         } else if record.kind == .code {
             RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
-                .fill(Color.white.opacity(0.18))
+                .fill(thumbnailBackgroundColor)
                 .overlay(
                     Image(systemName: "curlybraces")
                         .font(.system(size: layout.rowFileIconSize + 4, weight: .semibold))
@@ -474,7 +488,7 @@ struct ClipboardHistoryRow: View {
 
     private func websiteThumbnail(_ icon: NSImage) -> some View {
         RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
-            .fill(Color.white.opacity(0.18))
+            .fill(thumbnailBackgroundColor)
             .overlay(
                 Image(nsImage: icon)
                     .resizable()
@@ -484,7 +498,7 @@ struct ClipboardHistoryRow: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(thumbnailBorderColor, lineWidth: 1)
             )
             .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
     }
@@ -494,7 +508,7 @@ struct ClipboardHistoryRow: View {
             .fill(color.color)
             .overlay(
                 RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(thumbnailBorderColor, lineWidth: 1)
             )
             .frame(width: layout.rowImagePreviewWidth, height: layout.rowImagePreviewHeight)
     }
@@ -508,13 +522,13 @@ struct ClipboardHistoryRow: View {
             .clipShape(RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: layout.rowImagePreviewCornerRadius, style: .continuous)
-                    .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.20), lineWidth: 1)
             )
     }
 
     private var fileThumbnail: some View {
         RoundedRectangle(cornerRadius: layout.rowFilePreviewCornerRadius, style: .continuous)
-            .fill(Color.white.opacity(0.18))
+            .fill(thumbnailBackgroundColor)
             .overlay(
                 Group {
                     if let icon = record.fileIconImage {
@@ -550,7 +564,7 @@ struct ClipboardHistoryRow: View {
         } else {
             Image(systemName: "doc")
                 .font(.system(size: layout.rowTagSize, weight: .semibold))
-                .foregroundStyle(record.kind.accent)
+                .foregroundStyle(rowAccentColor)
         }
     }
 
@@ -558,9 +572,10 @@ struct ClipboardHistoryRow: View {
         ZStack {
             RoundedRectangle(cornerRadius: layout.badgeCornerRadius, style: .continuous)
                 .fill(record.kind.accent.opacity(0.12))
+                .opacity(colorScheme == .dark ? 0.82 : 1.0)
             Image(systemName: record.kind.symbolName)
                 .font(.system(size: layout.badgeIconSize, weight: .semibold))
-                .foregroundStyle(record.kind.accent)
+                .foregroundStyle(rowAccentColor)
         }
         .frame(width: layout.badgeSize, height: layout.badgeSize)
     }
@@ -576,7 +591,7 @@ struct ClipboardHistoryRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: max(4, size * 0.25), style: .continuous)
-                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.06), lineWidth: 1)
                 )
         } else {
             ZStack {
@@ -588,5 +603,41 @@ struct ClipboardHistoryRow: View {
             }
             .frame(width: size, height: size)
         }
+    }
+
+    private var rowBackgroundColor: Color {
+        if isSelected {
+            return colorScheme == .dark
+                ? Color.accentColor.opacity(0.14)
+                : Color(red: 0.91, green: 0.95, blue: 1.0).opacity(0.64)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.12)
+    }
+
+    private var rowBorderColor: Color {
+        if isSelected {
+            return Color(red: 0.24, green: 0.54, blue: 0.99).opacity(colorScheme == .dark ? 0.48 : 0.88)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)
+    }
+
+    private var thumbnailBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.18)
+    }
+
+    private var thumbnailBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var rowTitleColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.86) : Color.primary
+    }
+
+    private var rowSecondaryTextColor: Color {
+        colorScheme == .dark ? Color.secondary.opacity(0.82) : Color.secondary
+    }
+
+    private var rowAccentColor: Color {
+        colorScheme == .dark ? record.kind.accent.opacity(0.78) : record.kind.accent
     }
 }

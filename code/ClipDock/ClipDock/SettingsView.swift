@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var loginItemManager: LoginItemManager
     @EnvironmentObject private var sparkleUpdateManager: SparkleUpdateManager
     @State private var activeTab: SettingsTab = .general
@@ -39,6 +40,7 @@ struct SettingsView: View {
     @AppStorage(ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey) private var ignoreLongSensitiveText = false
     @AppStorage(LinkMetadataPrivacyPolicy.allowPrivateNetworkStorageKey) private var allowPrivateNetworkLinkMetadata = false
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
+    @AppStorage(AppAppearancePreference.storageKey) private var appearancePreference = AppAppearancePreference.system.rawValue
     @AppStorage(ClipboardStorageSummaryStore.lastUpdatedAtDefaultsKey) private var storageSummaryLastUpdatedAt = 0.0
 
     private var automaticCheckForUpdatesBinding: Binding<Bool> {
@@ -80,7 +82,7 @@ struct SettingsView: View {
                         .frame(width: layout.sidebarWidth)
 
                     Rectangle()
-                        .fill(Color.black.opacity(0.06))
+                        .fill(settingsDividerColor)
                         .frame(width: 1)
 
                     ScrollView(.vertical, showsIndicators: false) {
@@ -94,8 +96,8 @@ struct SettingsView: View {
                     .background(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(0.98),
-                                Color(red: 0.97, green: 0.98, blue: 1.0)
+                                settingsContentGradientStart,
+                                settingsContentGradientEnd
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -113,7 +115,7 @@ struct SettingsView: View {
                             LinearGradient(
                                 colors: [
                                     Color.white.opacity(0.30),
-                                    Color.white.opacity(0.10)
+                                    Color.white.opacity(colorScheme == .dark ? 0.04 : 0.10)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -125,7 +127,7 @@ struct SettingsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: layout.windowCornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: layout.windowCornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(0.42), lineWidth: 1)
+                        .stroke(settingsHairlineColor, lineWidth: 1)
                 )
                 .padding(layout.windowPadding)
 
@@ -154,6 +156,7 @@ struct SettingsView: View {
             if retentionValue <= 0 {
                 retentionValue = 7
             }
+            syncSettingsWindowAppearance()
         }
         .onChange(of: startAtLogin) { newValue in
             guard newValue != loginItemManager.isEnabled else { return }
@@ -164,6 +167,9 @@ struct SettingsView: View {
             if newValue == .storage {
                 storageSummaryLoader.load(context: viewContext)
             }
+        }
+        .onChange(of: appearancePreference) { _ in
+            syncSettingsWindowAppearance()
         }
         .onReceive(NotificationCenter.default.publisher(for: .clipDockStorageSummaryDidChange)) { _ in
             if activeTab == .storage {
@@ -236,6 +242,24 @@ struct SettingsView: View {
         window.standardWindowButton(.closeButton)?.isHidden = true
         window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.standardWindowButton(.zoomButton)?.isHidden = true
+        applyAppearance(to: window)
+    }
+
+    private func syncSettingsWindowAppearance() {
+        guard let window = windowRef else { return }
+        applyAppearance(to: window)
+    }
+
+    private func applyAppearance(to window: NSWindow) {
+        let preference = AppAppearancePreference.resolve(from: appearancePreference)
+        switch preference {
+        case .system:
+            window.appearance = nil
+        case .light:
+            window.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            window.appearance = NSAppearance(named: .darkAqua)
+        }
     }
 
     private func activateAppIfNeeded() {
@@ -292,8 +316,19 @@ struct SettingsView: View {
         .padding(.vertical, layout.sidebarPadding)
         .background(
             ZStack {
-                Rectangle().fill(.ultraThinMaterial)
-                Rectangle().fill(Color.white.opacity(0.16))
+                if colorScheme == .dark {
+                    LinearGradient(
+                        colors: [
+                            settingsContentGradientStart,
+                            settingsContentGradientEnd
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Rectangle().fill(settingsSidebarOverlayColor)
+                }
             }
         )
     }
@@ -334,6 +369,23 @@ struct SettingsView: View {
                     ) {
                         Picker("", selection: $languagePreference) {
                             ForEach(AppLanguagePreference.allCases) { option in
+                                Text(localizedTitle(for: option)).tag(option.rawValue)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 132)
+                    }
+
+                    Divider().padding(.leading, 52)
+
+                    settingsValueRow(
+                        iconName: "circle.lefthalf.filled",
+                        title: localizer.text(.appearance),
+                        subtitle: localizer.text(.appearanceSubtitle)
+                    ) {
+                        Picker("", selection: $appearancePreference) {
+                            ForEach(AppAppearancePreference.allCases) { option in
                                 Text(localizedTitle(for: option)).tag(option.rawValue)
                             }
                         }
@@ -746,17 +798,17 @@ struct SettingsView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(isSelected ? tab.tint.opacity(0.16) : Color.white.opacity(0.0))
+                    .fill(isSelected ? tab.tint.opacity(0.16) : Color.clear)
 
                 Image(systemName: tab.iconName)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.62))
+                    .foregroundStyle(isSelected ? tab.tint : settingsSidebarIconColor)
             }
             .frame(width: 32, height: 32)
 
             Text(localizer.text(tab.titleKey))
                 .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(isSelected ? tab.tint : Color.black.opacity(0.80))
+                .foregroundStyle(isSelected ? tab.tint : settingsSidebarTextColor)
 
             Spacer(minLength: 0)
         }
@@ -799,11 +851,11 @@ struct SettingsView: View {
                     .fill(.ultraThinMaterial)
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(0.12))
+                            .fill(settingsCardOverlayColor)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.white.opacity(0.38), lineWidth: 1)
+                            .stroke(settingsHairlineColor, lineWidth: 1)
                     )
             )
         }
@@ -854,7 +906,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
-                        .background(Color.black.opacity(0.04))
+                        .background(Color.primary.opacity(0.04))
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                     Image(systemName: "chevron.right")
@@ -1142,6 +1194,53 @@ struct SettingsView: View {
         case .english:
             return localizer.text(.english)
         }
+    }
+
+    private func localizedTitle(for preference: AppAppearancePreference) -> String {
+        switch preference {
+        case .system:
+            return localizer.text(.followSystem)
+        case .light:
+            return localizer.text(.lightAppearance)
+        case .dark:
+            return localizer.text(.darkAppearance)
+        }
+    }
+
+    private var settingsContentGradientStart: Color {
+        colorScheme == .dark
+            ? Color(nsColor: .windowBackgroundColor).opacity(0.96)
+            : Color.white.opacity(0.98)
+    }
+
+    private var settingsContentGradientEnd: Color {
+        colorScheme == .dark
+            ? Color(red: 0.10, green: 0.11, blue: 0.13).opacity(0.98)
+            : Color(red: 0.97, green: 0.98, blue: 1.0)
+    }
+
+    private var settingsSidebarOverlayColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.10) : Color.white.opacity(0.16)
+    }
+
+    private var settingsCardOverlayColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.10) : Color.white.opacity(0.12)
+    }
+
+    private var settingsHairlineColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.38)
+    }
+
+    private var settingsDividerColor: Color {
+        colorScheme == .dark ? Color.clear : Color.black.opacity(0.06)
+    }
+
+    private var settingsSidebarIconColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.66) : Color.black.opacity(0.62)
+    }
+
+    private var settingsSidebarTextColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.82) : Color.black.opacity(0.80)
     }
 
     @ViewBuilder

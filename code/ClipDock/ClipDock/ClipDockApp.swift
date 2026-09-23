@@ -25,6 +25,7 @@ struct ClipDockApp: App {
     @StateObject private var storageSummaryScheduler: StorageSummaryScheduler
     @StateObject private var sparkleUpdateManager: SparkleUpdateManager
     @AppStorage("app.languagePreference") private var languagePreference = AppLanguagePreference.system.rawValue
+    @AppStorage(AppAppearancePreference.storageKey) private var appearancePreference = AppAppearancePreference.system.rawValue
 
     init() {
         let viewContext = PersistenceController.shared.container.viewContext
@@ -45,7 +46,8 @@ struct ClipDockApp: App {
             ClipboardPrivacyRules.ignorePasswordsAndTokensStorageKey: false,
             ClipboardPrivacyRules.ignorePrivateKeysStorageKey: false,
             ClipboardPrivacyRules.ignoreLongSensitiveTextStorageKey: false,
-            LinkMetadataPrivacyPolicy.allowPrivateNetworkStorageKey: false
+            LinkMetadataPrivacyPolicy.allowPrivateNetworkStorageKey: false,
+            AppAppearancePreference.storageKey: AppAppearancePreference.system.rawValue
         ])
         _keyboardShortcutManager = StateObject(wrappedValue: KeyboardShortcutManager())
         _loginItemManager = StateObject(wrappedValue: LoginItemManager())
@@ -66,6 +68,7 @@ struct ClipDockApp: App {
 
     var body: some Scene {
         let localizer = AppLocalizer(language: AppDisplayLanguage.resolve(from: languagePreference))
+        let colorScheme = AppAppearancePreference.resolve(from: appearancePreference).colorScheme
 
         WindowGroup {
             ContentView()
@@ -77,6 +80,7 @@ struct ClipDockApp: App {
                 .environmentObject(loginItemManager)
                 .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
+                .preferredColorScheme(colorScheme)
         }
         .defaultSize(width: WindowLayout.defaultSize.width, height: WindowLayout.defaultSize.height)
         .windowResizability(.contentSize)
@@ -89,6 +93,7 @@ struct ClipDockApp: App {
                 .environmentObject(loginItemManager)
                 .environmentObject(storageSummaryScheduler)
                 .environmentObject(sparkleUpdateManager)
+                .preferredColorScheme(colorScheme)
         }
         .defaultSize(width: 780, height: 560)
         .windowResizability(.contentSize)

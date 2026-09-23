@@ -9,6 +9,7 @@ import AppKit
 
 struct SimpleClipboardWorkspaceView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
     @AppStorage("clipboard.autoHideAfterCopy") private var autoHideAfterCopy = false
 
@@ -89,7 +90,7 @@ struct SimpleClipboardWorkspaceView: View {
             .frame(width: layout.clampedSidebarWidth(sidebarWidth))
 
             Rectangle()
-                .fill(Color.black.opacity(0.035))
+                .fill(workspaceDividerColor)
                 .frame(width: 0.5)
 
             ClipboardDetailInspector(
@@ -121,7 +122,7 @@ struct SimpleClipboardWorkspaceView: View {
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: layout.workspaceCornerRadius, style: .continuous)
-                        .fill(Color.white.opacity(0.16))
+                        .fill(workspaceOverlayColor)
                 )
         )
         .onAppear {
@@ -162,6 +163,14 @@ struct SimpleClipboardWorkspaceView: View {
                 }
             )
         )
+    }
+
+    private var workspaceDividerColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.black.opacity(0.035)
+    }
+
+    private var workspaceOverlayColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.10) : Color.white.opacity(0.16)
     }
 
     private func currentSelectedRecord(from displayOrderedRecords: [ClipboardRecord]) -> ClipboardRecord? {

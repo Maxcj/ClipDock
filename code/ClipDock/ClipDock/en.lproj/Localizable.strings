@@ -100,7 +100,11 @@
 "interfaceSectionSubtitle" = "Display language and interface preferences";
 "language" = "Language";
 "languageSubtitle" = "Choose the display language for ClipDock";
+"appearance" = "Appearance";
+"appearanceSubtitle" = "Choose a light or dark interface, or follow macOS";
 "followSystem" = "Follow System";
+"lightAppearance" = "Light";
+"darkAppearance" = "Dark";
 "simplifiedChinese" = "Simplified Chinese";
 "english" = "English";
 "clipboardSection" = "Clipboard";

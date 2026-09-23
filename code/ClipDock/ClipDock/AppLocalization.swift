@@ -13,6 +13,31 @@ enum AppLanguagePreference: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum AppAppearancePreference: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    static let storageKey = "app.appearancePreference"
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
+
+    static func resolve(from rawValue: String) -> AppAppearancePreference {
+        AppAppearancePreference(rawValue: rawValue) ?? .system
+    }
+}
+
 enum AppDisplayLanguage {
     case simplifiedChinese
     case english
@@ -135,7 +160,11 @@ enum AppTextKey: String {
     case interfaceSectionSubtitle
     case language
     case languageSubtitle
+    case appearance
+    case appearanceSubtitle
     case followSystem
+    case lightAppearance
+    case darkAppearance
     case simplifiedChinese
     case english
     case clipboardSection
