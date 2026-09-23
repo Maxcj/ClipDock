@@ -37,6 +37,8 @@ private enum CategoryPresetPalette {
 }
 
 private struct SettingsActionButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
     enum Kind {
         case neutral
         case accent
@@ -51,8 +53,10 @@ private struct SettingsActionButtonStyle: ButtonStyle {
 
         switch kind {
         case .neutral:
-            foreground = .primary
-            background = Color.white.opacity(configuration.isPressed ? 0.56 : 0.80)
+            foreground = colorScheme == .dark ? Color.primary.opacity(0.88) : .primary
+            background = colorScheme == .dark
+                ? Color.white.opacity(configuration.isPressed ? 0.10 : 0.16)
+                : Color.white.opacity(configuration.isPressed ? 0.56 : 0.80)
         case .accent:
             foreground = .white
             background = Color.accentColor.opacity(configuration.isPressed ? 0.76 : 1.0)
@@ -70,8 +74,13 @@ private struct SettingsActionButtonStyle: ButtonStyle {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.black.opacity(kind == .accent ? 0.0 : 0.08), lineWidth: 1)
+                    .stroke(actionBorderColor, lineWidth: 1)
             )
+    }
+
+    private var actionBorderColor: Color {
+        if kind == .accent { return .clear }
+        return colorScheme == .dark ? Color.primary.opacity(0.16) : Color.black.opacity(0.08)
     }
 }
 

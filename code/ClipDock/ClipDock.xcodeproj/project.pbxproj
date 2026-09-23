@@ -49,8 +49,6 @@
 		D93A110D2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */; };
 		D93A110F2FF2000100A1B2C3 /* ClipboardHistoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */; };
 		D93A11112FF2000100A1B2C3 /* ClipboardDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */; };
-		D93A11132FF2000100A1B2C3 /* LegacyDashboardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */; };
-		D93A11152FF2000100A1B2C3 /* LegacyDashboardComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */; };
 		D93A11172FF2000100A1B2C3 /* SettingsSupportViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */; };
 		D93A11192FF2000100A1B2C3 /* ClipboardPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */; };
 		E20000000000000000000001 /* ClipboardSensitiveRuleSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* ClipboardSensitiveRuleSupport.swift */; };
@@ -85,7 +83,6 @@
 		C1E5F5EB2FE950D000571FED /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C1E5F5EE2FE950D000571FED /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		C1E5F5F02FE950D000571FED /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
-		C1E5F5F32FE950D000571FED /* ClipDockV1.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClipDockV1.xcdatamodel; sourceTree = "<group>"; };
 		E3F9C0A1B2D4E6F8091A2B3C /* ClipDockV2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClipDockV2.xcdatamodel; sourceTree = "<group>"; };
 		C1E5F5F52FE950D000571FED /* ClipDock.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClipDock.entitlements; sourceTree = "<group>"; };
 		C1F66B2A6E77EDD53D459AEA /* ClipboardStorageSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClipboardStorageSupport.swift; sourceTree = "<group>"; };
@@ -99,8 +96,6 @@
 		D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWorkspaceView.swift; sourceTree = "<group>"; };
 		D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardHistoryViews.swift; sourceTree = "<group>"; };
 		D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardDetailViews.swift; sourceTree = "<group>"; };
-		D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDashboardViews.swift; sourceTree = "<group>"; };
-		D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyDashboardComponents.swift; sourceTree = "<group>"; };
 		D93A11162FF2000100A1B2C3 /* SettingsSupportViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupportViews.swift; sourceTree = "<group>"; };
 		D93A11182FF2000100A1B2C3 /* ClipboardPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardPreviewSupport.swift; sourceTree = "<group>"; };
 		E20000000000000000000002 /* ClipboardSensitiveRuleSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSensitiveRuleSupport.swift; sourceTree = "<group>"; };
@@ -216,8 +211,6 @@
 				D93A110C2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift */,
 				D93A110E2FF2000100A1B2C3 /* ClipboardHistoryViews.swift */,
 				D93A11102FF2000100A1B2C3 /* ClipboardDetailViews.swift */,
-				D93A11142FF2000100A1B2C3 /* LegacyDashboardComponents.swift */,
-				D93A11122FF2000100A1B2C3 /* LegacyDashboardViews.swift */,
 				B20000000000000000000002 /* ClipboardCodeRenderingViews.swift */,
 			);
 			name = Views;
@@ -348,8 +341,6 @@
 			files = (
 				D93A11192FF2000100A1B2C3 /* ClipboardPreviewSupport.swift in Sources */,
 				D93A11172FF2000100A1B2C3 /* SettingsSupportViews.swift in Sources */,
-				D93A11152FF2000100A1B2C3 /* LegacyDashboardComponents.swift in Sources */,
-				D93A11132FF2000100A1B2C3 /* LegacyDashboardViews.swift in Sources */,
 				D93A11112FF2000100A1B2C3 /* ClipboardDetailViews.swift in Sources */,
 				D93A110F2FF2000100A1B2C3 /* ClipboardHistoryViews.swift in Sources */,
 				D93A110D2FF2000100A1B2C3 /* ClipboardWorkspaceView.swift in Sources */,
@@ -653,7 +644,6 @@
 		C1E5F5F22FE950D000571FED /* ClipDock.xcdatamodeld */ = {
 			isa = XCVersionGroup;
 			children = (
-				C1E5F5F32FE950D000571FED /* ClipDockV1.xcdatamodel */,
 				E3F9C0A1B2D4E6F8091A2B3C /* ClipDockV2.xcdatamodel */,
 			);
 			currentVersion = E3F9C0A1B2D4E6F8091A2B3C /* ClipDockV2.xcdatamodel */;

@@ -61,6 +61,7 @@ extension ClipboardRecord {
 
 struct ClipboardColorDetailView: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.colorScheme) private var colorScheme
     let record: ClipboardRecord
     let layout: SimpleClipboardLayout
     let onCopyHex: () -> Void
@@ -97,7 +98,7 @@ struct ClipboardColorDetailView: View {
                 .fill(color.color)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
+                        .strokeBorder(colorPreviewBorderColor, lineWidth: 1)
                 )
                 .frame(height: 180)
                 .overlay(alignment: .bottomLeading) {
@@ -160,11 +161,11 @@ struct ClipboardColorDetailView: View {
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white.opacity(0.20))
+                    .fill(valueRowBackgroundColor)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                    .stroke(valueRowBorderColor, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
@@ -194,8 +195,24 @@ struct ClipboardColorDetailView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.04))
+        .background(infoTagBackgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var colorPreviewBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+    }
+
+    private var valueRowBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.20)
+    }
+
+    private var valueRowBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.08)
+    }
+
+    private var infoTagBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.black.opacity(0.04)
     }
 
     private func opacityLabel(for color: ClipboardColorValue) -> String {

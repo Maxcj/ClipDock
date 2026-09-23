@@ -8,6 +8,7 @@ import AppKit
 
 struct AsyncDetailImageView: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.colorScheme) private var colorScheme
     let imagePath: String?
     let initialImage: NSImage?
     let placeholderTitle: String
@@ -37,14 +38,14 @@ struct AsyncDetailImageView: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 7)
-                    .foregroundStyle(.primary)
-                    .background(Color.white.opacity(isHovering ? 0.96 : 0.88))
+                    .foregroundStyle(previewButtonForegroundColor)
+                    .background(previewButtonBackgroundColor)
                     .clipShape(Capsule(style: .continuous))
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            .stroke(previewButtonBorderColor, lineWidth: 1)
                     )
-                    .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
+                    .shadow(color: previewButtonShadowColor, radius: 6, x: 0, y: 2)
                 }
                 .buttonStyle(.plain)
                 .padding(12)
@@ -140,12 +141,12 @@ struct AsyncDetailImageView: View {
         .frame(height: height ?? fallbackHeight)
         .background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(Color.white.opacity(0.16))
+                .fill(previewSurfaceBackgroundColor)
         )
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                .stroke(previewSurfaceBorderColor, lineWidth: 1)
         )
     }
 
@@ -163,13 +164,48 @@ struct AsyncDetailImageView: View {
         .background(
             LinearGradient(
                 colors: [
-                    Color.white.opacity(0.94),
-                    Color(red: 0.89, green: 0.94, blue: 1.0).opacity(0.84)
+                    placeholderGradientStartColor,
+                    placeholderGradientEndColor
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
+    }
+
+    private var previewButtonForegroundColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.88) : Color.primary
+    }
+
+    private var previewButtonBackgroundColor: Color {
+        if colorScheme == .dark {
+            return Color(nsColor: NSColor(calibratedWhite: isHovering ? 0.24 : 0.20, alpha: 0.92))
+        }
+        return Color.white.opacity(isHovering ? 0.96 : 0.88)
+    }
+
+    private var previewButtonBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.08)
+    }
+
+    private var previewButtonShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.24) : Color.black.opacity(0.12)
+    }
+
+    private var previewSurfaceBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.16)
+    }
+
+    private var previewSurfaceBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.18)
+    }
+
+    private var placeholderGradientStartColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.94)
+    }
+
+    private var placeholderGradientEndColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.10) : Color(red: 0.89, green: 0.94, blue: 1.0).opacity(0.84)
     }
 }
 
@@ -198,13 +234,15 @@ final class ImagePreviewPanelController: NSObject {
         let contentSize = Self.contentSize(for: image)
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.borderless],
             backing: .buffered,
             defer: false
         )
         panel.contentViewController = hostingController
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
         panel.isFloatingPanel = true
         panel.level = .floating
@@ -284,6 +322,7 @@ struct ImagePreviewPanelContent: View {
 
 struct FileDetailPreview: View {
     @Environment(\.appLocalizer) private var localizer
+    @Environment(\.colorScheme) private var colorScheme
     let record: ClipboardRecord
     let status: ClipboardFileStatus?
     let isLoading: Bool
@@ -348,10 +387,10 @@ struct FileDetailPreview: View {
         if let icon = record.fileIconImage {
             ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color.white.opacity(0.22))
+                    .fill(iconBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .stroke(iconBorderColor, lineWidth: 1)
                     )
 
                 Image(nsImage: icon)
@@ -369,6 +408,14 @@ struct FileDetailPreview: View {
                         .foregroundStyle(record.kind.accent)
                 )
         }
+    }
+
+    private var iconBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.22)
+    }
+
+    private var iconBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.18)
     }
 }
 
@@ -388,6 +435,8 @@ private extension ClipboardFileStatus {
 }
 
 struct LinkDetailPreview: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let record: ClipboardRecord
     let subtitleFontSize: CGFloat
     let footerFontSize: CGFloat
@@ -427,10 +476,10 @@ struct LinkDetailPreview: View {
         if let icon = record.websiteIconImage {
             ZStack {
                 RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(Color.white.opacity(0.22))
+                    .fill(iconBackgroundColor)
                     .overlay(
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            .stroke(iconBorderColor, lineWidth: 1)
                     )
 
                 Image(nsImage: icon)
@@ -448,5 +497,13 @@ struct LinkDetailPreview: View {
                         .foregroundStyle(record.kind.accent)
                 )
         }
+    }
+
+    private var iconBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.22)
+    }
+
+    private var iconBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.18)
     }
 }

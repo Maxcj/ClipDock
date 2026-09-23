@@ -218,15 +218,40 @@ struct SettingsInlineLinkRow: View {
 }
 
 struct DestructivePillButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .foregroundStyle(.white)
-            .background(Color(red: 0.96, green: 0.27, blue: 0.22).opacity(configuration.isPressed ? 0.82 : 1.0))
+            .foregroundStyle(destructiveForegroundColor)
+            .background(destructiveBackgroundColor(isPressed: configuration.isPressed))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: .red.opacity(0.16), radius: 8, x: 0, y: 3)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(destructiveBorderColor, lineWidth: 1)
+            )
+            .shadow(color: destructiveShadowColor, radius: 8, x: 0, y: 3)
+    }
+
+    private var destructiveForegroundColor: Color {
+        colorScheme == .dark ? Color.red.opacity(0.68) : .white
+    }
+
+    private func destructiveBackgroundColor(isPressed: Bool) -> Color {
+        if colorScheme == .dark {
+            return Color.red.opacity(isPressed ? 0.18 : 0.12)
+        }
+        return Color(red: 0.96, green: 0.27, blue: 0.22).opacity(isPressed ? 0.82 : 1.0)
+    }
+
+    private var destructiveBorderColor: Color {
+        colorScheme == .dark ? Color.red.opacity(0.18) : Color.clear
+    }
+
+    private var destructiveShadowColor: Color {
+        colorScheme == .dark ? Color.clear : Color.red.opacity(0.16)
     }
 }
 

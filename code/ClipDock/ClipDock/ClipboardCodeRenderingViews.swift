@@ -7,6 +7,146 @@ import SwiftUI
 import AppKit
 import Highlighter
 
+struct ClipboardCodePane: View {
+    @Environment(\.appLocalizer) private var localizer
+    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var clipboardMonitor: ClipboardMonitor
+    @ObservedObject var record: ClipboardRecord
+    @State private var copiedActionKey: String?
+
+    var body: some View {
+        let language = record.codeLanguage
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Menu {
+                    ForEach(ClipboardCodeLanguage.pickerCases) { item in
+                        Button {
+                            updateCodeLanguage(item)
+                        } label: {
+                            HStack(spacing: 8) {
+                                if item == language {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+
+                                Text(item.title)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(language.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(language.badgeColor)
+                        Text("\(record.codeLineCount) lines")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(language.badgeColor.opacity(colorScheme == .dark ? 0.14 : 0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    clipboardMonitor.copyTextSilently(
+                        ClipboardCodeActions.markdownCodeBlock(record.detailText, language: language)
+                    )
+                    triggerCopiedFeedback(key: "markdown")
+                } label: {
+                    copyActionLabel(
+                        title: localizer.text(.copyMarkdown),
+                        systemImage: copiedActionKey == "markdown" ? "checkmark.circle.fill" : "chevron.left.forwardslash.chevron.right"
+                    )
+                }
+                .buttonStyle(.plain)
+                .help(localizer.text(.copyMarkdown))
+            }
+            HighlighterCodeView(text: record.detailText, language: language)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(codePaneBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(codePaneBorderColor, lineWidth: 1)
+                )
+        )
+    }
+
+    private func triggerCopiedFeedback(key: String) {
+        withAnimation(.easeInOut(duration: 0.16)) {
+            copiedActionKey = key
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            guard copiedActionKey == key else { return }
+            withAnimation(.easeInOut(duration: 0.16)) {
+                copiedActionKey = nil
+            }
+        }
+    }
+
+    private func copyActionLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .foregroundStyle(colorScheme == .dark ? Color.primary.opacity(0.88) : Color.primary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(copyButtonBackgroundColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(copyButtonBorderColor, lineWidth: 1)
+        )
+    }
+
+    private func updateCodeLanguage(_ newValue: ClipboardCodeLanguage) {
+        record.setValue(newValue.rawValue, forKey: "codeLanguageRaw")
+        saveContext()
+    }
+
+    private func saveContext() {
+        do {
+            try viewContext.save()
+        } catch {
+            NSLog("Failed to save code language change: \(error.localizedDescription)")
+        }
+    }
+
+    private var codePaneBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.07) : Color.white.opacity(0.92)
+    }
+
+    private var codePaneBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.gray.opacity(0.12)
+    }
+
+    private var copyButtonBackgroundColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.78)
+    }
+
+    private var copyButtonBorderColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.10)
+    }
+}
+
 struct HighlighterCodeView: NSViewRepresentable {
     let text: String
     let language: ClipboardCodeLanguage
